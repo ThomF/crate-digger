@@ -4,21 +4,17 @@ import { fileURLToPath } from 'node:url'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import { DEFAULT_DB_PATH } from '../paths.ts'
 import * as schema from './schema.ts'
 
-// apps/api/drizzle — the same relative path works from src/db (dev) and dist/db (build).
+// apps/api/drizzle, where drizzle-kit writes the generated SQL migrations.
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../drizzle')
-
-export const DEFAULT_DB_PATH = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../../../data/crate.db',
-)
 
 /**
  * Opens (or creates) the SQLite database and brings it up to date with all migrations.
  * Pass ':memory:' for a throwaway database — that's what the tests do.
  */
-export function createDb(path: string = process.env.DATABASE_PATH ?? DEFAULT_DB_PATH) {
+export function createDb(path: string = DEFAULT_DB_PATH) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true })
 
   const sqlite = new Database(path)

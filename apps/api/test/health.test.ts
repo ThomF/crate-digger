@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildApp } from '../src/app.ts'
+import { buildTestApp } from './helpers.ts'
 
 describe('GET /api/health', () => {
   it('reports ok, including the database', async () => {
-    const app = await buildApp({ dbPath: ':memory:' })
+    const app = await buildTestApp()
 
     const res = await app.inject({ method: 'GET', url: '/api/health' })
 

@@ -6,6 +6,7 @@
 // Only the lazily loaded editor page imports this file, so the list pages stay small.
 import {
   createAlbumInput,
+  MAX_COVER_BYTES,
   type AlbumDetail,
   type AlbumFormat,
   type CreateAlbumInput,
@@ -29,6 +30,12 @@ export type AlbumFormState = {
   rating: number
   notes: string
   tracks: TrackRow[]
+  /** The cover already saved on the server (edit only). */
+  coverPath: string | null
+  /** A newly chosen image, uploaded after the album itself is saved. */
+  coverFile: File | null
+  /** Remove the saved cover when saving. */
+  removeCover: boolean
 }
 
 /**
@@ -58,6 +65,9 @@ export function emptyForm(crateId: number | null = null): AlbumFormState {
     rating: 0,
     notes: '',
     tracks: [newTrackRow('A')],
+    coverPath: null,
+    coverFile: null,
+    removeCover: false,
   }
 }
 
@@ -75,6 +85,9 @@ export function formFromAlbum(album: AlbumDetail): AlbumFormState {
     tracks: [...album.tracks]
       .sort((a, b) => a.side.localeCompare(b.side) || a.position - b.position)
       .map((t) => newTrackRow(t.side, t.title, formatDuration(t.durationSec))),
+    coverPath: album.coverPath,
+    coverFile: null,
+    removeCover: false,
   }
 }
 
@@ -109,6 +122,11 @@ export function validateAlbumForm(form: AlbumFormState): ValidationResult {
     return { side: row.side, position: perSide[row.side]!, title: row.title, durationSec }
   })
 
+  // The cover goes in a separate upload, so it's checked here rather than by the schema.
+  // The API checks again (and checks it's really an image).
+  const coverProblem = checkCoverFile(form.coverFile)
+  if (coverProblem) errors.cover = coverProblem
+
   const year = form.year.trim()
   const result = createAlbumInput.safeParse({
     crateId: form.crateId ?? undefined,
@@ -132,6 +150,13 @@ export function validateAlbumForm(form: AlbumFormState): ValidationResult {
 
   if (Object.keys(errors).length > 0 || !result.success) return { ok: false, errors }
   return { ok: true, data: result.data }
+}
+
+export function checkCoverFile(file: File | null): string | null {
+  if (!file) return null
+  if (!file.type.startsWith('image/')) return 'Choose an image file (JPEG, PNG or WebP)'
+  if (file.size > MAX_COVER_BYTES) return `Images up to ${MAX_COVER_BYTES / 1024 / 1024} MB, please`
+  return null
 }
 
 /** ['tracks', 2, 'title'] → 'track.<key of 3rd filled row>.title'; ['title'] → 'title'. */

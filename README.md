@@ -36,7 +36,12 @@ The web dev server proxies `/api/*` to the API, so the browser only ever talks t
 
 ## Database
 
-SQLite file at `data/crate.db` (git-ignored). Migrations run automatically when the API starts.
+Everything the app stores lives in `data/` (git-ignored), so backing up means copying one folder:
+
+- `data/crate.db`: the SQLite database. Migrations run automatically when the API starts.
+- `data/covers/`: uploaded cover art, re-encoded as 800×800 JPEGs.
+
+Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH` and `COVERS_DIR`.
 
 | Command                           | What it does                                            |
 | --------------------------------- | ------------------------------------------------------- |
@@ -46,16 +51,19 @@ SQLite file at `data/crate.db` (git-ignored). Migrations run automatically when 
 
 ## API
 
-| Method & path                | Does                              |
-| ---------------------------- | --------------------------------- |
-| `GET /api/health`            | API + database check              |
-| `GET /api/crates`            | Crates with album counts          |
-| `GET /api/albums?crateId=`   | Album summaries in crate order    |
-| `GET /api/albums/:id`        | One album with its tracks         |
-| `POST /api/albums`           | Create (optionally with `tracks`) |
-| `PATCH /api/albums/:id`      | Change only the fields sent       |
-| `PUT /api/albums/:id/tracks` | Replace the whole tracklist       |
-| `DELETE /api/albums/:id`     | Delete (its tracks go too)        |
+| Method & path                  | Does                                       |
+| ------------------------------ | ------------------------------------------ |
+| `GET /api/health`              | API + database check                       |
+| `GET /api/crates`              | Crates with album counts                   |
+| `GET /api/albums?crateId=`     | Album summaries in crate order             |
+| `GET /api/albums/:id`          | One album with its tracks                  |
+| `POST /api/albums`             | Create (optionally with `tracks`)          |
+| `POST /api/albums/:id/cover`   | Upload cover art (multipart field `cover`) |
+| `DELETE /api/albums/:id/cover` | Remove the cover                           |
+| `GET /covers/:file`            | Cover images (cached for a year)           |
+| `PATCH /api/albums/:id`        | Change only the fields sent                |
+| `PUT /api/albums/:id/tracks`   | Replace the whole tracklist                |
+| `DELETE /api/albums/:id`       | Delete (its tracks go too)                 |
 
 Errors always look like `{ statusCode, error, message, issues? }`.
 

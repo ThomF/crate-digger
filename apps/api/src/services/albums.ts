@@ -104,9 +104,15 @@ export function updateAlbum(db: Db, id: number, input: UpdateAlbumInput): AlbumD
   return getAlbum(db, id)
 }
 
-export function deleteAlbum(db: Db, id: number): void {
-  const result = db.delete(albums).where(eq(albums.id, id)).run() // tracks cascade
-  if (result.changes === 0) throw notFound(`Album ${id}`)
+/** Deletes the album (its tracks cascade) and returns its cover path so the caller can remove the file. */
+export function deleteAlbum(db: Db, id: number): { coverPath: string | null } {
+  const deleted = db
+    .delete(albums)
+    .where(eq(albums.id, id))
+    .returning({ coverPath: albums.coverPath })
+    .get()
+  if (!deleted) throw notFound(`Album ${id}`)
+  return deleted
 }
 
 /** Replaces the whole tracklist. Simpler than syncing individual track edits. */

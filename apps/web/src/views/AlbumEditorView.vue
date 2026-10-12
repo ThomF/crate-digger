@@ -2,7 +2,15 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, RouterLink, useRouter } from 'vue-router'
 import type { AlbumDetail } from '@crate-digger/shared'
-import { createAlbum, deleteAlbum, getAlbum, replaceTracks, updateAlbum } from '../api/albums.ts'
+import {
+  createAlbum,
+  deleteAlbum,
+  getAlbum,
+  removeCover,
+  replaceTracks,
+  updateAlbum,
+  uploadCover,
+} from '../api/albums.ts'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import {
@@ -69,7 +77,8 @@ const genreSuggestions = computed(() =>
 // ── Unsaved changes ─────────────────────────────────────────────────────
 
 let leavingOnPurpose = false
-const isDirty = () => !!form.value && JSON.stringify(form.value) !== snapshot
+const isDirty = () =>
+  !!form.value && (JSON.stringify(form.value) !== snapshot || form.value.coverFile !== null)
 
 // In-app navigation (links, back button within the app)…
 onBeforeRouteLeave(() => {
@@ -114,14 +123,33 @@ async function save() {
       saved = await createAlbum(result.data)
     }
 
-    library.upsertAlbum(saved)
+    // 3. The cover is a separate upload, so it can only happen once the album exists.
+    const cover = await syncCover(saved)
+
+    library.upsertAlbum(cover.album)
     leavingOnPurpose = true
-    await router.push({ name: 'album', params: { id: saved.id } })
+    // If only the cover failed, the album *is* saved. Go to it and say so, rather than
+    // staying here, where pressing Save again would create a second copy.
+    const notice = cover.problem
+      ? `Saved, but the cover didn't upload: ${cover.problem} Edit the record to try again.`
+      : undefined
+    await router.push({ name: 'album', params: { id: saved.id }, state: { notice } })
   } catch (err) {
     errors.value = errorsFromApi(err, form.value)
     focusFirstError()
   } finally {
     saving.value = false
+  }
+}
+
+async function syncCover(album: AlbumDetail): Promise<{ album: AlbumDetail; problem?: string }> {
+  const { coverFile, removeCover: wantsRemoval } = form.value!
+  try {
+    if (coverFile) return { album: await uploadCover(album.id, coverFile) }
+    if (wantsRemoval && album.coverPath) return { album: await removeCover(album.id) }
+    return { album }
+  } catch (err) {
+    return { album, problem: errorMessage(err) }
   }
 }
 

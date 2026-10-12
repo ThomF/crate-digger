@@ -1,4 +1,6 @@
+import { rm } from 'node:fs/promises'
 import { createDb } from './client.ts'
+import { DEFAULT_COVERS_DIR } from '../paths.ts'
 import { albums, crates, tracks, type NewAlbum } from './schema.ts'
 
 // Wipes the database and fills it with sample records. Run with: npm run db:seed
@@ -212,6 +214,9 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const { db, close } = createDb()
+
+// The albums are about to be replaced, so their cover files would be orphans.
+await rm(DEFAULT_COVERS_DIR, { recursive: true, force: true })
 
 // One transaction: either everything is replaced, or nothing changes.
 db.transaction((tx) => {

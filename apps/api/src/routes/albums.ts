@@ -16,6 +16,7 @@ import {
   replaceTracks,
   updateAlbum,
 } from '../services/albums.ts'
+import { deleteCoverFile } from '../services/covers.ts'
 
 // Routes stay thin: declare the schema, call a service, pick a status code.
 // Fastify validates params/query/body against the schema *before* the handler runs,
@@ -46,7 +47,8 @@ export const albumRoutes: FastifyPluginAsyncZod = async (app) => {
   )
 
   app.delete('/albums/:id', { schema: { params: idParams } }, async (req, reply) => {
-    deleteAlbum(app.db, req.params.id)
+    const { coverPath } = deleteAlbum(app.db, req.params.id)
+    await deleteCoverFile(app.coversDir, coverPath)
     return reply.code(204).send()
   })
 

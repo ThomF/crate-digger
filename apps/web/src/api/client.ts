@@ -20,7 +20,8 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   const res = await fetch(`/api${path}`, {
     ...init,
     headers: {
-      ...(init.body ? { 'content-type': 'application/json' } : {}),
+      // JSON bodies are strings. FormData (file uploads) sets its own multipart header.
+      ...(typeof init.body === 'string' ? { 'content-type': 'application/json' } : {}),
       ...init.headers,
     },
   })

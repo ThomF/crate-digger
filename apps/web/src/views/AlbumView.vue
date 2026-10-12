@@ -18,6 +18,11 @@ const status = ref<'loading' | 'ready' | 'not-found' | 'error'>('loading')
 const error = ref<string | null>(null)
 const turned = ref(false)
 
+// A message handed over by the previous page, e.g. "Saved, but the cover didn't upload".
+// It rides along in the browser history entry (router.push({ state })), so it's gone
+// once you navigate away and doesn't reappear on reload of a different entry.
+const notice = ref<string | null>(null)
+
 const library = useLibraryStore()
 library.load() // for the crate name; a no-op if already loaded
 
@@ -42,6 +47,7 @@ async function load(id: number) {
   status.value = 'loading'
   album.value = null
   turned.value = false
+  notice.value = typeof history.state?.notice === 'string' ? history.state.notice : null
   if (summary.value) document.title = `${summary.value.title} · Crate Digger`
   try {
     album.value = await getAlbum(id)
@@ -68,6 +74,11 @@ watch(() => props.id, load, { immediate: true })
       Edit
     </RouterLink>
   </nav>
+
+  <p v-if="notice" class="notice" role="status">
+    {{ notice }}
+    <button type="button" aria-label="Dismiss" @click="notice = null">×</button>
+  </p>
 
   <p v-if="status === 'not-found'" class="status-note">That record isn't in any crate.</p>
 
@@ -124,6 +135,23 @@ watch(() => props.id, load, { immediate: true })
 
 .back {
   font-family: var(--font-display);
+}
+
+.notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid var(--marker-red);
+  background: #fdecea;
+}
+
+.notice button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .top .btn {

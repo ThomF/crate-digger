@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AlbumDetail } from '@crate-digger/shared'
 import { ApiRequestError } from '../api/client.ts'
 import {
+  checkCoverFile,
   emptyForm,
   errorsFromApi,
   formFromAlbum,
@@ -180,5 +181,28 @@ describe('errorsFromApi', () => {
     expect(errorsFromApi(new TypeError('Failed to fetch'), filledForm())).toEqual({
       [FORM_ERROR]: "Can't reach the API. Is it running?",
     })
+  })
+})
+
+describe('cover files', () => {
+  const file = (type: string, bytes: number) => new File([new Uint8Array(bytes)], 'cover', { type })
+
+  it('accepts images up to the size limit', () => {
+    expect(checkCoverFile(null)).toBeNull()
+    expect(checkCoverFile(file('image/jpeg', 1000))).toBeNull()
+  })
+
+  it('rejects other file types and oversized images', () => {
+    expect(checkCoverFile(file('application/pdf', 1000))).toMatch(/image file/)
+    expect(checkCoverFile(file('image/png', 10 * 1024 * 1024 + 1))).toBe(
+      'Images up to 10 MB, please',
+    )
+  })
+
+  it('reports a bad cover as a form error alongside other fields', () => {
+    const result = validateAlbumForm(filledForm({ coverFile: file('text/plain', 10) }))
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.errors.cover).toMatch(/image file/)
   })
 })

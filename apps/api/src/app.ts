@@ -1,14 +1,19 @@
 import Fastify from 'fastify'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
+import { coversPlugin } from './plugins/covers.ts'
 import { dbPlugin } from './plugins/db.ts'
 import { errorHandlerPlugin } from './plugins/error-handler.ts'
 import { albumRoutes } from './routes/albums.ts'
+import { coverRoutes } from './routes/covers.ts'
 import { crateRoutes } from './routes/crates.ts'
 import { healthRoutes } from './routes/health.ts'
+import { DEFAULT_COVERS_DIR } from './paths.ts'
 
 export type AppOptions = {
-  /** SQLite file path, or ':memory:' for tests. Defaults to DATABASE_PATH / data/crate.db. */
+  /** SQLite file path, or ':memory:' for tests. Defaults to DATABASE_PATH or data/crate.db. */
   dbPath?: string
+  /** Where cover images are stored. Defaults to COVERS_DIR or data/covers. */
+  coversDir?: string
 }
 
 // Builds the app without starting it. Tests call this and use app.inject()
@@ -25,10 +30,12 @@ export async function buildApp(opts: AppOptions = {}) {
   // Plugins first (things routes depend on), then routes.
   await app.register(errorHandlerPlugin)
   await app.register(dbPlugin, { path: opts.dbPath })
+  await app.register(coversPlugin, { dir: opts.coversDir ?? DEFAULT_COVERS_DIR })
 
   await app.register(healthRoutes, { prefix: '/api' })
   await app.register(crateRoutes, { prefix: '/api' })
   await app.register(albumRoutes, { prefix: '/api' })
+  await app.register(coverRoutes, { prefix: '/api' })
 
   return app
 }

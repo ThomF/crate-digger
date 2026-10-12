@@ -3,10 +3,10 @@ import { computed } from 'vue'
 import type { AlbumSummary } from '@crate-digger/shared'
 import { readableInk } from '../../utils/color.ts'
 
-// A generated sleeve for albums without cover art (all of them until M7).
+// The front of a sleeve: the uploaded cover if there is one, otherwise a generated sleeve.
 // The album id picks one of a few 90s-ish motifs, so each record looks distinct but stable.
 const props = defineProps<{
-  album: Pick<AlbumSummary, 'id' | 'title' | 'artist' | 'year' | 'sleeveColor'>
+  album: Pick<AlbumSummary, 'id' | 'title' | 'artist' | 'year' | 'sleeveColor' | 'coverPath'>
 }>()
 
 const MOTIFS = ['rings', 'stripes', 'sun', 'grid'] as const
@@ -15,7 +15,13 @@ const ink = computed(() => readableInk(props.album.sleeveColor))
 </script>
 
 <template>
+  <div v-if="album.coverPath" class="sleeve-art has-cover">
+    <!-- alt="" because the title is always shown as text nearby. draggable=false so
+         dragging in the crate flips records instead of dragging the picture. -->
+    <img :src="album.coverPath" alt="" class="cover" decoding="async" draggable="false" />
+  </div>
   <div
+    v-else
     class="sleeve-art"
     :class="`motif-${motif}`"
     :style="{ '--sleeve-color': album.sleeveColor, '--ink': ink }"
@@ -43,6 +49,13 @@ const ink = computed(() => readableInk(props.album.sleeveColor))
   color: var(--ink);
   font-family: var(--font-display);
   container-type: inline-size; /* text below scales with the sleeve via cqw units */
+}
+
+.cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Faint cardboard wear on every sleeve. */
