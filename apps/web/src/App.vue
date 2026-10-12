@@ -1,68 +1,44 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-
-type Health = { status: string; service: string }
-
-const health = ref<Health | null>(null)
-const error = ref<string | null>(null)
-
-onMounted(async () => {
-  try {
-    const res = await fetch('/api/health')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    health.value = await res.json()
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  }
-})
+import { RouterLink, RouterView } from 'vue-router'
 </script>
 
 <template>
-  <main class="shop">
-    <h1 class="sign">Crate Digger</h1>
+  <header class="masthead">
+    <RouterLink to="/" class="sign">Crate Digger</RouterLink>
     <p class="tagline">Used &amp; new vinyl · est. 1994</p>
+  </header>
 
-    <p v-if="health" class="status ok">● API {{ health.status }}</p>
-    <p v-else-if="error" class="status err">● API unreachable ({{ error }})</p>
-    <p v-else class="status">● checking API…</p>
+  <main class="page">
+    <RouterView />
   </main>
 </template>
 
 <style scoped>
-.shop {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
+.masthead {
   text-align: center;
-  gap: 0.5rem;
-  padding: 1rem;
+  padding: 2rem 1rem 1rem;
+  border-bottom: 3px double var(--cardboard-dark);
 }
 
 .sign {
-  font-family: 'Courier New', monospace;
-  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  font-weight: bold;
   letter-spacing: 0.05em;
   color: var(--marker-red);
-  text-shadow: 3px 3px 0 var(--cardboard-dark);
-  margin: 0;
+  text-shadow: 3px 3px 0 var(--cardboard);
+  text-decoration: none;
 }
 
 .tagline {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-display);
   color: var(--ink-soft);
-  margin: 0 0 1.5rem;
+  margin: 0.25rem 0 0;
 }
 
-.status {
-  font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
-}
-
-.ok {
-  color: var(--ok-green);
-}
-
-.err {
-  color: var(--marker-red);
+.page {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
 }
 </style>

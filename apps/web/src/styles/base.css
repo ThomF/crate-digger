@@ -3,10 +3,15 @@
   --cardboard: #c8a374;
   --cardboard-dark: #8a6a43;
   --paper: #f3ead8;
+  --paper-dark: #e6d9bf;
   --ink: #2b2118;
   --ink-soft: #6b5a48;
   --marker-red: #c0392b;
   --ok-green: #2e7d32;
+  --star: #d4a017;
+
+  --font-display: 'Courier New', Courier, monospace;
+  --font-body: system-ui, sans-serif;
 }
 
 *,
@@ -19,5 +24,41 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: system-ui, sans-serif;
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid var(--marker-red);
+  outline-offset: 2px;
+}
+
+/* Shared bits used by several views */
+.status-note {
+  font-family: var(--font-display);
+  color: var(--ink-soft);
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.status-note.is-error {
+  color: var(--marker-red);
+}
+
+.btn {
+  font-family: var(--font-display);
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  padding: 0.4rem 1rem;
+  margin-left: 0.5rem;
 }
