@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router'
 import type { AlbumSummary } from '@crate-digger/shared'
 import RatingStars from './RatingStars.vue'
+import { sleeveTransitionName } from '../../viewTransitions.ts'
 
 defineProps<{ album: AlbumSummary }>()
 </script>
@@ -9,7 +10,14 @@ defineProps<{ album: AlbumSummary }>()
 <template>
   <RouterLink :to="{ name: 'album', params: { id: album.id } }" class="row">
     <!-- A tiny sleeve in the album's color; becomes the real cover art in M7. -->
-    <span class="sleeve" :style="{ background: album.sleeveColor }" aria-hidden="true" />
+    <span
+      class="sleeve"
+      :style="{
+        background: album.sleeveColor,
+        'view-transition-name': sleeveTransitionName(album.id),
+      }"
+      aria-hidden="true"
+    />
     <span class="text">
       <span class="title">{{ album.title }}</span>
       <span class="artist">{{ album.artist }}</span>

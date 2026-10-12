@@ -4,6 +4,7 @@ import type { AlbumSummary, Crate } from '@crate-digger/shared'
 import { useCrateFlip } from '../../composables/useCrateFlip.ts'
 import { sleevePose, visibleRange } from '../../utils/crateLayout.ts'
 import SleeveArt from './SleeveArt.vue'
+import { sleeveTransitionName } from '../../viewTransitions.ts'
 
 const props = defineProps<{ crate: Crate; albums: AlbumSummary[] }>()
 const index = defineModel<number>('index', { required: true })
@@ -72,6 +73,8 @@ defineExpose({ focus: () => scene.value?.focus() })
           opacity: pose.opacity,
           zIndex: pose.zIndex,
           '--shade': pose.shade,
+          // Only the front sleeve gets a name, so it alone lifts out to the album page.
+          'view-transition-name': offset === 0 ? sleeveTransitionName(album.id) : 'none',
         }"
         aria-hidden="true"
         @click="onSleeveClick(offset, album)"

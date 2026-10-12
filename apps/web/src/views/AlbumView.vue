@@ -6,8 +6,8 @@ import { getAlbum } from '../api/albums.ts'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import RatingStars from '../components/album/RatingStars.vue'
+import RecordStage from '../components/album/RecordStage.vue'
 import TrackList from '../components/album/TrackList.vue'
-import SleeveArt from '../components/crate/SleeveArt.vue'
 import { formatDuration, totalDuration } from '../utils/tracks.ts'
 
 const props = defineProps<{ id: number }>()
@@ -16,13 +16,20 @@ const props = defineProps<{ id: number }>()
 const album = ref<AlbumDetail | null>(null)
 const status = ref<'loading' | 'ready' | 'not-found' | 'error'>('loading')
 const error = ref<string | null>(null)
+const turned = ref(false)
 
 const library = useLibraryStore()
 library.load() // for the crate name; a no-op if already loaded
 
+// If we came from the crate or the list, the store already has this album's summary,
+// so the page can draw the sleeve immediately (which the pull-out animation needs)
+// while notes and tracks load.
+const summary = computed(() => library.albums.find((a) => a.id === props.id) ?? null)
+const shown = computed(() => album.value ?? summary.value)
+
 const crateName = computed(() => {
-  if (!album.value) return null
-  const crate = library.crateById(album.value.crateId)
+  if (!shown.value) return null
+  const crate = library.crateById(shown.value.crateId)
   return crate ? (crate.label ?? crate.name) : null
 })
 
@@ -33,12 +40,14 @@ const runtime = computed(() => {
 
 async function load(id: number) {
   status.value = 'loading'
+  album.value = null
+  turned.value = false
+  if (summary.value) document.title = `${summary.value.title} · Crate Digger`
   try {
     album.value = await getAlbum(id)
     status.value = 'ready'
     document.title = `${album.value.title} · Crate Digger`
   } catch (err) {
-    album.value = null
     if (err instanceof ApiRequestError && err.status === 404) {
       status.value = 'not-found'
     } else {
@@ -60,46 +69,47 @@ watch(() => props.id, load, { immediate: true })
     </RouterLink>
   </nav>
 
-  <p v-if="status === 'loading'" class="status-note">Pulling it out of the crate…</p>
-
-  <p v-else-if="status === 'not-found'" class="status-note">That record isn't in any crate.</p>
+  <p v-if="status === 'not-found'" class="status-note">That record isn't in any crate.</p>
 
   <p v-else-if="status === 'error'" class="status-note is-error" role="alert">
     {{ error }}
     <button type="button" class="btn" @click="load(id)">Try again</button>
   </p>
 
-  <article v-else-if="album" class="album">
-    <div class="sleeve" aria-hidden="true"><SleeveArt :album="album" /></div>
+  <p v-else-if="!shown" class="status-note">Pulling it out of the crate…</p>
+
+  <article v-else class="album">
+    <RecordStage v-model:turned="turned" :album="shown" :tracks="album?.tracks ?? null" />
 
     <header class="info">
       <p v-if="crateName" class="crate">{{ crateName }}</p>
-      <h1>{{ album.title }}</h1>
-      <p class="artist">{{ album.artist }}</p>
+      <h1>{{ shown.title }}</h1>
+      <p class="artist">{{ shown.artist }}</p>
       <dl class="facts">
-        <template v-if="album.year">
+        <template v-if="shown.year">
           <dt>Year</dt>
-          <dd>{{ album.year }}</dd>
+          <dd>{{ shown.year }}</dd>
         </template>
-        <template v-if="album.genre">
+        <template v-if="shown.genre">
           <dt>Genre</dt>
-          <dd>{{ album.genre }}</dd>
+          <dd>{{ shown.genre }}</dd>
         </template>
         <dt>Format</dt>
-        <dd>{{ album.format }}</dd>
+        <dd>{{ shown.format }}</dd>
         <template v-if="runtime">
           <dt>Runtime</dt>
           <dd>{{ runtime }}</dd>
         </template>
         <dt>Rating</dt>
-        <dd><RatingStars :rating="album.rating" /></dd>
+        <dd><RatingStars :rating="shown.rating" /></dd>
       </dl>
-      <p v-if="album.notes" class="notes">{{ album.notes }}</p>
+      <p v-if="album?.notes" class="notes">{{ album.notes }}</p>
     </header>
 
     <section class="tracks">
       <h2>Tracklist</h2>
-      <TrackList :tracks="album.tracks" />
+      <TrackList v-if="album" :tracks="album.tracks" />
+      <p v-else class="status-note">Reading the back of the sleeve…</p>
     </section>
   </article>
 </template>
@@ -122,15 +132,9 @@ watch(() => props.id, load, { immediate: true })
 
 .album {
   display: grid;
-  grid-template-columns: minmax(8rem, 14rem) 1fr;
-  gap: 1.5rem 2rem;
-}
-
-.sleeve {
-  width: 100%;
-  aspect-ratio: 1;
-  border: 1px solid rgb(0 0 0 / 0.2);
-  box-shadow: 6px 6px 0 rgb(0 0 0 / 0.15);
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem 2.5rem;
+  align-items: start;
 }
 
 .crate {
@@ -185,13 +189,9 @@ dd {
   font-size: 1.1rem;
 }
 
-@media (max-width: 36rem) {
+@media (max-width: 44rem) {
   .album {
     grid-template-columns: 1fr;
-  }
-
-  .sleeve {
-    max-width: 14rem;
   }
 }
 </style>
