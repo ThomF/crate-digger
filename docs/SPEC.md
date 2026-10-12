@@ -64,7 +64,7 @@ services are testable on their own.
 Crate   id, name, color, label (handwritten-style text), sortOrder
 Album   id, crateId, title, artist, year, genre, format (LP/EP/7"),
         coverPath?, sleeveColor (fallback when no cover), rating 0–5,
-        notes, positionInCrate, createdAt, updatedAt
+        notes, position (order in crate), createdAt, updatedAt
 Track   id, albumId, side ('A'|'B'|'C'|'D'), position, title, durationSec?
 ```
 

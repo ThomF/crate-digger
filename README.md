@@ -32,10 +32,22 @@ The web dev server proxies `/api/*` to the API, so the browser only ever talks t
 | `npm run format`    | Prettier — format everything      |
 | `npm run build`     | Production build of every app     |
 
+## Database
+
+SQLite file at `data/crate.db` (git-ignored). Migrations run automatically when the API starts.
+
+| Command                           | What it does                                            |
+| --------------------------------- | ------------------------------------------------------- |
+| `npm run db:seed -w apps/api`     | Wipe the DB and load sample records                     |
+| `npm run db:generate -w apps/api` | After editing `src/db/schema.ts`, write a new migration |
+| `npm run db:studio -w apps/api`   | Browse the data in Drizzle Studio                       |
+
 ## Layout
 
 ```
 apps/api   Fastify backend  (src/app.ts builds the app, src/server.ts starts it)
+  src/db/    schema.ts (tables), client.ts (connect + migrate), seed.ts
+  drizzle/   generated SQL migrations — committed, never edited by hand
 apps/web   Vue 3 frontend   (src/App.vue is the entry component)
 docs/      Spec + architecture decision records
 ```
