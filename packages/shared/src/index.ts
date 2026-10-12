@@ -8,7 +8,10 @@ export const ALBUM_FORMATS = ['LP', 'EP', '7"', '12"'] as const
 export const TRACK_SIDES = ['A', 'B', 'C', 'D'] as const
 
 const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i, 'Must be a hex color like #c8a374')
-const optionalText = (max: number) => z.string().trim().max(max).nullish()
+const optionalText = (max: number) =>
+  z.string().trim().max(max, `Keep it under ${max} characters`).nullish()
+const requiredText = (max: number) =>
+  z.string().trim().min(1, 'Required').max(max, `Keep it under ${max} characters`)
 
 export const idParams = z.object({ id: z.coerce.number().int().positive() })
 
@@ -17,13 +20,13 @@ export const idParams = z.object({ id: z.coerce.number().int().positive() })
 export const trackInput = z.object({
   side: z.enum(TRACK_SIDES),
   position: z.number().int().positive(),
-  title: z.string().trim().min(1).max(200),
+  title: requiredText(200),
   durationSec: z.number().int().positive().nullish(),
 })
 
 export const tracklistInput = z
   .array(trackInput)
-  .max(100)
+  .max(100, 'Up to 100 tracks')
   .refine(
     (tracks) => new Set(tracks.map((t) => `${t.side}${t.position}`)).size === tracks.length,
     'Each side + position pair must be unique (e.g. only one A1)',
@@ -38,10 +41,15 @@ export const track = trackInput.extend({
 
 // No defaults here on purpose: a PATCH built from this must not reset fields the client left out.
 const albumFields = z.object({
-  crateId: z.number().int().positive(),
-  title: z.string().trim().min(1).max(200),
-  artist: z.string().trim().min(1).max(200),
-  year: z.number().int().min(1900).max(2100).nullish(),
+  crateId: z.number({ error: 'Pick a crate' }).int().positive(),
+  title: requiredText(200),
+  artist: requiredText(200),
+  year: z
+    .number({ error: 'Year must be a number' })
+    .int('Year must be a whole number')
+    .min(1900, 'Year must be 1900–2100')
+    .max(2100, 'Year must be 1900–2100')
+    .nullish(),
   genre: optionalText(60),
   format: z.enum(ALBUM_FORMATS),
   sleeveColor: hexColor,

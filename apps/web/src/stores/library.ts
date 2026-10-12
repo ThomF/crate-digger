@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { AlbumSummary, Crate } from '@crate-digger/shared'
+import type { AlbumDetail, AlbumSummary, Crate } from '@crate-digger/shared'
 import { listAlbums } from '../api/albums.ts'
 import { listCrates } from '../api/crates.ts'
 import { errorMessage } from '../api/client.ts'
@@ -16,11 +16,13 @@ export const useLibraryStore = defineStore('library', () => {
   const status = ref<Status>('idle')
   const error = ref<string | null>(null)
 
-  /** Crates in order, each with its albums in crate order (the API already sorts them). */
+  /** Crates in order, each with its albums in crate order. */
   const crateShelves = computed(() =>
     crates.value.map((crate) => ({
       crate,
-      albums: albums.value.filter((a) => a.crateId === crate.id),
+      albums: albums.value
+        .filter((a) => a.crateId === crate.id)
+        .sort((a, b) => a.position - b.position),
     })),
   )
 
@@ -46,5 +48,42 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
-  return { crates, albums, status, error, crateShelves, crateById, load }
+  /**
+   * After saving an album, patch it into the list instead of refetching everything.
+   * Only the summary fields are kept; the list never holds tracks or notes.
+   */
+  function upsertAlbum(album: AlbumDetail) {
+    const summary: AlbumSummary = {
+      id: album.id,
+      crateId: album.crateId,
+      title: album.title,
+      artist: album.artist,
+      year: album.year,
+      genre: album.genre,
+      format: album.format,
+      coverPath: album.coverPath,
+      sleeveColor: album.sleeveColor,
+      rating: album.rating,
+      position: album.position,
+    }
+    const index = albums.value.findIndex((a) => a.id === album.id)
+    if (index === -1) albums.value.push(summary)
+    else albums.value[index] = summary
+  }
+
+  function removeAlbum(id: number) {
+    albums.value = albums.value.filter((a) => a.id !== id)
+  }
+
+  return {
+    crates,
+    albums,
+    status,
+    error,
+    crateShelves,
+    crateById,
+    load,
+    upsertAlbum,
+    removeAlbum,
+  }
 })

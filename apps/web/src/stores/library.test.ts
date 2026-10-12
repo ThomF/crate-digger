@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import type { AlbumSummary, Crate } from '@crate-digger/shared'
+import type { AlbumDetail, AlbumSummary, Crate } from '@crate-digger/shared'
 import { useLibraryStore } from './library.ts'
 
 const crates: Crate[] = [
@@ -64,5 +64,30 @@ describe('library store', () => {
     await library.load()
 
     expect(library.error).toBe("Can't reach the API. Is it running?")
+  })
+
+  it('patches saved albums into the list and removes deleted ones', async () => {
+    vi.stubGlobal('fetch', fakeFetch({ '/api/crates': crates, '/api/albums': albums }))
+    const library = useLibraryStore()
+    await library.load()
+    const saved = {
+      ...albums[0],
+      id: 11,
+      title: 'In Utero',
+      position: 1,
+      notes: 'not in the list',
+      tracks: [],
+    } as unknown as AlbumDetail
+
+    library.upsertAlbum(saved)
+    library.upsertAlbum({ ...saved, title: 'In Utero (edited)' })
+    expect(library.crateShelves[0]?.albums.map((a) => a.title)).toEqual([
+      'Nevermind',
+      'In Utero (edited)',
+    ])
+    expect(library.albums[1]).not.toHaveProperty('notes')
+
+    library.removeAlbum(10)
+    expect(library.albums.map((a) => a.id)).toEqual([11])
   })
 })

@@ -15,6 +15,19 @@ export const router = createRouter({
       // Hand the id to the view as a typed prop instead of reading route.params inside it.
       props: (route) => ({ id: Number(route.params.id) }),
     },
+    {
+      path: '/albums/new',
+      name: 'album-new',
+      component: () => import('./views/AlbumEditorView.vue'),
+      // /albums/new?crateId=3 pre-selects a crate.
+      props: (route) => ({ crateId: Number(route.query.crateId) || null }),
+    },
+    {
+      path: '/albums/:id(\\d+)/edit',
+      name: 'album-edit',
+      component: () => import('./views/AlbumEditorView.vue'),
+      props: (route) => ({ id: Number(route.params.id) }),
+    },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
   scrollBehavior: () => ({ top: 0 }),
