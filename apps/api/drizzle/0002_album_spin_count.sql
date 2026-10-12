@@ -1,0 +1,1 @@
+ALTER TABLE `albums` ADD `spin_count` integer DEFAULT 0 NOT NULL;

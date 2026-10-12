@@ -104,10 +104,14 @@ export const albumSummary = z.object({
 
 export const albumDetail = albumSummary.extend({
   notes: z.string().nullable(),
+  spinCount: z.number().int(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   tracks: z.array(track),
 })
+
+/** What POST /api/albums/:id/spins answers with. */
+export const spinResult = z.object({ spinCount: z.number().int() })
 
 // ── Crates ──────────────────────────────────────────────────────────────
 

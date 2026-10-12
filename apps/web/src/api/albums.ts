@@ -20,6 +20,11 @@ export function listAlbums(query: AlbumQuery = {}, signal?: AbortSignal) {
   return request<AlbumSummary[]>(`/albums${search}`, { signal })
 }
 
+/** Counts one spin. Answers with the new total. */
+export function spinAlbum(id: number) {
+  return request<{ spinCount: number }>(`/albums/${id}/spins`, { method: 'POST' })
+}
+
 export function moveAlbum(id: number, body: MoveAlbumInput) {
   return request<AlbumDetail>(`/albums/${id}/position`, {
     method: 'PATCH',

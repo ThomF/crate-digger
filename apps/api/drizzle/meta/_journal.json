@@ -15,6 +15,13 @@
       "when": 1791838818163,
       "tag": "0001_crate_sort_by",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791844364086,
+      "tag": "0002_album_spin_count",
+      "breakpoints": true
     }
   ]
 }

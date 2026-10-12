@@ -65,6 +65,9 @@ describe('admin password', () => {
     expect((await app.inject({ method: 'DELETE', url: '/api/albums/1/cover' })).statusCode).toBe(
       401,
     )
+    // A spin is a change too, so the door stops visitors from counting them.
+    const spin = await app.inject({ method: 'POST', url: '/api/albums/1/spins' })
+    expect(spin.statusCode).toBe(401)
     expect((await app.inject({ url: '/api/session' })).json<SessionInfo>()).toEqual({
       canEdit: false,
       canLogIn: true,

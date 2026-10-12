@@ -6,10 +6,12 @@ import {
   createAlbumInput,
   idParams,
   moveAlbumInput,
+  spinResult,
   tracklistInput,
   updateAlbumInput,
 } from '@crate-digger/shared'
 import {
+  addSpin,
   createAlbum,
   deleteAlbum,
   getAlbum,
@@ -58,6 +60,14 @@ export const albumRoutes: FastifyPluginAsyncZod = async (app) => {
     '/albums/:id/position',
     { schema: { params: idParams, body: moveAlbumInput, response: { 200: albumDetail } } },
     async (req) => moveAlbum(app.db, req.params.id, req.body),
+  )
+
+  // Not part of GET /albums/:id on purpose: GET must never change anything, or reloads,
+  // link prefetching and crawlers would all count as spins.
+  app.post(
+    '/albums/:id/spins',
+    { schema: { params: idParams, response: { 200: spinResult } } },
+    async (req) => addSpin(app.db, req.params.id),
   )
 
   app.put(
