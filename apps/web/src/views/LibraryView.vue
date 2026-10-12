@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import LibraryToolbar from '../components/LibraryToolbar.vue'
 import { useLibraryStore } from '../stores/library.ts'
 import AlbumRow from '../components/album/AlbumRow.vue'
 
@@ -14,6 +15,8 @@ onMounted(() => {
 </script>
 
 <template>
+  <LibraryToolbar />
+
   <p v-if="library.status === 'loading' || library.status === 'idle'" class="status-note">
     Flipping through the crates…
   </p>
@@ -28,10 +31,6 @@ onMounted(() => {
   </p>
 
   <div v-else class="shelves">
-    <div class="toolbar">
-      <RouterLink :to="{ name: 'album-new' }" class="btn">+ Add a record</RouterLink>
-    </div>
-
     <section v-for="{ crate, albums } in library.crateShelves" :key="crate.id" class="crate">
       <h2 class="crate-label" :style="{ background: crate.color }">
         {{ crate.label ?? crate.name }}
@@ -54,17 +53,6 @@ onMounted(() => {
 .shelves {
   display: grid;
   gap: 2rem;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -1rem;
-}
-
-.toolbar .btn {
-  text-decoration: none;
-  margin-left: 0;
 }
 
 .crate {
