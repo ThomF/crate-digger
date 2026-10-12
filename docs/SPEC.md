@@ -6,15 +6,15 @@ tracklist. Everything is added manually — no external music APIs required.
 
 ## 1. Stack
 
-| Layer      | Choice                                                    | Why                                                                                         |
-| ---------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Frontend   | Vue 3 + Vite + TypeScript, Pinia, Vue Router              | Standard modern Vue setup, heavily documented                                               |
-| Backend    | Node + TypeScript + Fastify                               | Same language as the frontend; routes, validation and plugins are explicit and easy to read |
-| Validation | Zod, in a shared package                                  | One schema validates the server and types the frontend                                      |
-| Database   | SQLite + Drizzle ORM                                      | No DB server, one backup-able file; Drizzle reads like SQL, so you learn SQL too            |
-| Images     | Cover uploads saved to disk (`/data/covers`), resized with `sharp` | Real file uploads without needing S3                                               |
-| Tests      | Vitest (both apps), Playwright (one end-to-end test later) |                                                                                            |
-| Hosting    | Docker Compose + Caddy on a VPS or home server            | One-command deploy, automatic HTTPS                                                         |
+| Layer      | Choice                                                             | Why                                                                                         |
+| ---------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Frontend   | Vue 3 + Vite + TypeScript, Pinia, Vue Router                       | Standard modern Vue setup, heavily documented                                               |
+| Backend    | Node + TypeScript + Fastify                                        | Same language as the frontend; routes, validation and plugins are explicit and easy to read |
+| Validation | Zod, in a shared package                                           | One schema validates the server and types the frontend                                      |
+| Database   | SQLite + Drizzle ORM                                               | No DB server, one backup-able file; Drizzle reads like SQL, so you learn SQL too            |
+| Images     | Cover uploads saved to disk (`/data/covers`), resized with `sharp` | Real file uploads without needing S3                                                        |
+| Tests      | Vitest (both apps), Playwright (one end-to-end test later)         |                                                                                             |
+| Hosting    | Docker Compose + Caddy on a VPS or home server                     | One-command deploy, automatic HTTPS                                                         |
 
 See [ADR 0001](adr/0001-stack.md) for the reasoning.
 
@@ -106,19 +106,19 @@ GET    /covers/:file                  static
 
 ## 6. Milestones (one PR to `main` each)
 
-| #   | Branch                | Delivers                                                                       |
-| --- | --------------------- | ------------------------------------------------------------------------------ |
+| #   | Branch                | Delivers                                                                              |
+| --- | --------------------- | ------------------------------------------------------------------------------------- |
 | 0   | `chore/scaffold`      | Monorepo, Vite + Fastify hello world, `/api/health`, ESLint/Prettier, CI, PR template |
-| 1   | `feat/db-schema`      | Drizzle schema, migrations, seed data (~10 albums)                             |
-| 2   | `feat/albums-api`     | `packages/shared`, CRUD routes, services, Zod validation, API tests            |
-| 3   | `feat/album-list-ui`  | Router + Pinia; plain list + detail view wired to the API                      |
-| 4   | `feat/add-album-form` | Create/edit form, tracklist editor                                             |
-| 5   | `feat/crate-view`     | 3D crate, flipping, keyboard nav                                               |
-| 6   | `feat/album-pullout`  | Pull-out animation, vinyl, tracklist on the sleeve back                        |
-| 7   | `feat/covers`         | Cover upload + resize, generated fallback sleeves                              |
-| 8   | `feat/crates-sorting` | Multiple crates, dividers, drag between crates, search                         |
-| 9   | `chore/docker-deploy` | Dockerfile, Compose, Caddy, deploy docs                                        |
-| 10  | `feat/polish`         | Textures, optional crackle sounds, Playwright e2e                              |
+| 1   | `feat/db-schema`      | Drizzle schema, migrations, seed data (~10 albums)                                    |
+| 2   | `feat/albums-api`     | `packages/shared`, CRUD routes, services, Zod validation, API tests                   |
+| 3   | `feat/album-list-ui`  | Router + Pinia; plain list + detail view wired to the API                             |
+| 4   | `feat/add-album-form` | Create/edit form, tracklist editor                                                    |
+| 5   | `feat/crate-view`     | 3D crate, flipping, keyboard nav                                                      |
+| 6   | `feat/album-pullout`  | Pull-out animation, vinyl, tracklist on the sleeve back                               |
+| 7   | `feat/covers`         | Cover upload + resize, generated fallback sleeves                                     |
+| 8   | `feat/crates-sorting` | Multiple crates, dividers, drag between crates, search                                |
+| 9   | `chore/docker-deploy` | Dockerfile, Compose, Caddy, deploy docs                                               |
+| 10  | `feat/polish`         | Textures, optional crackle sounds, Playwright e2e                                     |
 
 Data flows end to end first (M1–M4), visuals second, so every PR leaves a working app.
 

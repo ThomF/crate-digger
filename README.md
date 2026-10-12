@@ -23,14 +23,14 @@ The web dev server proxies `/api/*` to the API, so the browser only ever talks t
 
 ## Scripts
 
-| Command             | What it does                                 |
-| ------------------- | -------------------------------------------- |
-| `npm run dev`       | Run API + web together                       |
-| `npm test`          | Run all tests (Vitest)                       |
-| `npm run lint`      | ESLint across the repo                       |
-| `npm run typecheck` | TypeScript / vue-tsc in every app            |
-| `npm run format`    | Prettier — format everything                 |
-| `npm run build`     | Production build of every app                |
+| Command             | What it does                      |
+| ------------------- | --------------------------------- |
+| `npm run dev`       | Run API + web together            |
+| `npm test`          | Run all tests (Vitest)            |
+| `npm run lint`      | ESLint across the repo            |
+| `npm run typecheck` | TypeScript / vue-tsc in every app |
+| `npm run format`    | Prettier — format everything      |
+| `npm run build`     | Production build of every app     |
 
 ## Layout
 
