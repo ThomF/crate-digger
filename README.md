@@ -18,7 +18,8 @@ npm run dev
 
 - Web: http://localhost:5173 (Vite, hot reload). Flip through a crate with the scroll wheel,
   by dragging down, or with ↑/↓, Home/End, PageUp/PageDown; Enter pulls the record out.
-  `/list` shows the same collection as a plain list.
+  In a sorted crate, type a letter to jump to its divider.
+  `/list` searches and rearranges the collection; `/crates` adds, renames and sorts crates.
 - API: http://localhost:3000/api/health (Fastify, restarts on save)
 
 The web dev server proxies `/api/*` to the API, so the browser only ever talks to `:5173`.
@@ -51,19 +52,24 @@ Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH` and
 
 ## API
 
-| Method & path                  | Does                                       |
-| ------------------------------ | ------------------------------------------ |
-| `GET /api/health`              | API + database check                       |
-| `GET /api/crates`              | Crates with album counts                   |
-| `GET /api/albums?crateId=`     | Album summaries in crate order             |
-| `GET /api/albums/:id`          | One album with its tracks                  |
-| `POST /api/albums`             | Create (optionally with `tracks`)          |
-| `POST /api/albums/:id/cover`   | Upload cover art (multipart field `cover`) |
-| `DELETE /api/albums/:id/cover` | Remove the cover                           |
-| `GET /covers/:file`            | Cover images (cached for a year)           |
-| `PATCH /api/albums/:id`        | Change only the fields sent                |
-| `PUT /api/albums/:id/tracks`   | Replace the whole tracklist                |
-| `DELETE /api/albums/:id`       | Delete (its tracks go too)                 |
+| Method & path                    | Does                                       |
+| -------------------------------- | ------------------------------------------ |
+| `GET /api/health`                | API + database check                       |
+| `GET /api/crates`                | Crates with album counts                   |
+| `POST /api/crates`               | New crate (at the end of the shelf)        |
+| `PATCH /api/crates/:id`          | Rename, recolor, change how it sorts       |
+| `DELETE /api/crates/:id`         | Delete an empty crate (409 if not empty)   |
+| `PUT /api/crates/order`          | Reorder the shelf: `{ ids: [...] }`        |
+| `GET /api/albums`                | Summaries; `?crateId= &q= &genre= &sort=`  |
+| `PATCH /api/albums/:id/position` | Move: `{ crateId, position }`              |
+| `GET /api/albums/:id`            | One album with its tracks                  |
+| `POST /api/albums`               | Create (optionally with `tracks`)          |
+| `POST /api/albums/:id/cover`     | Upload cover art (multipart field `cover`) |
+| `DELETE /api/albums/:id/cover`   | Remove the cover                           |
+| `GET /covers/:file`              | Cover images (cached for a year)           |
+| `PATCH /api/albums/:id`          | Change only the fields sent                |
+| `PUT /api/albums/:id/tracks`     | Replace the whole tracklist                |
+| `DELETE /api/albums/:id`         | Delete (its tracks go too)                 |
 
 Errors always look like `{ statusCode, error, message, issues? }`.
 
@@ -71,6 +77,7 @@ Errors always look like `{ statusCode, error, message, issues? }`.
 
 ```
 packages/shared   Zod schemas + types: the contract between API and web
+  src/sorting.ts  filing rules shared by API and web (no Zod: safe for the main bundle)
 apps/api          Fastify backend (src/app.ts builds the app, src/server.ts starts it)
   src/routes/     HTTP: schema in, status code out — thin
   src/services/   business logic: plain functions taking (db, input)

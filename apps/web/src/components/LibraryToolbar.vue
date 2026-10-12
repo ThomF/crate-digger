@@ -10,12 +10,15 @@ defineProps<{ addToCrateId?: number }>()
       <RouterLink :to="{ name: 'library' }" exact-active-class="active">Crates</RouterLink>
       <RouterLink :to="{ name: 'list' }" exact-active-class="active">List</RouterLink>
     </nav>
-    <RouterLink
-      :to="{ name: 'album-new', query: addToCrateId ? { crateId: addToCrateId } : {} }"
-      class="btn"
-    >
-      + Add a record
-    </RouterLink>
+    <div class="end">
+      <RouterLink :to="{ name: 'crates' }" class="manage">Edit crates</RouterLink>
+      <RouterLink
+        :to="{ name: 'album-new', query: addToCrateId ? { crateId: addToCrateId } : {} }"
+        class="btn"
+      >
+        + Add a record
+      </RouterLink>
+    </div>
   </div>
 </template>
 
@@ -44,8 +47,25 @@ defineProps<{ addToCrateId?: number }>()
   color: var(--paper);
 }
 
+.end {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.manage {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+}
+
 .btn {
   text-decoration: none;
   margin-left: 0;
+}
+
+@media (max-width: 30rem) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
 }
 </style>

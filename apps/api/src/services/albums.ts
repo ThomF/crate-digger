@@ -1,13 +1,16 @@
-import { asc, eq, max } from 'drizzle-orm'
+import { and, asc, eq, max, ne, or, sql, type SQL } from 'drizzle-orm'
 import type {
   AlbumDetail,
   AlbumSummary,
   CreateAlbumInput,
+  ListSort,
+  MoveAlbumInput,
   TrackInput,
   UpdateAlbumInput,
 } from '@crate-digger/shared'
 import type { Db } from '../db/client.ts'
-import { albums, tracks } from '../db/schema.ts'
+import { albums, crates, tracks } from '../db/schema.ts'
+import { compareAlbums } from '@crate-digger/shared/sorting'
 import { notFound } from '../errors.ts'
 import { assertCrateExists } from './crates.ts'
 
@@ -28,13 +31,52 @@ const summaryColumns = {
   position: albums.position,
 }
 
-export function listAlbums(db: Db, filter: { crateId?: number } = {}): AlbumSummary[] {
-  return db
+export type AlbumFilter = { crateId?: number; q?: string; genre?: string; sort?: ListSort }
+
+/** In LIKE patterns % and _ are wildcards; escape them so a search for "100%" means 100%. */
+const escapeLike = (text: string) => text.replace(/[\\%_]/g, (c) => `\\${c}`)
+
+export function listAlbums(db: Db, filter: AlbumFilter = {}): AlbumSummary[] {
+  const conditions: SQL[] = []
+  if (filter.crateId) conditions.push(eq(albums.crateId, filter.crateId))
+  if (filter.q) {
+    // SQLite's LIKE ignores case for A–Z, so "nirv" finds "Nirvana".
+    const pattern = `%${escapeLike(filter.q)}%`
+    conditions.push(
+      or(
+        sql`${albums.title} LIKE ${pattern} ESCAPE '\\'`,
+        sql`${albums.artist} LIKE ${pattern} ESCAPE '\\'`,
+      )!,
+    )
+  }
+  if (filter.genre) conditions.push(sql`${albums.genre} = ${filter.genre} COLLATE NOCASE`)
+
+  const rows = db
     .select(summaryColumns)
     .from(albums)
-    .where(filter.crateId ? eq(albums.crateId, filter.crateId) : undefined)
-    .orderBy(asc(albums.crateId), asc(albums.position), asc(albums.id))
+    .where(and(...conditions))
     .all()
+
+  // Sorting happens here rather than in SQL so it uses exactly the same rules as the web
+  // app (shared/sorting.ts): "The Notorious B.I.G." files under N, Björk under B, etc.
+  const sort = filter.sort ?? 'crate'
+  if (sort !== 'crate') return rows.sort((a, b) => compareAlbums(sort, a, b))
+
+  // 'crate': crates in shelf order, each sorted the way that crate is set to sort.
+  const crateInfo = new Map(
+    db
+      .select({ id: crates.id, sortOrder: crates.sortOrder, sortBy: crates.sortBy })
+      .from(crates)
+      .all()
+      .map((c) => [c.id, c]),
+  )
+  const crateOf = (a: AlbumSummary) => crateInfo.get(a.crateId)!
+  return rows.sort(
+    (a, b) =>
+      crateOf(a).sortOrder - crateOf(b).sortOrder ||
+      a.crateId - b.crateId ||
+      compareAlbums(crateOf(a).sortBy, a, b),
+  )
 }
 
 export function getAlbum(db: Db, id: number): AlbumDetail {
@@ -101,6 +143,49 @@ export function updateAlbum(db: Db, id: number, input: UpdateAlbumInput): AlbumD
   }
 
   db.update(albums).set(changes).where(eq(albums.id, id)).run()
+  return getAlbum(db, id)
+}
+
+/**
+ * Puts an album at `position` (0 = front) in `crateId`, shifting the others along.
+ * Positions only matter in crates sorted 'manual'; sorted crates order themselves.
+ */
+export function moveAlbum(db: Db, id: number, { crateId, position }: MoveAlbumInput): AlbumDetail {
+  const album = db.select({ crateId: albums.crateId }).from(albums).where(eq(albums.id, id)).get()
+  if (!album) throw notFound(`Album ${id}`)
+  assertCrateExists(db, crateId)
+
+  db.transaction((tx) => {
+    const renumber = (inCrate: number, order: number[]) =>
+      order.forEach((albumId, index) => {
+        tx.update(albums)
+          .set({
+            crateId: inCrate,
+            position: index,
+            // Shuffling neighbours along isn't an edit to them, so keep their updatedAt.
+            ...(albumId === id ? {} : { updatedAt: sql`${albums.updatedAt}` }),
+          })
+          .where(eq(albums.id, albumId))
+          .run()
+      })
+
+    const idsIn = (crate: number) =>
+      tx
+        .select({ id: albums.id })
+        .from(albums)
+        .where(and(eq(albums.crateId, crate), ne(albums.id, id)))
+        .orderBy(asc(albums.position), asc(albums.id))
+        .all()
+        .map((row) => row.id)
+
+    const target = idsIn(crateId)
+    target.splice(Math.min(position, target.length), 0, id)
+    renumber(crateId, target)
+
+    // Close the gap it left behind.
+    if (album.crateId !== crateId) renumber(album.crateId, idsIn(album.crateId))
+  })
+
   return getAlbum(db, id)
 }
 

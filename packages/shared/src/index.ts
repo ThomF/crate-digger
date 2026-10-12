@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { CRATE_SORTS, LIST_SORTS } from './sorting.ts'
+
+export * from './sorting.ts'
 
 // The contract between the API and the web app. The API validates requests and
 // responses against these schemas; the web app uses the inferred types.
@@ -73,6 +76,16 @@ export const updateAlbumInput = albumFields
 
 export const albumQuery = z.object({
   crateId: z.coerce.number().int().positive().optional(),
+  /** Matches title or artist, anywhere, ignoring case. */
+  q: z.string().trim().max(100).optional(),
+  genre: z.string().trim().max(60).optional(),
+  sort: z.enum(LIST_SORTS).default('crate'),
+})
+
+/** Move a record: to another crate and/or to a position (0 = front) within it. */
+export const moveAlbumInput = z.object({
+  crateId: z.number({ error: 'Pick a crate' }).int().positive(),
+  position: z.number().int().min(0),
 })
 
 export const albumSummary = z.object({
@@ -103,8 +116,32 @@ export const crate = z.object({
   name: z.string(),
   color: z.string(),
   label: z.string().nullable(),
+  sortBy: z.enum(CRATE_SORTS),
   sortOrder: z.number().int(),
   albumCount: z.number().int(),
+})
+
+const crateFields = z.object({
+  name: requiredText(60),
+  label: optionalText(40), // the text on the crate's tape label; defaults to the name
+  color: hexColor,
+  sortBy: z.enum(CRATE_SORTS),
+})
+
+export const createCrateInput = crateFields.extend({
+  color: hexColor.default('#c8a374'),
+  sortBy: crateFields.shape.sortBy.default('manual'),
+})
+
+export const updateCrateInput = crateFields
+  .partial()
+  .refine((body) => Object.keys(body).length > 0, 'Send at least one field to update')
+
+/** The complete new order of crates, as a list of every crate id. */
+export const crateOrderInput = z.object({
+  ids: z
+    .array(z.number().int().positive())
+    .refine((ids) => new Set(ids).size === ids.length, 'Each crate may appear only once'),
 })
 
 // ── Errors ──────────────────────────────────────────────────────────────
@@ -130,4 +167,9 @@ export type UpdateAlbumInput = z.infer<typeof updateAlbumInput>
 export type AlbumSummary = z.infer<typeof albumSummary>
 export type AlbumDetail = z.infer<typeof albumDetail>
 export type Crate = z.infer<typeof crate>
+export type CreateCrateInput = z.infer<typeof createCrateInput>
+export type CreateCrateRequest = z.input<typeof createCrateInput>
+export type UpdateCrateInput = z.infer<typeof updateCrateInput>
+export type AlbumQuery = z.input<typeof albumQuery>
+export type MoveAlbumInput = z.infer<typeof moveAlbumInput>
 export type ApiError = z.infer<typeof apiError>

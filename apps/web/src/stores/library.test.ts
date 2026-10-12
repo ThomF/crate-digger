@@ -4,10 +4,28 @@ import type { AlbumDetail, AlbumSummary, Crate } from '@crate-digger/shared'
 import { useLibraryStore } from './library.ts'
 
 const crates: Crate[] = [
-  { id: 1, name: 'Guitars', color: '#c8a374', label: 'ROCK', sortOrder: 0, albumCount: 1 },
-  { id: 2, name: 'Empty', color: '#a67c52', label: null, sortOrder: 1, albumCount: 0 },
+  {
+    id: 1,
+    name: 'Guitars',
+    color: '#c8a374',
+    label: 'ROCK',
+    sortBy: 'manual',
+    sortOrder: 0,
+    albumCount: 1,
+  },
+  {
+    id: 2,
+    name: 'Empty',
+    color: '#a67c52',
+    label: null,
+    sortBy: 'manual',
+    sortOrder: 1,
+    albumCount: 0,
+  },
 ]
-const albums = [{ id: 10, crateId: 1, title: 'Nevermind' }] as AlbumSummary[]
+const albums = [
+  { id: 10, crateId: 1, title: 'Nevermind', artist: 'Nirvana', year: 1991, rating: 5, position: 0 },
+] as AlbumSummary[]
 
 // Stand-in for the real API: answers by URL.
 function fakeFetch(routes: Record<string, unknown>) {

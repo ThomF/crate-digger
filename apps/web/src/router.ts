@@ -8,6 +8,7 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'library', component: CrateView },
     { path: '/list', name: 'list', component: LibraryView },
+    { path: '/crates', name: 'crates', component: () => import('./views/CratesView.vue') },
     {
       // (\\d+) = only match numeric ids; /albums/abc falls through to not-found.
       path: '/albums/:id(\\d+)',
