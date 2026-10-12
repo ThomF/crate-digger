@@ -22,3 +22,32 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # Builds the production image and checks it starts, so a broken Dockerfile can't reach main.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: crate-digger:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test the image
+        run: |
+          docker run -d --name app -p 3000:3000 -e ADMIN_PASSWORD=ci-only crate-digger:ci
+          for _ in $(seq 1 30); do
+            if curl -sf localhost:3000/api/health; then
+              curl -sf localhost:3000/ | grep -q '<div id="app">' && echo " web app served"
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs app
+          exit 1

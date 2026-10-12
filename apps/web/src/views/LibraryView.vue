@@ -8,6 +8,7 @@ import { useAlbumSearch } from '../composables/useAlbumSearch.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
 import AlbumRow from '../components/album/AlbumRow.vue'
+import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 
 // The list view: every crate as a plain list, where records can be rearranged, plus
@@ -176,11 +177,7 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
     <button type="button" class="btn" @click="library.load({ force: true })">Try again</button>
   </p>
 
-  <p v-else-if="library.crates.length === 0" class="status-note">
-    No crates yet.
-    <RouterLink v-if="session.canEdit" :to="{ name: 'crates' }">Make one</RouterLink>, or run
-    <code>npm run db:seed -w apps/api</code> for sample records.
-  </p>
+  <EmptyShelf v-else-if="library.crates.length === 0" />
 
   <!-- Search results: one flat list across all crates. -->
   <section v-else-if="searching" class="results" aria-live="polite">

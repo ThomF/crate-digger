@@ -5,6 +5,7 @@ Your music collection as 90s record crates. Flip through the sleeves, pull one o
 Self-hosted, manually curated, built with Vue 3 + Fastify + SQLite.
 
 - 📄 [Spec](docs/SPEC.md)
+- 🚀 [Deploying it](docs/DEPLOY.md): Docker Compose + Caddy, backups and restores
 - 🧭 [Architecture decisions](docs/adr/)
 
 ## Getting started
@@ -56,11 +57,13 @@ Everything the app stores lives in `data/` (git-ignored), so backing up means co
 
 Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH` and `COVERS_DIR`.
 
-| Command                           | What it does                                            |
-| --------------------------------- | ------------------------------------------------------- |
-| `npm run db:seed -w apps/api`     | Wipe the DB and load sample records                     |
-| `npm run db:generate -w apps/api` | After editing `src/db/schema.ts`, write a new migration |
-| `npm run db:studio -w apps/api`   | Browse the data in Drizzle Studio                       |
+| Command                                    | What it does                                            |
+| ------------------------------------------ | ------------------------------------------------------- |
+| `npm run db:seed -w apps/api`              | Wipe the DB and load sample records                     |
+| `npm run db:generate -w apps/api`          | After editing `src/db/schema.ts`, write a new migration |
+| `npm run db:studio -w apps/api`            | Browse the data in Drizzle Studio                       |
+| `npm run db:backup -w apps/api`            | Consistent copy of the DB into `data/backups/`          |
+| `npm run db:restore -w apps/api -- <file>` | Replace the DB with a backup (stop the app first)       |
 
 ## API
 
@@ -109,6 +112,15 @@ apps/web          Vue 3 frontend
 docs/      Spec + architecture decision records
 ```
 
+## Deploying
+
+```bash
+cp .env.example .env   # set ADMIN_PASSWORD (and DOMAIN on a server)
+docker compose up -d --build
+```
+
+The full walkthrough, with backups and restores, is in [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ## Status
 
-🚧 Early development — see the milestone table in the [spec](docs/SPEC.md#6-milestones-one-pr-to-main-each).
+All spec milestones through deployment are done. Next up: polish (milestone 10).

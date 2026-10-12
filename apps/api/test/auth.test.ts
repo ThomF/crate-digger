@@ -99,6 +99,15 @@ describe('admin password', () => {
     expect(res.statusCode).toBe(401)
   })
 
+  it('treats an empty SESSION_SECRET as unset (Compose passes "" for missing values)', async () => {
+    const app = await appWith({ adminPassword: 'crate-digger', sessionSecret: '' })
+
+    const cookie = sessionCookie(await logIn(app, 'crate-digger'))
+
+    expect((await newCrate(app, cookie)).statusCode).toBe(201)
+    expect((await app.inject({ url: '/api/session', cookies: cookie })).statusCode).toBe(200)
+  })
+
   it('logs everyone out when the password changes', async () => {
     const before = await appWith({ adminPassword: 'old-password' })
     const cookie = sessionCookie(await logIn(before, 'old-password'))
