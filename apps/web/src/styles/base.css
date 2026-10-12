@@ -1,0 +1,23 @@
+/* Design tokens — the 90s record shop palette. Grows in M5+. */
+:root {
+  --cardboard: #c8a374;
+  --cardboard-dark: #8a6a43;
+  --paper: #f3ead8;
+  --ink: #2b2118;
+  --ink-soft: #6b5a48;
+  --marker-red: #c0392b;
+  --ok-green: #2e7d32;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: system-ui, sans-serif;
+}
