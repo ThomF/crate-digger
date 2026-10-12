@@ -3,11 +3,13 @@ import { computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import type { AlbumSummary } from '@crate-digger/shared'
 import { useLibraryStore } from '../stores/library.ts'
+import { useSessionStore } from '../stores/session.ts'
 import CrateBox from '../components/crate/CrateBox.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 import RatingStars from '../components/album/RatingStars.vue'
 
 const library = useLibraryStore()
+const session = useSessionStore()
 const router = useRouter()
 
 onMounted(() => {
@@ -87,7 +89,10 @@ function open(album: AlbumSummary) {
       </template>
       <p v-else class="count">
         Nothing in here yet.
-        <RouterLink :to="{ name: 'album-new', query: { crateId: crate.id } }">
+        <RouterLink
+          v-if="session.canEdit"
+          :to="{ name: 'album-new', query: { crateId: crate.id } }"
+        >
           Add a record
         </RouterLink>
       </p>

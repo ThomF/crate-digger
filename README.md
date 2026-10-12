@@ -35,6 +35,18 @@ The web dev server proxies `/api/*` to the API, so the browser only ever talks t
 | `npm run format`    | Prettier — format everything      |
 | `npm run build`     | Production build of the web app   |
 
+## Who can edit
+
+| `ADMIN_PASSWORD` | `NODE_ENV`       | Result                                                   |
+| ---------------- | ---------------- | -------------------------------------------------------- |
+| set              | any              | Anyone can browse; editing needs "Staff log in" (footer) |
+| not set          | development/test | Open: anyone can edit (what `npm run dev` gives you)     |
+| not set          | production       | Read-only for everyone (safe default)                    |
+
+Try it locally with `ADMIN_PASSWORD=pick-something npm run dev`. Logins last 30 days, are
+rate-limited (10 tries per 15 minutes), and changing the password logs everyone out. Set
+`SESSION_SECRET` to keep sessions independent of the password.
+
 ## Database
 
 Everything the app stores lives in `data/` (git-ignored), so backing up means copying one folder:
@@ -55,6 +67,9 @@ Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH` and
 | Method & path                    | Does                                       |
 | -------------------------------- | ------------------------------------------ |
 | `GET /api/health`                | API + database check                       |
+| `GET /api/session`               | `{ canEdit, canLogIn }` for this visitor   |
+| `POST /api/session`              | Log in: `{ password }` (sets a cookie)     |
+| `DELETE /api/session`            | Log out                                    |
 | `GET /api/crates`                | Crates with album counts                   |
 | `POST /api/crates`               | New crate (at the end of the shelf)        |
 | `PATCH /api/crates/:id`          | Rename, recolor, change how it sorts       |
