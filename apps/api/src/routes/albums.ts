@@ -5,6 +5,7 @@ import {
   albumSummary,
   createAlbumInput,
   idParams,
+  moveAlbumInput,
   tracklistInput,
   updateAlbumInput,
 } from '@crate-digger/shared'
@@ -13,6 +14,7 @@ import {
   deleteAlbum,
   getAlbum,
   listAlbums,
+  moveAlbum,
   replaceTracks,
   updateAlbum,
 } from '../services/albums.ts'
@@ -51,6 +53,12 @@ export const albumRoutes: FastifyPluginAsyncZod = async (app) => {
     await deleteCoverFile(app.coversDir, coverPath)
     return reply.code(204).send()
   })
+
+  app.patch(
+    '/albums/:id/position',
+    { schema: { params: idParams, body: moveAlbumInput, response: { 200: albumDetail } } },
+    async (req) => moveAlbum(app.db, req.params.id, req.body),
+  )
 
   app.put(
     '/albums/:id/tracks',

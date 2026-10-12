@@ -8,6 +8,7 @@ const crate: Crate = {
   name: 'Guitars',
   color: '#c8a374',
   label: 'ROCK / ALT',
+  sortBy: 'manual',
   sortOrder: 0,
   albumCount: 3,
 }
@@ -83,5 +84,52 @@ describe('CrateBox', () => {
     expect(wrapper.get('.scene').attributes('aria-label')).toBe(
       'ROCK / ALT crate. Arrow keys flip, Enter pulls out the record.',
     )
+  })
+
+  describe('in a crate sorted by artist', () => {
+    const sorted = { ...crate, sortBy: 'artist' as const }
+    const byArtist = ['Beck', 'Björk', 'Massive Attack', 'The Notorious B.I.G.'].map(
+      (artist, i): AlbumSummary => ({ ...albums[0]!, id: i + 1, artist, title: artist }),
+    )
+
+    function mountSorted(index = 0) {
+      const wrapper = mount(CrateBox, {
+        props: {
+          crate: sorted,
+          albums: byArtist,
+          index,
+          'onUpdate:index': (value: number) => wrapper.setProps({ index: value }),
+        },
+      })
+      return wrapper
+    }
+
+    it('puts a divider in front of the first record of each letter', () => {
+      const wrapper = mountSorted()
+
+      expect(wrapper.findAll('.divider-tab').map((t) => t.text())).toEqual(['B', 'M', 'N'])
+    })
+
+    it('jumps to a divider when you type its letter', async () => {
+      const wrapper = mountSorted()
+
+      await wrapper.get('.scene').trigger('keydown', { key: 'n' })
+      await wrapper.get('.scene').trigger('keydown', { key: 'M' })
+      await wrapper.get('.scene').trigger('keydown', { key: 'z' }) // no Z section: ignored
+
+      expect(wrapper.emitted('update:index')).toEqual([[3], [2]])
+    })
+
+    it('leaves browser shortcuts alone', async () => {
+      const wrapper = mountSorted()
+
+      await wrapper.get('.scene').trigger('keydown', { key: 'n', metaKey: true })
+
+      expect(wrapper.emitted('update:index')).toBeUndefined()
+    })
+  })
+
+  it('has no dividers in a manual crate', () => {
+    expect(mountCrate().findAll('.divider-tab')).toHaveLength(0)
   })
 })

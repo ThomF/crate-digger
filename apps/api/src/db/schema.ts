@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { CRATE_SORTS } from '@crate-digger/shared/sorting'
 
 // Every table here becomes a real SQLite table. After changing this file, run
 // `npm run db:generate -w apps/api` to write a new SQL migration into apps/api/drizzle/.
@@ -19,6 +20,8 @@ export const crates = sqliteTable('crates', {
   name: text('name').notNull(),
   color: text('color').notNull().default('#c8a374'),
   label: text('label'), // the handwritten text on the front of the crate
+  // How records in this crate are ordered. Added in migration 0001: existing crates get 'manual'.
+  sortBy: text('sort_by', { enum: CRATE_SORTS }).notNull().default('manual'),
   sortOrder: integer('sort_order').notNull().default(0),
   ...timestamps,
 })

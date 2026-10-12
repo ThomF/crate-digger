@@ -1,0 +1,1 @@
+ALTER TABLE `crates` ADD `sort_by` text DEFAULT 'manual' NOT NULL;

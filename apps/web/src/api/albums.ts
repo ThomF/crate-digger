@@ -1,15 +1,30 @@
 import type {
   AlbumDetail,
+  AlbumQuery,
   AlbumSummary,
   CreateAlbumRequest,
+  MoveAlbumInput,
   TrackInput,
   UpdateAlbumInput,
 } from '@crate-digger/shared'
 import { request } from './client.ts'
 
-export function listAlbums(filter: { crateId?: number } = {}) {
-  const query = filter.crateId ? `?crateId=${filter.crateId}` : ''
-  return request<AlbumSummary[]>(`/albums${query}`)
+/** `signal` lets a caller cancel a search that's been overtaken by a newer one. */
+export function listAlbums(query: AlbumQuery = {}, signal?: AbortSignal) {
+  // URLSearchParams handles encoding, so "AC/DC & friends" survives the trip.
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '') params.set(key, String(value))
+  }
+  const search = params.size ? `?${params}` : ''
+  return request<AlbumSummary[]>(`/albums${search}`, { signal })
+}
+
+export function moveAlbum(id: number, body: MoveAlbumInput) {
+  return request<AlbumDetail>(`/albums/${id}/position`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
 }
 
 export function getAlbum(id: number) {

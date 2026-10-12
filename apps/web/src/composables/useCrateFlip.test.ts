@@ -28,9 +28,7 @@ describe('useCrateFlip', () => {
   it.each([
     ['ArrowDown', 3, 4],
     ['ArrowRight', 3, 4],
-    ['j', 3, 4],
     ['ArrowUp', 3, 2],
-    ['k', 3, 2],
     ['PageDown', 3, 8],
     ['PageUp', 3, 0],
     ['Home', 3, 0],
@@ -42,10 +40,11 @@ describe('useCrateFlip', () => {
     expect(index.value).toBe(expected)
   })
 
-  it('ignores keys it does not use', () => {
+  it('ignores keys it does not use (letters jump to dividers instead)', () => {
     const { index, flip } = setup(10, 3)
 
     expect(flip.onKeydown({ key: 'Enter' })).toBe(false)
+    expect(flip.onKeydown({ key: 'j' })).toBe(false)
     expect(index.value).toBe(3)
   })
 

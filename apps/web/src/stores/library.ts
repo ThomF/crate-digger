@@ -1,14 +1,22 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { AlbumDetail, AlbumSummary, Crate } from '@crate-digger/shared'
-import { listAlbums } from '../api/albums.ts'
-import { listCrates } from '../api/crates.ts'
+import type {
+  AlbumDetail,
+  AlbumSummary,
+  Crate,
+  CreateCrateRequest,
+  UpdateCrateInput,
+} from '@crate-digger/shared'
+// The sorting entry point has no Zod in it, so this import keeps the main bundle small.
+import { sortAlbums } from '@crate-digger/shared/sorting'
+import { listAlbums, moveAlbum } from '../api/albums.ts'
+import { createCrate, deleteCrate, listCrates, reorderCrates, updateCrate } from '../api/crates.ts'
 import { errorMessage } from '../api/client.ts'
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
 
 // A Pinia "setup store": refs are state, computeds are getters, functions are actions.
-// The library lives here because several screens need it (the list now, the crate view in M5).
+// The library lives here because several screens need it (crate view, list, crate manager).
 // One-off data, like a single album's details, stays local to its view instead.
 export const useLibraryStore = defineStore('library', () => {
   const crates = ref<Crate[]>([])
@@ -16,13 +24,14 @@ export const useLibraryStore = defineStore('library', () => {
   const status = ref<Status>('idle')
   const error = ref<string | null>(null)
 
-  /** Crates in order, each with its albums in crate order. */
+  /** Crates in shelf order, each with its albums sorted the way that crate is set to. */
   const crateShelves = computed(() =>
     crates.value.map((crate) => ({
       crate,
-      albums: albums.value
-        .filter((a) => a.crateId === crate.id)
-        .sort((a, b) => a.position - b.position),
+      albums: sortAlbums(
+        albums.value.filter((a) => a.crateId === crate.id),
+        crate.sortBy,
+      ),
     })),
   )
 
@@ -59,15 +68,20 @@ export const useLibraryStore = defineStore('library', () => {
     status.value = 'loading'
     error.value = null
     try {
-      // Two independent requests → run them at the same time.
-      const [crateList, albumList] = await Promise.all([listCrates(), listAlbums()])
-      crates.value = crateList
-      albums.value = albumList
+      await refresh()
       status.value = 'ready'
     } catch (err) {
       error.value = errorMessage(err)
       status.value = 'error'
     }
+  }
+
+  /** Refetches everything without showing a loading state (used after a change). */
+  async function refresh() {
+    // Two independent requests → run them at the same time.
+    const [crateList, albumList] = await Promise.all([listCrates(), listAlbums()])
+    crates.value = crateList
+    albums.value = albumList
   }
 
   /**
@@ -97,6 +111,37 @@ export const useLibraryStore = defineStore('library', () => {
     albums.value = albums.value.filter((a) => a.id !== id)
   }
 
+  // ── Changing crates and moving records ────────────────────────────────
+  // These throw on failure so the screen that called them can show the error.
+
+  /** id null = create. For a create, `changes` must include a name (the API checks). */
+  async function saveCrate(id: number | null, changes: UpdateCrateInput) {
+    const saved =
+      id === null
+        ? await createCrate(changes as CreateCrateRequest)
+        : await updateCrate(id, changes)
+    const index = crates.value.findIndex((c) => c.id === saved.id)
+    if (index === -1) crates.value.push(saved)
+    else crates.value[index] = saved
+    return saved
+  }
+
+  async function removeCrate(id: number) {
+    await deleteCrate(id)
+    crates.value = crates.value.filter((c) => c.id !== id)
+    if (selectedCrateId.value === id) selectedCrateId.value = null
+  }
+
+  async function reorderShelf(ids: number[]) {
+    crates.value = await reorderCrates(ids)
+  }
+
+  /** Moves a record (positions of its neighbours change too, so refetch the list). */
+  async function moveAlbumTo(albumId: number, crateId: number, position: number) {
+    await moveAlbum(albumId, { crateId, position })
+    await refresh()
+  }
+
   return {
     crates,
     albums,
@@ -111,5 +156,9 @@ export const useLibraryStore = defineStore('library', () => {
     load,
     upsertAlbum,
     removeAlbum,
+    saveCrate,
+    removeCrate,
+    reorderShelf,
+    moveAlbumTo,
   }
 })

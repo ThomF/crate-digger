@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
 import type { AlbumSummary, Crate } from '@crate-digger/shared'
 import { useCrateFlip } from '../../composables/useCrateFlip.ts'
 import { sleevePose, visibleRange } from '../../utils/crateLayout.ts'
+import { dividerFor } from '@crate-digger/shared/sorting'
 import SleeveArt from './SleeveArt.vue'
 import { sleeveTransitionName } from '../../viewTransitions.ts'
 
@@ -12,19 +13,43 @@ const emit = defineEmits<{ open: [album: AlbumSummary] }>()
 
 const flip = useCrateFlip(index, () => props.albums.length)
 
+// In a sorted crate, the first record of each section (A, B, …, or 1990s, …) has a
+// divider standing in front of it. Manual crates have none.
+const dividers = computed(() =>
+  props.albums.map((album, i) => {
+    const label = dividerFor(props.crate.sortBy, album)
+    const previous = i > 0 ? dividerFor(props.crate.sortBy, props.albums[i - 1]!) : null
+    return label !== null && label !== previous ? label : null
+  }),
+)
+
 // Only draw the sleeves near the front; a 500-record crate still renders ~16 elements.
 const drawn = computed(() => {
   const [start, end] = visibleRange(index.value, props.albums.length)
   return props.albums.slice(start, end).map((album, i) => {
     const offset = start + i - index.value
-    return { album, offset, pose: sleevePose(offset) }
+    return { album, offset, pose: sleevePose(offset), divider: dividers.value[start + i] }
   })
 })
+
+/** Typing a letter (or digit) jumps to the first section that starts with it. */
+function jumpToDivider(key: string): boolean {
+  if (key.length !== 1 || !/[a-z0-9#?]/i.test(key)) return false
+  const wanted = key.toUpperCase()
+  const target = dividers.value.findIndex((label) => label?.startsWith(wanted))
+  if (target === -1) return false
+  flip.goTo(target)
+  return true
+}
+
+/** Staggers divider tabs left to right, like the cut tabs on real dividers. */
+const tabOffset = (label: string) => `${8 + ((label.charCodeAt(0) * 7) % 5) * 15}%`
 
 const current = computed(() => props.albums[index.value])
 
 function onKeydown(event: KeyboardEvent) {
-  if (flip.onKeydown(event)) return event.preventDefault()
+  if (event.metaKey || event.ctrlKey || event.altKey) return // leave browser shortcuts alone
+  if (flip.onKeydown(event) || jumpToDivider(event.key)) return event.preventDefault()
   if (event.key === 'Enter' && current.value) {
     event.preventDefault()
     emit('open', current.value)
@@ -52,7 +77,9 @@ defineExpose({ focus: () => scene.value?.focus() })
     tabindex="0"
     role="group"
     aria-roledescription="record crate"
-    :aria-label="`${crate.label ?? crate.name} crate. Arrow keys flip, Enter pulls out the record.`"
+    :aria-label="`${crate.label ?? crate.name} crate. Arrow keys flip, Enter pulls out the record.${
+      crate.sortBy === 'manual' ? '' : ' Type a letter to jump to its divider.'
+    }`"
     @keydown="onKeydown"
     @pointerdown="flip.onPointerDown"
     @pointermove="flip.onPointerMove"
@@ -64,7 +91,7 @@ defineExpose({ focus: () => scene.value?.focus() })
       <div class="panel back" aria-hidden="true" />
 
       <div
-        v-for="{ album, offset, pose } in drawn"
+        v-for="{ album, offset, pose, divider } in drawn"
         :key="album.id"
         class="sleeve"
         :class="{ current: offset === 0 }"
@@ -79,6 +106,9 @@ defineExpose({ focus: () => scene.value?.focus() })
         aria-hidden="true"
         @click="onSleeveClick(offset, album)"
       >
+        <span v-if="divider" class="divider-tab" :style="{ left: tabOffset(divider) }">
+          {{ divider }}
+        </span>
         <SleeveArt :album="album" />
       </div>
 
@@ -139,6 +169,23 @@ defineExpose({ focus: () => scene.value?.focus() })
   box-shadow: 0 -2px 6px rgb(0 0 0 / 0.25);
   backface-visibility: hidden;
   cursor: pointer;
+}
+
+/* The tab of a divider card standing just in front of this record. */
+.divider-tab {
+  position: absolute;
+  bottom: 100%;
+  min-width: 18%;
+  padding: 0.15rem 0.5rem 0.4rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: bold;
+  font-size: clamp(0.75rem, 3.5vw, 1rem);
+  color: var(--ink);
+  background: #e9dcc0;
+  border: 1px solid rgb(0 0 0 / 0.25);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
 }
 
 /* Darken records deeper in the crate. */

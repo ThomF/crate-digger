@@ -66,12 +66,10 @@ export function useCrateFlip(index: Ref<number>, count: () => number) {
     switch (event.key) {
       case 'ArrowDown':
       case 'ArrowRight':
-      case 'j':
         next()
         return true
       case 'ArrowUp':
       case 'ArrowLeft':
-      case 'k':
         prev()
         return true
       case 'PageDown':
