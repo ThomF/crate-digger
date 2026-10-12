@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin'
-import { createDb, type Db } from '../db/client.js'
+import { createDb, type Db } from '../db/client.ts'
 
 // Tell TypeScript that every Fastify instance now has `app.db`.
 declare module 'fastify' {

@@ -1,0 +1,122 @@
+import { z } from 'zod'
+
+// The contract between the API and the web app. The API validates requests and
+// responses against these schemas; the web app uses the inferred types.
+// Input schemas describe what clients may send; the others describe what the API returns.
+
+export const ALBUM_FORMATS = ['LP', 'EP', '7"', '12"'] as const
+export const TRACK_SIDES = ['A', 'B', 'C', 'D'] as const
+
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i, 'Must be a hex color like #c8a374')
+const optionalText = (max: number) => z.string().trim().max(max).nullish()
+
+export const idParams = z.object({ id: z.coerce.number().int().positive() })
+
+// ── Tracks ──────────────────────────────────────────────────────────────
+
+export const trackInput = z.object({
+  side: z.enum(TRACK_SIDES),
+  position: z.number().int().positive(),
+  title: z.string().trim().min(1).max(200),
+  durationSec: z.number().int().positive().nullish(),
+})
+
+export const tracklistInput = z
+  .array(trackInput)
+  .max(100)
+  .refine(
+    (tracks) => new Set(tracks.map((t) => `${t.side}${t.position}`)).size === tracks.length,
+    'Each side + position pair must be unique (e.g. only one A1)',
+  )
+
+export const track = trackInput.extend({
+  id: z.number().int(),
+  durationSec: z.number().int().nullable(),
+})
+
+// ── Albums ──────────────────────────────────────────────────────────────
+
+// No defaults here on purpose: a PATCH built from this must not reset fields the client left out.
+const albumFields = z.object({
+  crateId: z.number().int().positive(),
+  title: z.string().trim().min(1).max(200),
+  artist: z.string().trim().min(1).max(200),
+  year: z.number().int().min(1900).max(2100).nullish(),
+  genre: optionalText(60),
+  format: z.enum(ALBUM_FORMATS),
+  sleeveColor: hexColor,
+  rating: z.number().int().min(0).max(5),
+  notes: optionalText(2000),
+})
+
+export const createAlbumInput = albumFields.extend({
+  format: albumFields.shape.format.default('LP'),
+  sleeveColor: hexColor.optional(), // the database picks a default
+  rating: albumFields.shape.rating.default(0),
+  tracks: tracklistInput.optional(),
+})
+
+export const updateAlbumInput = albumFields
+  .partial()
+  .refine((body) => Object.keys(body).length > 0, 'Send at least one field to update')
+
+export const albumQuery = z.object({
+  crateId: z.coerce.number().int().positive().optional(),
+})
+
+export const albumSummary = z.object({
+  id: z.number().int(),
+  crateId: z.number().int(),
+  title: z.string(),
+  artist: z.string(),
+  year: z.number().int().nullable(),
+  genre: z.string().nullable(),
+  format: z.enum(ALBUM_FORMATS),
+  coverPath: z.string().nullable(),
+  sleeveColor: z.string(),
+  rating: z.number().int(),
+  position: z.number().int(),
+})
+
+export const albumDetail = albumSummary.extend({
+  notes: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  tracks: z.array(track),
+})
+
+// ── Crates ──────────────────────────────────────────────────────────────
+
+export const crate = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  color: z.string(),
+  label: z.string().nullable(),
+  sortOrder: z.number().int(),
+  albumCount: z.number().int(),
+})
+
+// ── Errors ──────────────────────────────────────────────────────────────
+
+export const apiError = z.object({
+  statusCode: z.number().int(),
+  error: z.string(),
+  message: z.string(),
+  issues: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+})
+
+// ── Types (inferred, so they can never drift from the schemas) ──────────
+
+export type TrackSide = (typeof TRACK_SIDES)[number]
+export type AlbumFormat = (typeof ALBUM_FORMATS)[number]
+export type TrackInput = z.infer<typeof trackInput>
+export type Track = z.infer<typeof track>
+/** What the API sees after validation (defaults filled in). */
+export type CreateAlbumInput = z.infer<typeof createAlbumInput>
+/** What a client sends (defaulted fields may be left out). */
+export type CreateAlbumRequest = z.input<typeof createAlbumInput>
+export type UpdateAlbumInput = z.infer<typeof updateAlbumInput>
+export type AlbumSummary = z.infer<typeof albumSummary>
+export type AlbumDetail = z.infer<typeof albumDetail>
+export type Crate = z.infer<typeof crate>
+export type ApiError = z.infer<typeof apiError>

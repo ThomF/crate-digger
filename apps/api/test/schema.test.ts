@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { createDb, type Db } from '../src/db/client.js'
-import { albums, crates, tracks } from '../src/db/schema.js'
+import { createDb, type Db } from '../src/db/client.ts'
+import { albums, crates, tracks } from '../src/db/schema.ts'
 
 // These tests pin down the rules the database itself enforces,
 // so later milestones can rely on them.
