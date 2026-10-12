@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
@@ -10,5 +10,9 @@ export default defineConfig({
     proxy: {
       '/api': 'http://127.0.0.1:3000',
     },
+  },
+  test: {
+    // A fake browser DOM so components can render inside Node.
+    environment: 'happy-dom',
   },
 })

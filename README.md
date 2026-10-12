@@ -26,7 +26,7 @@ The web dev server proxies `/api/*` to the API, so the browser only ever talks t
 | Command             | What it does                      |
 | ------------------- | --------------------------------- |
 | `npm run dev`       | Run API + web together            |
-| `npm test`          | Run all tests (Vitest)            |
+| `npm test`          | Run all tests (Vitest, API + web) |
 | `npm run lint`      | ESLint across the repo            |
 | `npm run typecheck` | TypeScript / vue-tsc in every app |
 | `npm run format`    | Prettier — format everything      |
@@ -67,7 +67,12 @@ apps/api          Fastify backend (src/app.ts builds the app, src/server.ts star
   src/plugins/    db connection, error handler
   src/db/         schema.ts (tables), client.ts (connect + migrate), seed.ts
   drizzle/        generated SQL migrations — committed, never edited by hand
-apps/web          Vue 3 frontend (src/App.vue is the entry component)
+apps/web          Vue 3 frontend
+  src/api/        typed fetch functions, one file per resource
+  src/stores/     Pinia stores for state several screens share
+  src/views/      one component per route (see src/router.ts)
+  src/components/ reusable pieces, grouped by feature
+  src/utils/      plain functions (easy to unit test)
 docs/      Spec + architecture decision records
 ```
 
