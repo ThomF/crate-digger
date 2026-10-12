@@ -52,7 +52,12 @@ watch(() => props.id, load, { immediate: true })
 </script>
 
 <template>
-  <RouterLink to="/" class="back">← Back to the crates</RouterLink>
+  <nav class="top">
+    <RouterLink to="/" class="back">← Back to the crates</RouterLink>
+    <RouterLink v-if="status === 'ready'" :to="{ name: 'album-edit', params: { id } }" class="btn">
+      Edit
+    </RouterLink>
+  </nav>
 
   <p v-if="status === 'loading'" class="status-note">Pulling it out of the crate…</p>
 
@@ -99,10 +104,19 @@ watch(() => props.id, load, { immediate: true })
 </template>
 
 <style scoped>
-.back {
-  display: inline-block;
-  font-family: var(--font-display);
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.back {
+  font-family: var(--font-display);
+}
+
+.top .btn {
+  text-decoration: none;
 }
 
 .album {

@@ -62,3 +62,41 @@ button {
   padding: 0.4rem 1rem;
   margin-left: 0.5rem;
 }
+
+/* Form controls */
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--ink-soft);
+  border-radius: 0;
+  padding: 0.4rem 0.5rem;
+  min-width: 0;
+}
+
+textarea {
+  resize: vertical;
+}
+
+::placeholder {
+  color: #9a8b78; /* clearly lighter than typed text, so examples don't look filled in */
+}
+
+[aria-invalid='true'] {
+  border-color: var(--marker-red);
+  box-shadow: inset 0 0 0 1px var(--marker-red);
+}
+
+/* Hidden visually, still read by screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

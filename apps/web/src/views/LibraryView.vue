@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useLibraryStore } from '../stores/library.ts'
 import AlbumRow from '../components/album/AlbumRow.vue'
 
@@ -27,10 +28,17 @@ onMounted(() => {
   </p>
 
   <div v-else class="shelves">
+    <div class="toolbar">
+      <RouterLink :to="{ name: 'album-new' }" class="btn">+ Add a record</RouterLink>
+    </div>
+
     <section v-for="{ crate, albums } in library.crateShelves" :key="crate.id" class="crate">
       <h2 class="crate-label" :style="{ background: crate.color }">
         {{ crate.label ?? crate.name }}
-        <small>{{ albums.length }} {{ albums.length === 1 ? 'record' : 'records' }}</small>
+        <small>
+          {{ albums.length }} {{ albums.length === 1 ? 'record' : 'records' }} ·
+          <RouterLink :to="{ name: 'album-new', query: { crateId: crate.id } }">add</RouterLink>
+        </small>
       </h2>
       <ul v-if="albums.length" class="albums">
         <li v-for="album in albums" :key="album.id">
@@ -46,6 +54,17 @@ onMounted(() => {
 .shelves {
   display: grid;
   gap: 2rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -1rem;
+}
+
+.toolbar .btn {
+  text-decoration: none;
+  margin-left: 0;
 }
 
 .crate {
