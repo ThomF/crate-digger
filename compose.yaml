@@ -1,0 +1,45 @@
+# The whole deployment: the app, plus Caddy in front for HTTPS.
+#
+#   cp .env.example .env      # then fill it in
+#   docker compose up -d --build
+#
+# See docs/DEPLOY.md for the full walkthrough.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Compose stops with this message if ADMIN_PASSWORD is missing from .env.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      # Requests only reach the app through Caddy, so its X-Forwarded-For can be trusted.
+      TRUST_PROXY: 'true'
+    volumes:
+      - crate-data:/data
+    # No "ports:" on purpose: the app is only reachable through Caddy, on Docker's
+    # private network, never directly from the internet.
+    expose:
+      - '3000'
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    environment:
+      DOMAIN: ${DOMAIN:-http://localhost}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # HTTPS certificates; keep this so Caddy doesn't re-request them
+      - caddy-config:/config
+
+volumes:
+  crate-data: # your database, covers and backups
+  caddy-data:
+  caddy-config:

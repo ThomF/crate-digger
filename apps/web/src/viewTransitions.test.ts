@@ -71,4 +71,32 @@ describe('installViewTransitions', () => {
 
     expect(router.currentRoute.value.path).toBe('/elsewhere')
   })
+
+  it('swallows the rejection when the browser skips an animation', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:any(.*)', component: Page }],
+    })
+    const skipped = Promise.reject(new DOMException('Transition was aborted', 'InvalidStateError'))
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    installViewTransitions(
+      router,
+      {
+        startViewTransition: (update: () => Promise<void>) => {
+          queueMicrotask(update)
+          return { ready: skipped } as unknown as ViewTransition
+        },
+      } as unknown as Document,
+      () => false,
+    )
+
+    await router.push('/')
+    await router.push('/next')
+    await new Promise((r) => setTimeout(r, 10))
+    process.off('unhandledRejection', unhandled)
+
+    expect(router.currentRoute.value.path).toBe('/next')
+    expect(unhandled).not.toHaveBeenCalled()
+  })
 })

@@ -5,6 +5,7 @@ import type { AlbumSummary } from '@crate-digger/shared'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
 import CrateBox from '../components/crate/CrateBox.vue'
+import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 import RatingStars from '../components/album/RatingStars.vue'
 
@@ -50,9 +51,7 @@ function open(album: AlbumSummary) {
     <button type="button" class="btn" @click="library.load({ force: true })">Try again</button>
   </p>
 
-  <p v-else-if="!crate" class="status-note">
-    No crates yet. Run <code>npm run db:seed -w apps/api</code> for sample records.
-  </p>
+  <EmptyShelf v-else-if="!crate" />
 
   <template v-else>
     <!-- Crate picker: tape labels along the top. Toggle buttons (aria-pressed). -->

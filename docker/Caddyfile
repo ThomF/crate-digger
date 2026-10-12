@@ -1,0 +1,21 @@
+# Caddy sits in front of the app. With a real domain in DOMAIN it gets and renews a
+# free HTTPS certificate from Let's Encrypt by itself; "http://localhost" serves plain
+# HTTP for trying the setup on your own machine.
+{$DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy app:3000
+
+	header {
+		# Only ever talk to this site over HTTPS (ignored on plain-HTTP localhost).
+		Strict-Transport-Security "max-age=31536000"
+		# Only load scripts, styles, images and data from this site. blob: is for the cover
+		# preview before upload. Blocks injected third-party scripts.
+		Content-Security-Policy "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		# Don't let browsers guess file types, and don't leak full URLs to other sites.
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# No need to advertise what server software this is.
+		-Server
+	}
+}

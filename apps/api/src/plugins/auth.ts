@@ -46,8 +46,10 @@ export const authPlugin = fp<AuthOptions>(async (app, opts) => {
   }
 
   // Cookies are signed with an HMAC, so a visitor can't just write "admin" into one.
+  // `||`, not `??`: an empty SESSION_SECRET (Compose passes "" when it's unset) must also
+  // fall back, or cookies would be "signed" with an empty key.
   const secret =
-    opts.sessionSecret ??
+    opts.sessionSecret ||
     createHmac('sha256', 'crate-digger-session')
       .update(password ?? 'none')
       .digest('hex')

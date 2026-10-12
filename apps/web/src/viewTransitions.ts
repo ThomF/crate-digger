@@ -29,13 +29,17 @@ export function installViewTransitions(
     // Wait until the browser has captured the old page, then let the navigation continue.
     // The transition's update callback stays pending until afterEach says the new page is in.
     return new Promise<void>((captured) => {
-      doc.startViewTransition!(
+      const transition = doc.startViewTransition!(
         () =>
           new Promise<void>((pageIsReady) => {
             finishTransition = pageIsReady
             captured()
           }),
       )
+      // The browser may skip the animation (tab in the background, another navigation
+      // starting mid-way). The page still changes; only the animation is dropped. Without
+      // this catch, each skip shows up as an "Uncaught (in promise)" error in the console.
+      transition?.ready?.catch(() => {})
     })
   })
 

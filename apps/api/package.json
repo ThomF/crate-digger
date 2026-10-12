@@ -9,7 +9,9 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:seed": "node src/db/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:backup": "node src/db/backup.ts",
+    "db:restore": "node src/db/restore.ts"
   },
   "dependencies": {
     "@crate-digger/shared": "*",
