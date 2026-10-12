@@ -1,11 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import CrateView from './views/CrateView.vue'
 import LibraryView from './views/LibraryView.vue'
 import NotFoundView from './views/NotFoundView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'library', component: LibraryView },
+    { path: '/', name: 'library', component: CrateView },
+    { path: '/list', name: 'list', component: LibraryView },
     {
       // (\\d+) = only match numeric ids; /albums/abc falls through to not-found.
       path: '/albums/:id(\\d+)',

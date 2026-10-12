@@ -26,6 +26,28 @@ export const useLibraryStore = defineStore('library', () => {
     })),
   )
 
+  // ── Where you are in the crates ───────────────────────────────────────
+  // Kept here (not in the crate view) so opening an album and coming back puts you
+  // in the same crate, at the same record.
+  const selectedCrateId = ref<number | null>(null)
+  const positions = ref<Record<number, number>>({})
+
+  const selectedCrate = computed(
+    () => crates.value.find((c) => c.id === selectedCrateId.value) ?? crates.value[0] ?? null,
+  )
+
+  function selectCrate(id: number) {
+    selectedCrateId.value = id
+  }
+
+  function positionIn(crateId: number) {
+    return positions.value[crateId] ?? 0
+  }
+
+  function setPosition(crateId: number, index: number) {
+    positions.value[crateId] = index
+  }
+
   function crateById(id: number) {
     return crates.value.find((c) => c.id === id)
   }
@@ -82,6 +104,10 @@ export const useLibraryStore = defineStore('library', () => {
     error,
     crateShelves,
     crateById,
+    selectedCrate,
+    selectCrate,
+    positionIn,
+    setPosition,
     load,
     upsertAlbum,
     removeAlbum,

@@ -16,7 +16,9 @@ npm install
 npm run dev
 ```
 
-- Web: http://localhost:5173 (Vite, hot reload)
+- Web: http://localhost:5173 (Vite, hot reload). Flip through a crate with the scroll wheel,
+  by dragging down, or with ↑/↓, Home/End, PageUp/PageDown; Enter pulls the record out.
+  `/list` shows the same collection as a plain list.
 - API: http://localhost:3000/api/health (Fastify, restarts on save)
 
 The web dev server proxies `/api/*` to the API, so the browser only ever talks to `:5173`.
@@ -71,7 +73,8 @@ apps/web          Vue 3 frontend
   src/api/        typed fetch functions, one file per resource
   src/stores/     Pinia stores for state several screens share
   src/views/      one component per route (see src/router.ts)
-  src/components/ reusable pieces, grouped by feature
+  src/components/ reusable pieces, grouped by feature (crate/ is the 3D crate)
+  src/composables/ reusable stateful logic (useCrateFlip: keys, wheel, drag → index)
   src/utils/      plain functions (easy to unit test)
 docs/      Spec + architecture decision records
 ```

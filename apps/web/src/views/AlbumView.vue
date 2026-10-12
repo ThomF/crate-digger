@@ -7,6 +7,7 @@ import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import RatingStars from '../components/album/RatingStars.vue'
 import TrackList from '../components/album/TrackList.vue'
+import SleeveArt from '../components/crate/SleeveArt.vue'
 import { formatDuration, totalDuration } from '../utils/tracks.ts'
 
 const props = defineProps<{ id: number }>()
@@ -69,7 +70,7 @@ watch(() => props.id, load, { immediate: true })
   </p>
 
   <article v-else-if="album" class="album">
-    <div class="sleeve" :style="{ background: album.sleeveColor }" aria-hidden="true" />
+    <div class="sleeve" aria-hidden="true"><SleeveArt :album="album" /></div>
 
     <header class="info">
       <p v-if="crateName" class="crate">{{ crateName }}</p>
