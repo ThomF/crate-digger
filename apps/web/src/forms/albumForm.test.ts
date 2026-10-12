@@ -117,6 +117,7 @@ describe('formFromAlbum', () => {
       rating: 4,
       position: 0,
       notes: null,
+      spinCount: 0,
       createdAt: '2026-10-12T00:00:00.000Z',
       updatedAt: '2026-10-12T00:00:00.000Z',
       tracks: [

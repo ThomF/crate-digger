@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import type { AlbumSummary } from '@crate-digger/shared'
+import { spinAlbum } from '../api/albums.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
 import CrateBox from '../components/crate/CrateBox.vue'
@@ -34,7 +35,10 @@ const index = computed({
 
 const current = computed(() => albums.value[index.value])
 
-function open(album: AlbumSummary) {
+async function open(album: AlbumSummary) {
+  // Count the spin *before* opening the album, so the album page loads the new total
+  // instead of showing one less. Visitors can't change anything, so only when you can edit.
+  if (session.canEdit) await spinAlbum(album.id).catch(() => {}) // never block opening on it
   router.push({ name: 'album', params: { id: album.id } })
 }
 </script>

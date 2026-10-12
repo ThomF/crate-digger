@@ -45,6 +45,8 @@ const runtime = computed(() => {
   return total ? formatDuration(total) : null
 })
 
+const spins = (count: number) => (count === 0 ? 'Not yet' : count === 1 ? 'Once' : `${count} times`)
+
 async function load(id: number) {
   status.value = 'loading'
   album.value = null
@@ -119,6 +121,10 @@ watch(() => props.id, load, { immediate: true })
         </template>
         <dt>Rating</dt>
         <dd><RatingStars :rating="shown.rating" /></dd>
+        <template v-if="album">
+          <dt>Spun</dt>
+          <dd>{{ spins(album.spinCount) }}</dd>
+        </template>
       </dl>
       <p v-if="album?.notes" class="notes">{{ album.notes }}</p>
     </header>

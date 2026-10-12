@@ -46,6 +46,7 @@ export const albums = sqliteTable(
     rating: integer('rating').notNull().default(0),
     notes: text('notes'),
     position: integer('position').notNull().default(0), // order within its crate
+    spinCount: integer('spin_count').notNull().default(0), // times pulled out of the crate
     ...timestamps,
   },
   (t) => [

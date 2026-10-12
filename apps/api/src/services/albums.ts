@@ -189,6 +189,21 @@ export function moveAlbum(db: Db, id: number, { crateId, position }: MoveAlbumIn
   return getAlbum(db, id)
 }
 
+/** Counts one spin (the record was pulled out of the crate) and returns the new total. */
+export function addSpin(db: Db, id: number): { spinCount: number } {
+  // spin_count + 1 is worked out by SQLite itself, so two spins at the same moment
+  // both count (reading the number, adding one in JS and saving it back could lose one).
+  const row = db
+    .update(albums)
+    // updatedAt stays as it was: listening to a record is not editing it.
+    .set({ spinCount: sql`${albums.spinCount} + 1`, updatedAt: sql`${albums.updatedAt}` })
+    .where(eq(albums.id, id))
+    .returning({ spinCount: albums.spinCount })
+    .get()
+  if (!row) throw notFound(`Album ${id}`)
+  return row
+}
+
 /** Deletes the album (its tracks cascade) and returns its cover path so the caller can remove the file. */
 export function deleteAlbum(db: Db, id: number): { coverPath: string | null } {
   const deleted = db

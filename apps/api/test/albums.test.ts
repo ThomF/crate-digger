@@ -216,4 +216,25 @@ describe('albums API', () => {
       expect(second.statusCode).toBe(404)
     })
   })
+
+  describe('POST /api/albums/:id/spins', () => {
+    it('counts each spin and includes the total in the album', async () => {
+      const { album } = await create()
+      expect(album.spinCount).toBe(0)
+
+      await app.inject({ method: 'POST', url: `/api/albums/${album.id}/spins` })
+      const res = await app.inject({ method: 'POST', url: `/api/albums/${album.id}/spins` })
+      const detail = await app.inject({ url: `/api/albums/${album.id}` })
+
+      expect(res.json()).toEqual({ spinCount: 2 })
+      expect(detail.json<AlbumDetail>().spinCount).toBe(2)
+      expect(detail.json<AlbumDetail>().updatedAt).toBe(album.updatedAt) // not an edit
+    })
+
+    it('returns 404 for an unknown album', async () => {
+      const res = await app.inject({ method: 'POST', url: '/api/albums/999/spins' })
+
+      expect(res.statusCode).toBe(404)
+    })
+  })
 })
