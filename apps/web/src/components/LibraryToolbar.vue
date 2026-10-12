@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { useSessionStore } from '../stores/session.ts'
 
 defineProps<{ addToCrateId?: number }>()
+const session = useSessionStore()
 </script>
 
 <template>
@@ -10,7 +12,7 @@ defineProps<{ addToCrateId?: number }>()
       <RouterLink :to="{ name: 'library' }" exact-active-class="active">Crates</RouterLink>
       <RouterLink :to="{ name: 'list' }" exact-active-class="active">List</RouterLink>
     </nav>
-    <div class="end">
+    <div v-if="session.canEdit" class="end">
       <RouterLink :to="{ name: 'crates' }" class="manage">Edit crates</RouterLink>
       <RouterLink
         :to="{ name: 'album-new', query: addToCrateId ? { crateId: addToCrateId } : {} }"

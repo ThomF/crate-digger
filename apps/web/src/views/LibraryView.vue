@@ -6,12 +6,14 @@ import { LIST_SORTS, type ListSort } from '@crate-digger/shared/sorting'
 import { errorMessage } from '../api/client.ts'
 import { useAlbumSearch } from '../composables/useAlbumSearch.ts'
 import { useLibraryStore } from '../stores/library.ts'
+import { useSessionStore } from '../stores/session.ts'
 import AlbumRow from '../components/album/AlbumRow.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 
 // The list view: every crate as a plain list, where records can be rearranged, plus
 // search across the whole collection.
 const library = useLibraryStore()
+const session = useSessionStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -112,6 +114,7 @@ const dragged = ref<AlbumSummary | null>(null)
 const dropTarget = ref<string | null>(null)
 
 function onDragStart(event: DragEvent, album: AlbumSummary) {
+  if (!session.canEdit) return event.preventDefault()
   dragged.value = album
   event.dataTransfer?.setData('text/plain', album.title)
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
@@ -174,7 +177,8 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
   </p>
 
   <p v-else-if="library.crates.length === 0" class="status-note">
-    No crates yet. <RouterLink :to="{ name: 'crates' }">Make one</RouterLink>, or run
+    No crates yet.
+    <RouterLink v-if="session.canEdit" :to="{ name: 'crates' }">Make one</RouterLink>, or run
     <code>npm run db:seed -w apps/api</code> for sample records.
   </p>
 
@@ -215,8 +219,11 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
       <h2 class="crate-label" :style="{ background: crate.color }">
         {{ crate.label ?? crate.name }}
         <small>
-          {{ albums.length }} {{ albums.length === 1 ? 'record' : 'records' }} ·
-          <RouterLink :to="{ name: 'album-new', query: { crateId: crate.id } }">add</RouterLink>
+          {{ albums.length }} {{ albums.length === 1 ? 'record' : 'records' }}
+          <template v-if="session.canEdit">
+            ·
+            <RouterLink :to="{ name: 'album-new', query: { crateId: crate.id } }">add</RouterLink>
+          </template>
         </small>
       </h2>
       <p v-if="crate.sortBy !== 'manual'" class="sorted-note">
@@ -232,14 +239,14 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
             'drop-before': dropTarget === `album-${album.id}`,
             'being-dragged': dragged?.id === album.id,
           }"
-          draggable="true"
+          :draggable="session.canEdit"
           @dragstart="onDragStart($event, album)"
           @dragend="onDragEnd"
           @dragover.prevent.stop="dragged && (dropTarget = `album-${album.id}`)"
           @drop.prevent.stop="onDrop(crate.id, crate.sortBy === 'manual' ? album : null)"
         >
           <AlbumRow :album="album" />
-          <span class="tools">
+          <span v-if="session.canEdit" class="tools">
             <template v-if="crate.sortBy === 'manual'">
               <button
                 type="button"
@@ -274,7 +281,9 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
           </span>
         </li>
       </ul>
-      <p v-else class="status-note">Empty crate. Drag a record here.</p>
+      <p v-else class="status-note">
+        Empty crate.<template v-if="session.canEdit"> Drag a record here.</template>
+      </p>
     </section>
   </div>
 </template>

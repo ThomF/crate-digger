@@ -5,6 +5,7 @@ import type { AlbumDetail } from '@crate-digger/shared'
 import { getAlbum } from '../api/albums.ts'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
+import { useSessionStore } from '../stores/session.ts'
 import RatingStars from '../components/album/RatingStars.vue'
 import RecordStage from '../components/album/RecordStage.vue'
 import TrackList from '../components/album/TrackList.vue'
@@ -24,6 +25,7 @@ const turned = ref(false)
 const notice = ref<string | null>(null)
 
 const library = useLibraryStore()
+const session = useSessionStore()
 library.load() // for the crate name; a no-op if already loaded
 
 // If we came from the crate or the list, the store already has this album's summary,
@@ -70,7 +72,11 @@ watch(() => props.id, load, { immediate: true })
 <template>
   <nav class="top">
     <RouterLink to="/" class="back">← Back to the crates</RouterLink>
-    <RouterLink v-if="status === 'ready'" :to="{ name: 'album-edit', params: { id } }" class="btn">
+    <RouterLink
+      v-if="status === 'ready' && session.canEdit"
+      :to="{ name: 'album-edit', params: { id } }"
+      class="btn"
+    >
       Edit
     </RouterLink>
   </nav>

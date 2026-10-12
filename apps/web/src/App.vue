@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { onMounted } from 'vue'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { useSessionStore } from './stores/session.ts'
+
+const session = useSessionStore()
+const router = useRouter()
+onMounted(() => session.load())
+
+async function logOut() {
+  await session.logOut()
+  if (router.currentRoute.value.meta.requiresEdit) router.push({ name: 'library' })
+}
 </script>
 
 <template>
@@ -11,6 +22,11 @@ import { RouterLink, RouterView } from 'vue-router'
   <main class="page">
     <RouterView />
   </main>
+
+  <footer v-if="session.canLogIn && $route.name !== 'login'" class="staff">
+    <button v-if="session.canEdit" type="button" @click="logOut">Log out</button>
+    <RouterLink v-else :to="{ name: 'login' }">Staff log in</RouterLink>
+  </footer>
 </template>
 
 <style scoped>
@@ -34,6 +50,24 @@ import { RouterLink, RouterView } from 'vue-router'
   font-family: var(--font-display);
   color: var(--ink-soft);
   margin: 0.25rem 0 0;
+}
+
+.staff {
+  text-align: center;
+  padding: 0 1rem 2rem;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+}
+
+.staff button {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  color: var(--ink-soft);
+}
+
+.staff a {
+  color: var(--ink-soft);
 }
 
 .page {
