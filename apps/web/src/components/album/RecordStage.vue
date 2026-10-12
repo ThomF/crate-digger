@@ -6,7 +6,10 @@ import SleeveBack from './SleeveBack.vue'
 import VinylDisc from './VinylDisc.vue'
 
 defineProps<{
-  album: Pick<AlbumSummary, 'id' | 'title' | 'artist' | 'year' | 'format' | 'sleeveColor'>
+  album: Pick<
+    AlbumSummary,
+    'id' | 'title' | 'artist' | 'year' | 'format' | 'sleeveColor' | 'coverPath'
+  >
   tracks: Track[] | null
 }>()
 

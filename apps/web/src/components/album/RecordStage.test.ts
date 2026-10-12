@@ -12,6 +12,7 @@ const album = {
   year: 1994,
   format: 'LP' as const,
   sleeveColor: '#5a2a6e',
+  coverPath: null,
 }
 
 const tracks: Track[] = [

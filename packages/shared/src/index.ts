@@ -7,6 +7,9 @@ import { z } from 'zod'
 export const ALBUM_FORMATS = ['LP', 'EP', '7"', '12"'] as const
 export const TRACK_SIDES = ['A', 'B', 'C', 'D'] as const
 
+/** Largest cover image upload the API accepts. */
+export const MAX_COVER_BYTES = 10 * 1024 * 1024
+
 const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i, 'Must be a hex color like #c8a374')
 const optionalText = (max: number) =>
   z.string().trim().max(max, `Keep it under ${max} characters`).nullish()

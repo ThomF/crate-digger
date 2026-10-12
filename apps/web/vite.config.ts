@@ -9,6 +9,7 @@ export default defineConfig({
     // In production, one server serves both, so the frontend never needs a full API URL.
     proxy: {
       '/api': 'http://127.0.0.1:3000',
+      '/covers': 'http://127.0.0.1:3000',
     },
   },
   test: {

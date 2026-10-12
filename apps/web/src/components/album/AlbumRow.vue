@@ -9,7 +9,7 @@ defineProps<{ album: AlbumSummary }>()
 
 <template>
   <RouterLink :to="{ name: 'album', params: { id: album.id } }" class="row">
-    <!-- A tiny sleeve in the album's color; becomes the real cover art in M7. -->
+    <!-- A tiny sleeve: the cover if there is one, otherwise the sleeve color. -->
     <span
       class="sleeve"
       :style="{
@@ -17,7 +17,9 @@ defineProps<{ album: AlbumSummary }>()
         'view-transition-name': sleeveTransitionName(album.id),
       }"
       aria-hidden="true"
-    />
+    >
+      <img v-if="album.coverPath" :src="album.coverPath" alt="" loading="lazy" decoding="async" />
+    </span>
     <span class="text">
       <span class="title">{{ album.title }}</span>
       <span class="artist">{{ album.artist }}</span>
@@ -42,6 +44,13 @@ defineProps<{ album: AlbumSummary }>()
 
 .row:hover {
   background: var(--paper-dark);
+}
+
+.sleeve img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .sleeve {

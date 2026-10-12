@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ALBUM_FORMATS, type Crate } from '@crate-digger/shared'
 import { FORM_ERROR, type AlbumFormState, type FieldErrors } from '../../forms/albumForm.ts'
+import CoverUpload from './CoverUpload.vue'
 import RatingInput from './RatingInput.vue'
 import TrackEditor from './TrackEditor.vue'
 
@@ -117,6 +118,16 @@ const describedBy = (field: string, errors: FieldErrors) =>
 
       <div class="field">
         <RatingInput v-model="form.rating" />
+      </div>
+
+      <div class="field wide">
+        <CoverUpload
+          v-model:file="form.coverFile"
+          v-model:remove="form.removeCover"
+          :cover-path="form.coverPath"
+          :sleeve-color="form.sleeveColor"
+          :error="errors.cover"
+        />
       </div>
 
       <div class="field wide">

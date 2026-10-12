@@ -34,3 +34,14 @@ export function replaceTracks(id: number, tracks: TrackInput[]) {
 export function deleteAlbum(id: number) {
   return request<void>(`/albums/${id}`, { method: 'DELETE' })
 }
+
+/** Sends the image as multipart/form-data, the same way a plain HTML file form would. */
+export function uploadCover(id: number, file: File) {
+  const form = new FormData()
+  form.append('cover', file)
+  return request<AlbumDetail>(`/albums/${id}/cover`, { method: 'POST', body: form })
+}
+
+export function removeCover(id: number) {
+  return request<AlbumDetail>(`/albums/${id}/cover`, { method: 'DELETE' })
+}
