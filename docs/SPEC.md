@@ -46,7 +46,7 @@ crate-digger/
 │       │   └── server.ts       # starts listening
 │       └── test/
 ├── packages/
-│   └── shared/                 # Zod schemas + TS types used by both apps (added in M2)
+│   └── shared/                 # Zod schemas + TS types used by both apps
 ├── docker/                     # Dockerfile, Caddyfile
 ├── docker-compose.yml
 ├── .github/
@@ -76,8 +76,8 @@ Albums without cover art get a generated plain sleeve with a typed label.
 GET    /api/health
 GET    /api/crates                    list crates with album counts
 POST   /api/crates                    PATCH/DELETE /api/crates/:id
-GET    /api/crates/:id/albums         albums in crate order
-GET    /api/albums?q=&genre=&sort=    search/filter across all crates
+GET    /api/albums?crateId=           albums in crate order (M2)
+GET    /api/albums?q=&genre=&sort=    search/filter across all crates (M8)
 GET    /api/albums/:id                album + tracks
 POST   /api/albums                    PATCH/DELETE /api/albums/:id
 PUT    /api/albums/:id/tracks         replace the whole tracklist

@@ -1,5 +1,5 @@
-import { createDb } from './client.js'
-import { albums, crates, tracks, type NewAlbum } from './schema.js'
+import { createDb } from './client.ts'
+import { albums, crates, tracks, type NewAlbum } from './schema.ts'
 
 // Wipes the database and fills it with sample records. Run with: npm run db:seed
 
