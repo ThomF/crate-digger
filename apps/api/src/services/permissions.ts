@@ -54,3 +54,10 @@ export function assertCanEditAlbum(db: Db, user: PublicUser | null, albumId: num
   }
   return signedIn
 }
+
+/** 401 if signed out, 403 unless an admin. A role check only: whose record it is never matters. */
+export function requireAdmin(user: PublicUser | null): PublicUser {
+  const signedIn = requireUser(user)
+  if (signedIn.role !== 'admin') throw new HttpError(403, 'Only admins can do that')
+  return signedIn
+}

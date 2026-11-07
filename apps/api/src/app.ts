@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth.ts'
 import { coverRoutes } from './routes/covers.ts'
 import { crateRoutes } from './routes/crates.ts'
 import { healthRoutes } from './routes/health.ts'
+import { profileRoutes } from './routes/profiles.ts'
 import { DEFAULT_COVERS_DIR } from './paths.ts'
 
 export type AppOptions = {
@@ -56,6 +57,7 @@ export async function buildApp(opts: AppOptions = {}) {
   await app.register(crateRoutes, { prefix: '/api' })
   await app.register(albumRoutes, { prefix: '/api' })
   await app.register(coverRoutes, { prefix: '/api' })
+  await app.register(profileRoutes, { prefix: '/api' })
 
   // Last, so API and cover routes always win over the web app's catch-all.
   await app.register(webPlugin, { dir: opts.webDir ?? process.env.WEB_DIR })
