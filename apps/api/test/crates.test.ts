@@ -1,22 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AlbumDetail, AlbumSummary, ApiError, Crate } from '@frisson/shared'
 import { albums } from '../src/db/schema.ts'
-import { addCrate, buildTestApp, type TestApp } from './helpers.ts'
+import { addCrate, buildTestApp, signUp, type SignedIn, type TestApp } from './helpers.ts'
 
+// Every write here is made by a signed-in owner on their own crates; who-may-do-what
+// is covered in ownership.test.ts.
 describe('crates API', () => {
   let app: TestApp
+  let me: SignedIn
 
   beforeEach(async () => {
     app = await buildTestApp()
+    me = await signUp(app)
   })
   afterEach(() => app.close())
 
+  const mine = (name?: string, sortOrder?: number) => addCrate(app, name, sortOrder, me.user.id)
+
   const createCrate = (payload: object) =>
-    app.inject({ method: 'POST', url: '/api/crates', payload })
+    app.inject({ method: 'POST', url: '/api/crates', payload, headers: me.headers })
 
   it('lists crates in shelf order with album counts, including empty crates', async () => {
-    const second = addCrate(app, 'Second', 1)
-    const first = addCrate(app, 'First', 0)
+    const second = mine('Second', 1)
+    const first = mine('First', 0)
     app.db
       .insert(albums)
       .values([
@@ -35,7 +41,7 @@ describe('crates API', () => {
   })
 
   it('creates a crate at the end of the shelf with defaults', async () => {
-    addCrate(app, 'Existing', 4)
+    mine('Existing', 4)
 
     const res = await createCrate({ name: '  Jazz  ' })
 
@@ -47,6 +53,7 @@ describe('crates API', () => {
       sortBy: 'manual',
       sortOrder: 5,
       albumCount: 0,
+      ownerId: me.user.id,
     })
   })
 
@@ -63,22 +70,27 @@ describe('crates API', () => {
   })
 
   it('updates only the fields sent', async () => {
-    const crate = addCrate(app, 'Guitars')
+    const crate = mine('Guitars')
 
     const res = await app.inject({
       method: 'PATCH',
       url: `/api/crates/${crate.id}`,
       payload: { sortBy: 'artist', label: 'ROCK' },
+      headers: me.headers,
     })
 
     expect(res.json<Crate>()).toMatchObject({ name: 'Guitars', sortBy: 'artist', label: 'ROCK' })
   })
 
   it('refuses to delete a crate that still holds records, and explains why', async () => {
-    const crate = addCrate(app)
+    const crate = mine()
     app.db.insert(albums).values({ crateId: crate.id, title: 'A', artist: 'X' }).run()
 
-    const res = await app.inject({ method: 'DELETE', url: `/api/crates/${crate.id}` })
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/crates/${crate.id}`,
+      headers: me.headers,
+    })
 
     expect(res.statusCode).toBe(409)
     expect(res.json<ApiError>().message).toBe(
@@ -87,9 +99,13 @@ describe('crates API', () => {
   })
 
   it('deletes an empty crate', async () => {
-    const crate = addCrate(app)
+    const crate = mine()
 
-    const res = await app.inject({ method: 'DELETE', url: `/api/crates/${crate.id}` })
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/crates/${crate.id}`,
+      headers: me.headers,
+    })
     const after = await app.inject({ url: `/api/crates/${crate.id}` })
 
     expect(res.statusCode).toBe(204)
@@ -97,11 +113,11 @@ describe('crates API', () => {
   })
 
   it('reorders the shelf, but only with every crate listed once', async () => {
-    const a = addCrate(app, 'A', 0)
-    const b = addCrate(app, 'B', 1)
-    const c = addCrate(app, 'C', 2)
+    const a = mine('A', 0)
+    const b = mine('B', 1)
+    const c = mine('C', 2)
     const order = (ids: number[]) =>
-      app.inject({ method: 'PUT', url: '/api/crates/order', payload: { ids } })
+      app.inject({ method: 'PUT', url: '/api/crates/order', payload: { ids }, headers: me.headers })
 
     const res = await order([c.id, a.id, b.id])
     expect(res.json<Crate[]>().map((x) => x.name)).toEqual(['C', 'A', 'B'])
@@ -113,13 +129,15 @@ describe('crates API', () => {
 
 describe('moving and finding albums', () => {
   let app: TestApp
+  let me: SignedIn
   let guitars: number
   let beats: number
 
   beforeEach(async () => {
     app = await buildTestApp()
-    guitars = addCrate(app, 'Guitars', 0).id
-    beats = addCrate(app, 'Beats', 1).id
+    me = await signUp(app)
+    guitars = addCrate(app, 'Guitars', 0, me.user.id).id
+    beats = addCrate(app, 'Beats', 1, me.user.id).id
   })
   afterEach(() => app.close())
 
@@ -144,6 +162,7 @@ describe('moving and finding albums', () => {
       method: 'PATCH',
       url: `/api/albums/${id}/position`,
       payload: { crateId, position },
+      headers: me.headers,
     })
 
   it('moves a record within a crate', async () => {
@@ -228,7 +247,13 @@ describe('moving and finding albums', () => {
   it('lists in crate order, each crate sorted its own way', async () => {
     seed(guitars, ['Zebra', 'Z'], ['Apple', 'A']) // manual: Zebra first
     seed(beats, ['Zulu', 'Z'], ['Alpha', 'A'])
-    await app.inject({ method: 'PATCH', url: `/api/crates/${beats}`, payload: { sortBy: 'title' } })
+    const sorted = await app.inject({
+      method: 'PATCH',
+      url: `/api/crates/${beats}`,
+      payload: { sortBy: 'title' },
+      headers: me.headers,
+    })
+    expect(sorted.statusCode).toBe(200)
 
     const res = await app.inject({ url: '/api/albums' })
 

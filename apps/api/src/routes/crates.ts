@@ -15,6 +15,7 @@ import {
   updateCrate,
 } from '../services/crates.ts'
 
+// Reads are public. Writes pass request.user to the service, which answers 401/403/404.
 export const crateRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get('/crates', { schema: { response: { 200: crate.array() } } }, async () =>
     listCrates(app.db),
@@ -27,24 +28,24 @@ export const crateRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/crates',
     { schema: { body: createCrateInput, response: { 201: crate } } },
-    async (req, reply) => reply.code(201).send(createCrate(app.db, req.body)),
+    async (req, reply) => reply.code(201).send(createCrate(app.db, req.user, req.body)),
   )
 
   app.patch(
     '/crates/:id',
     { schema: { params: idParams, body: updateCrateInput, response: { 200: crate } } },
-    async (req) => updateCrate(app.db, req.params.id, req.body),
+    async (req) => updateCrate(app.db, req.user, req.params.id, req.body),
   )
 
   // 409 Conflict if the crate still holds records.
   app.delete('/crates/:id', { schema: { params: idParams } }, async (req, reply) => {
-    deleteCrate(app.db, req.params.id)
+    deleteCrate(app.db, req.user, req.params.id)
     return reply.code(204).send()
   })
 
   app.put(
     '/crates/order',
     { schema: { body: crateOrderInput, response: { 200: crate.array() } } },
-    async (req) => reorderCrates(app.db, req.body.ids),
+    async (req) => reorderCrates(app.db, req.user, req.body.ids),
   )
 }
