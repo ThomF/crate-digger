@@ -1,0 +1,34 @@
+{
+  "id": "T3",
+  "status": "done-pending-test",
+  "committed": true,
+  "commit": "c51c28c",
+  "filesChanged": [
+    "apps/api/src/routes/crates.ts",
+    "apps/api/src/services/crates.ts",
+    "apps/api/test/crates.test.ts",
+    "apps/api/test/ownership.test.ts"
+  ],
+  "filesDeleted": [],
+  "gates": {
+    "typecheck -w apps/api": 0,
+    "test -w apps/api": 0,
+    "eslint apps/api": 0,
+    "prettier --check apps/api": 0
+  },
+  "criteriaSelfCheck": {
+    "AC1": "PARTIAL: api gates green (123 tests). Full repo gates not run because web/docs/shared are mid-change by parallel devs; tester should run them after merge.",
+    "AC10": "crate tests pass: 'anonymous can GET crates, crate, albums and album' and the four crate 401 tests. Album and cover 401 tests are T4's.",
+    "AC11": "crate tests pass: creating sets ownerId, owner patch/delete, non-owner 403 patch/delete/reorder, 'ownerless crate is editable only by admin'. 'admin can edit and delete any user's crate and album' exists only as a crate-part test named \"admin can edit and delete any user's crate (crate part)\" for T4 to replace. Album tests are T4's.",
+    "AC17": "no sql.raw / exec / template SQL in crate service or route; reorder ownership check uses Drizzle inArray/isNull/ne; no secrets added",
+    "AC18": "new HttpError(403) in services/crates.ts (reorder), 401/403/404 via permissions.ts; routes never touch reply for errors"
+  },
+  "dependenciesAdded": [],
+  "findings": [
+    "Service signatures changed: createCrate(db, user, input), updateCrate(db, user, id, input), deleteCrate(db, user, id), reorderCrates(db, user, ids). No other callers existed.",
+    "Reorder order of checks: 401, then 400 (must list every crate once), then 403 if non-admin and any crate is ownerless or someone else's. Consequence per plan: a non-admin can only reorder when they own every crate on the shelf; reorder is effectively admin-only on a shared shelf. Flag for owner if per-user ordering is wanted.",
+    "Schema validation runs before the service, so an anonymous POST with an invalid body gets 400, not 401.",
+    "crates.test.ts has no POST /api/albums calls; its album writes are PATCH /albums/:id/position, which now send the owner's cookie.",
+    "api tests ran against a working tree where packages/shared/src/index.ts is modified by another dev (uncommitted); they passed."
+  ]
+}

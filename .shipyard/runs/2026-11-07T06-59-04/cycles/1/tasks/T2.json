@@ -1,0 +1,42 @@
+{
+  "id": "T2",
+  "status": "done-pending-test",
+  "committed": true,
+  "commit": "c0ce0fd",
+  "filesChanged": [
+    "apps/api/src/services/users.ts",
+    "apps/api/src/services/sessions.ts",
+    "apps/api/src/services/permissions.ts",
+    "apps/api/src/services/bootstrap.ts",
+    "apps/api/src/plugins/auth.ts",
+    "apps/api/src/routes/auth.ts",
+    "apps/api/src/app.ts",
+    "apps/api/src/server.ts",
+    "apps/api/test/helpers.ts",
+    "apps/api/test/auth-accounts.test.ts",
+    "apps/api/test/bootstrap.test.ts"
+  ],
+  "filesDeleted": ["apps/api/src/routes/session.ts", "apps/api/test/auth.test.ts"],
+  "filesUntouched": ["apps/api/src/plugins/error-handler.ts"],
+  "gates": { "format:check": 0, "lint": 0, "typecheck": 0, "test": 0, "build": 0 },
+  "criteriaSelfCheck": {
+    "AC1": "all five gates exit 0 (api 110 tests, web 102)",
+    "AC5": "6 named tests pass; passwordHash grep on apps/web/src and packages/shared/src is empty",
+    "AC6": "7 named tests pass",
+    "AC7": "4 named tests pass",
+    "AC8": "2 named tests pass (max 3); rateLimit grep matches routes/auth.ts",
+    "AC9": "6 named tests pass (plus an extra admin-username-suffix test)",
+    "AC12": "PARTIAL by design: routes/session.ts gone and no matches in apps/api; remaining matches are canLogIn in apps/web (App.vue, router.ts, stores/session.ts) and sessionInfo/loginInput in packages/shared, which the spec leaves to T5",
+    "AC17": "both greps return nothing",
+    "AC18": "literal HttpError 401/403/409/429 in permissions.ts, users.ts, routes/auth.ts; no reply.code(40x).send in routes/auth.ts"
+  },
+  "dependenciesAdded": [],
+  "findings": [
+    "Until T5 lands, the web app still calls /api/session, which now 404s; writes are unguarded server-side until T3/T4 (expected per spec).",
+    "POST /api/auth/logout has no body schema; a client sending content-type: application/json with an empty body gets Fastify's 400 empty-JSON error. T5 should send no body or no JSON content-type.",
+    "If ADMIN_EMAIL already belongs to a non-admin account, bootstrap logs a warning and does not promote it; ownerless crates stay admin-only.",
+    "A too-short ADMIN_PASSWORD (under 8) makes bootstrap throw and server.ts exit 1 when no admin exists (fail loud).",
+    "Docs and deploy config still describe ADMIN_PASSWORD/SESSION_SECRET semantics (README.md, docs/DEPLOY.md, docs/adr/0003-deployment.md, .env.example, compose.yaml requires ADMIN_PASSWORD but not ADMIN_EMAIL, Dockerfile). Not owned by T2.",
+    "The NODE_ENV=production cookie test builds an app with logging on, so it prints a few pino lines during npm test."
+  ]
+}

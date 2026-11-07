@@ -1,0 +1,109 @@
+{
+  "criteria": {
+    "AC1": {
+      "verdict": "pass",
+      "evidence": "`npm run format:check && npm run lint && npm run typecheck && npm test && npm run build` -> EXIT=0. api: 'Test Files 13 passed (13), Tests 132 passed (132)'; web: 'Test Files 16 passed (16), Tests 118 passed (118)'; vite build '✓ built in 2.23s'. git status afterwards shows only the untracked run dir."
+    },
+    "AC2": {
+      "verdict": "pass",
+      "evidence": "ls apps/api/drizzle/*.sql -> 0000_init.sql 0001_crate_sort_by.sql 0002_album_spin_count.sql 0003_accounts.sql; _journal.json entries = 4; git diff base on the three old .sql files and 0000-0002 snapshots is empty (diff --stat vs base for apps/api/drizzle lists only 0003_accounts.sql, meta/0003_snapshot.json, meta/_journal.json, all insertions). grep on 0003 matched 'CREATE TABLE `sessions` (', 'CREATE TABLE `users` (', 'ALTER TABLE `crates` ADD `owner_id` integer REFERENCES users(id);'. ALTER ADD COLUMN, no table rebuild. `cd apps/api && npx drizzle-kit generate` -> 'No schema changes, nothing to migrate'."
+    },
+    "AC3": {
+      "verdict": "pass",
+      "evidence": "'✓ test/migration.test.ts > migrations > migration 0003 preserves existing crates, albums and tracks'. Read the test: it copies only 0000-0002 plus a trimmed journal (asserts 3 entries), migrates a file DB, inserts 2 crates, 1 album, 2 tracks with raw SQL, snapshots SELECT *, reopens via createDb (applies 0003), and asserts crates equal snapshot + owner_id:null, albums/tracks toEqual snapshot, users/sessions tables exist, foreign_key_check empty, owner_id FK targets users. Also confirmed by smoke on a DB created by the base-commit server (see smoke.preExistingDb)."
+    },
+    "AC4": {
+      "verdict": "pass",
+      "evidence": "apps/api/src/services/passwords.ts:1 `import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto'`; :74 `return actual.length === key.length && timingSafeEqual(actual, key)`. git diff base -- package.json apps/*/package.json packages/*/package.json is empty (no new deps at all; package-lock unchanged). Tests pass: 'hashes with a random salt (same password gives different hashes)' (asserts a !== b, scrypt$ prefix, no plaintext), 'verifies the right password and rejects a wrong one' (true/false/false for right/off-by-one/empty), 'rejects passwords shorter than 8 characters' (rejects HttpError 400 for 7 chars, resolves for exactly 8). Login calls verifyAgainstDummy for unknown emails (auth.ts:54-57)."
+    },
+    "AC5": {
+      "verdict": "pass",
+      "evidence": "All six named tests pass in auth-accounts.test.ts and assert real things: normalised email/username in body toEqual, body lacks passwordHash/scrypt, DB row hash starts scrypt$ and lacks plaintext, cookie authenticates /me; 400 with zero users stored; 409 'Email already registered' for ADA@Example.com; 409 'Username taken' for ADA; 4 bad usernames each 400 with no rows; role:'admin' supplied -> 201 with role 'user' in body and DB. grep -rn 'password_hash\\|passwordHash' apps/web/src packages/shared/src -> no output (rc=1)."
+    },
+    "AC6": {
+      "verdict": "pass",
+      "evidence": "All seven named tests pass. Unknown-email vs wrong-password test asserts both 401, `unknown.body).toBe(wrong.body)`, message 'Email or password is incorrect', no cookie set. Logout test checks the sha256(token) row exists, POST logout 204, cookie cleared, row gone, /me with old cookie 401. Expired test backdates expiresAt and asserts 401 and row deleted. Smoke confirmed identical 401 bodies and old-cookie 401 after logout."
+    },
+    "AC7": {
+      "verdict": "pass",
+      "evidence": "All four named tests pass: session id === sha256(token), !== token, 64 hex; token is 43-char base64url; SESSION_TTL_MS === 30 days and expiresAt within window and equal to cookie Expires; cookie httpOnly true, sameSite 'Lax', raw Set-Cookie matches HttpOnly and SameSite=Lax; Secure falsy with NODE_ENV=test and true with NODE_ENV=production (also on logout clear). Smoke Set-Cookie: 'frisson_session=<redacted>; Path=/; Expires=Mon, 07 Dec 2026 07:40:25 GMT; HttpOnly; SameSite=Lax' (login at 2026-11-07, 30 days); sessions table rows have 64-char ids."
+    },
+    "AC8": {
+      "verdict": "pass",
+      "evidence": "Both named tests pass with max:3: 3 requests allowed then 429 {statusCode:429,error:'Too Many Requests'}, and a request from remoteAddress 10.0.0.99 still succeeds (per IP); signup test also asserts only 3 users stored. grep apps/api/src/routes/auth.ts: ':2:import rateLimit from '@fastify/rate-limit'', ':27:  await app.register(rateLimit, {', ':33:  const limit = { rateLimit: { ...DEFAULT_RATE_LIMIT, ...opts.rateLimit } }'."
+    },
+    "AC9": {
+      "verdict": "pass",
+      "evidence": "All six named tests in bootstrap.test.ts pass (plus 'uses a free username when admin is taken'). They assert: one admin with lower-cased email, username 'admin', displayName 'Admin', password verifies; existing admin kept, password not reset, no new user; missing/empty email or missing password -> {created:false,adminId:null,assignedCrates:0}, 0 users, 3 warnings, crate stays ownerless; three runs create 1 user and later runs return assignedCrates 0 and keep the first password; 2 ownerless crates assigned, owned crate untouched, later ownerless crate picked up next run; login with ADMIN_PASSWORD -> 200 role admin. Smoke log: 'Created admin account admin', 'Assigned 1 ownerless crate(s) to the admin'."
+    },
+    "AC10": {
+      "verdict": "pass",
+      "evidence": "All named tests pass in ownership.test.ts: anonymous GETs return 200 with expected data; each anonymous write (POST/PATCH/DELETE crate, PUT order, POST/PATCH/position/PUT tracks/spins/DELETE album, cover upload/delete) asserts 401 'Sign in to make changes' and that state is unchanged (names, order, album list, spinCount 0, empty covers dir, coverPath null). Smoke: anonymous POST /api/crates -> 401 'Sign in to make changes'."
+    },
+    "AC11": {
+      "verdict": "pass",
+      "evidence": "All twelve named tests pass and each checks status and resulting state: ownerId/ownerUsername/ownerDisplayName on create; owner patch 200 and delete 204 then 404; non-owner patch/delete 403 with unchanged name/existence; add album to other's crate 403 and album list unchanged; patch/tracks/spins/delete in other's crate 403 and album unchanged; moving into another's crate via PATCH and /position 403 and pulling out 403, crateIds unchanged; cover upload/delete 403, covers dir empty; reorder with a foreign crate 403 'You can only reorder crates you own' and order unchanged; owner full album+track+cover lifecycle; admin edits/reorders/moves/spins/deletes across users; ownerless crate 403 for user on patch/delete/reorder/album add/patch, 200/204 for admin. Smoke: user PATCH admin-owned crate 1 -> 403 'You can only change crates you own'; PATCH album 1 -> 403; admin PATCH user's crate -> 200."
+    },
+    "AC12": {
+      "verdict": "pass",
+      "evidence": "grep -rnE \"checkPassword|/api/session|adminPassword|'admin:'|canLogIn|loginInput\" apps packages --include=*.ts --include=*.vue --exclude-dir=node_modules -> no output (rc=1), so not even an allowlisted hit. `ls apps/api/src/routes/session.ts` -> 'No such file or directory'; routes dir: albums.ts auth.ts covers.ts crates.ts health.ts. Smoke: POST /api/session -> 404 'Route POST:/api/session not found'."
+    },
+    "AC13": {
+      "verdict": "pass",
+      "evidence": "packages/shared/src/index.ts:160 'export const publicUser = z.object({', :171 'export const signupInput = z.object({', :191 \"password: z.string().min(8, 'At least 8 characters')...\". '✓ test/shared-auth.test.ts > shared auth schemas > signupInput rejects short passwords' (7 chars fails with message 'At least 8 characters', 8 chars succeeds). Note: loginInput was renamed credentialsInput (AC12 forbids loginInput), so the 'or' grep matches via signupInput/publicUser."
+    },
+    "AC14": {
+      "verdict": "pass",
+      "evidence": "ls SignupView.vue LoginView.vue rc=0; router.ts:34 \"path: '/signup',\" :35 \"name: 'signup',\"; App.vue:35 '<button type=\"button\" @click=\"logOut\">Log out</button>'; LoginView.vue:52 'type=\"email\"'. '✓ src/stores/session.test.ts > session store > session store loads the current user, logs in, signs up and logs out' asserts load called once, logIn args, user/signedIn/isAdmin after each step, logOut clears user, signUp args and user."
+    },
+    "AC15": {
+      "verdict": "pass",
+      "evidence": "All five canEditCrate tests pass in apps/web/src/utils/permissions.test.ts with concrete true/false assertions (incl. null user, null crate, ownerless crate). canEditCrate used in views/CrateView.vue:38,43, AlbumView.vue:41, LibraryView.vue:77,78,124,137,143,231,250,257,294, CratesView.vue:16, AlbumEditorView.vue:37,62. grep -rn 'session.canEdit\\|\\.canEdit\\b' apps/web/src -> no output (rc=1)."
+    },
+    "AC16": {
+      "verdict": "pass",
+      "evidence": "ADMIN_EMAIL matches in .env.example:7, compose.yaml:15 (':?' guard), docs/DEPLOY.md:23,69,100,103,110,121, README.md:47,49,56,134. ADMIN_PASSWORD still in .env.example:8, compose.yaml:16, docs/DEPLOY.md:24,69,... compose.yaml:20 '- crate-data:/data', :44 'crate-data:'; paths.ts:10 crate.db line, git diff base -- paths.ts is 0 lines. FLAG: the literal check `git diff base -- Dockerfile docker | grep -E '^[-+].*(crate-data|/data|crate\\.db)'` is NOT empty: it prints '-#   docker run -p 3000:3000 -v crate-data:/data -e ADMIN_PASSWORD=… frisson' and '+#   docker run -p 3000:3000 -v crate-data:/data \\'. Both are a usage comment in the Dockerfile header re-wrapped to add -e ADMIN_EMAIL; the volume mount text is identical and no VOLUME/WORKDIR/ENV path changed. Judged pass on the criterion text (data paths unchanged); the harbormaster may treat the literal grep as a nit."
+    },
+    "AC17": {
+      "verdict": "pass",
+      "evidence": "grep -rnE 'sql\\.raw|\\.exec\\(|\\.prepare\\(`|\\$\\{[^}]*\\}.*(SELECT|INSERT|UPDATE|DELETE)' apps/api/src/services apps/api/src/routes apps/api/src/plugins -> no output now and none at base (both rc=1). Remaining sql`` templates (albums.ts LIKE/COLLATE/spinCount, health SELECT 1) are drizzle bound-param templates and pre-existing. git grep password literal over apps/api/src apps/web/src packages -> 2 hits, both in the test file apps/web/src/stores/session.test.ts:47 \"password: 'hunter22hunter'\" and :62 \"password: 'longenough'\" (mocked API inputs, not secrets). No hits in non-test source."
+    },
+    "AC18": {
+      "verdict": "pass",
+      "evidence": "HttpError matches in auth/ownership code: services/users.ts:59,60,74 (409), routes/auth.ts:31 (429 via errorResponseBuilder), :58 (401 bad credentials), :74 (401 me), services/permissions.ts:16 (401), :37,:53 (403), services/crates.ts:120 (403 reorder). grep -rn 'reply.code(40[0-9]).send' apps/api/src/routes/auth.ts -> no output (rc=1). Only pre-existing reply.code(4xx).send are plugins/web.ts:36 (404) and plugins/error-handler.ts:23 (400) themselves."
+    }
+  },
+  "smoke": {
+    "verdict": "pass",
+    "setup": "Extracted base commit b628a8d via git archive to /tmp/sy-base (node_modules entries symlinked, @frisson/* pointed at the base copy). Ran base server (NODE_ENV=development open mode, DATA_DIR=/tmp/sy-data, PORT 3917), created crate 'Legacy Jazz' + album 'Kind of Blue' with track 'So What'; stopped it (DB had 3 migrations, crates had no owner_id). Then ran branch server: DATA_DIR=/tmp/sy-data PORT=3918 NODE_ENV=development ADMIN_EMAIL=Admin@Smoke.test ADMIN_PASSWORD=smoke-admin-pass node apps/api/src/server.ts. Both servers killed afterwards (pgrep empty).",
+    "preExistingDb": "pass: GET /api/crates -> Legacy Jazz with albumCount 1, ownerId 1, ownerUsername 'admin'; GET /api/albums/1 -> Kind of Blue with track So What intact. Log: 'Created admin account admin', 'Assigned 1 ownerless crate(s) to the admin'.",
+    "signup": "201 {id:2,email:'thom@smoke.test',username:'thom',displayName:'thom',role:'user'} (input Thom@Smoke.test normalised), HttpOnly cookie, 43-char token",
+    "login": "200 same user; Set-Cookie 'Path=/; Expires=Mon, 07 Dec 2026; HttpOnly; SameSite=Lax'. Unknown email and wrong password both 401 {\"message\":\"Email or password is incorrect\"} identical bodies",
+    "me": "200 user JSON, no hash",
+    "createCrate": "201 'Thom crate' ownerId 2",
+    "editAdminCrate": "PATCH /api/crates/1 -> 403 'You can only change crates you own'; PATCH /api/albums/1 -> 403 'You can only change records in crates you own'; admin PATCH /api/crates/2 -> 200",
+    "logout": "204; GET /me with the pre-logout cookie -> 401 'Not signed in'; PATCH with old cookie -> 401",
+    "writeWithoutSession": "POST /api/crates -> 401 'Sign in to make changes'",
+    "oldRoute": "POST /api/session -> 404",
+    "db": "sessions ids are 64-char hashes; users.password_hash prefixed scrypt$"
+  },
+  "observations": [
+    "Non-blocking: schema.ts declares crates.owner_id onDelete 'set null', but drizzle-kit's SQLite ALTER ADD COLUMN emitted 'REFERENCES users(id)' without ON DELETE; pragma foreign_key_list(crates) on the migrated DB shows on_delete 'NO ACTION'. Harmless this phase (no user deletion), but the brief assumed SET NULL; a future user-deletion feature would hit FK errors instead of nulling.",
+    "AC16 literal grep returns two Dockerfile comment lines (re-wrapped docker run example); judged pass, see AC16 evidence."
+  ],
+  "commandsRun": [
+    "cat /home/claude/shipyard/agents/tester.md; git status --short; git log --oneline -5; cat state.json brief.json codebase-map.json",
+    "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build (EXIT=0)",
+    "npm test -w apps/api -- --reporter=verbose",
+    "cd apps/web && npx vitest run --reporter=verbose src/stores/session.test.ts src/utils/permissions.test.ts",
+    "read apps/api/test/{migration,passwords,auth-accounts,bootstrap,ownership,shared-auth,helpers}.ts and apps/web/src/{stores/session.test.ts,utils/permissions*.ts}",
+    "ls apps/api/drizzle/*.sql; journal entry count; git diff --stat base -- apps/api/drizzle/...; grep on 0003_accounts.sql",
+    "cd apps/api && npx drizzle-kit generate",
+    "AC4/5/8/12-18 greps as listed in brief.json checks; git diff base -- package.json apps/*/package.json packages/*/package.json; git diff base -- Dockerfile docker compose.yaml",
+    "git archive base | tar -x -C /tmp/sy-base; base server on 3917 with DATA_DIR=/tmp/sy-data; curl seed crate+album; pkill",
+    "branch server on 3918 with ADMIN_EMAIL/ADMIN_PASSWORD on same DATA_DIR; curl signup/login/bad login/me/create crate/PATCH admin crate+album/admin PATCH/logout/me old cookie/anon write/old-cookie write/POST /api/session; pkill",
+    "python3 sqlite3 inspection of /tmp/sy-data/crate.db (sessions, users, foreign_key_list(crates))",
+    "git status --short (only untracked .shipyard run dir)"
+  ],
+  "summary": "18/18 criteria pass. Repo gates green (api 132 tests, web 118). All named tests exist and make substantive assertions on status and resulting state. E2E smoke on a DB created by the base-commit server passed: legacy data survived, legacy crate backfilled to bootstrap admin, signup/login/me/logout, 403 on admin-owned crate, 401 without session. Two non-blocking notes: owner_id FK is NO ACTION in the generated SQL (schema says set null), and the AC16 literal Dockerfile grep hits a re-wrapped comment."
+}

@@ -1,0 +1,35 @@
+{
+  "id": "T7",
+  "status": "done-pending-test",
+  "committed": true,
+  "commit": "9b5474f",
+  "filesChanged": [
+    ".env.example",
+    "compose.yaml",
+    "docs/DEPLOY.md",
+    "README.md",
+    "docs/SPEC.md",
+    "docs/adr/0004-user-accounts.md",
+    ".github/workflows/ci.yml"
+  ],
+  "dependenciesAdded": [],
+  "checks": {
+    "prettierCheckOwnFiles": 0,
+    "npmRunFormatCheck": 0,
+    "yamlParses": true,
+    "composeConfigFailsWithoutAdminEmail": true,
+    "composeConfigOkWithBoth": true
+  },
+  "criteriaSelfCheck": {
+    "AC1": "format:check exits 0; lint/typecheck/test/build not run by T7 (docs-only; other devs' work in progress in the tree)",
+    "AC16": "ADMIN_EMAIL matches in .env.example, compose.yaml, docs/DEPLOY.md, README.md; ADMIN_PASSWORD still matches in all three; crate-data: and crate.db unchanged; Dockerfile and docker/ untouched",
+    "AC17": "no source code touched by T7"
+  },
+  "findings": [
+    "CI smoke password changed from ci-only (7 chars) to ci-only-password: with ADMIN_EMAIL set, bootstrap rejects passwords under 8 and the app exits.",
+    "compose.yaml no longer passes SESSION_SECRET; existing .env files that set it still work (value is just unused).",
+    "docs/adr/0003-deployment.md 'Fail closed' bullet and the Dockerfile usage comment (-e ADMIN_PASSWORD only) still describe the old model; not owned by T7. ADR 0004 marks the relevant 0003 parts as superseded.",
+    "There is no in-app password change; DEPLOY.md says so and drops the old 'Change the admin password' row.",
+    "First commit attempt accidentally swept in apps/web/src/api/session.ts deletion that another dev had staged; soft-reset and recommitted with only T7 paths. That deletion is still staged for its owner."
+  ]
+}

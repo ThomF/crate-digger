@@ -1,0 +1,175 @@
+{
+  "commit": "b628a8defcdbc00c7ff1578a963673267c01e4f4",
+  "structureTests": {
+    "concerns": [
+      "structure",
+      "tests"
+    ],
+    "structure": {
+      "type": "npm workspaces monorepo, ESM, root package name 'frisson'; workspaces packages/* and apps/*; node >=22.18, .nvmrc 22",
+      "workspaces": {
+        "packages/shared": "@frisson/shared; zod; exports ./src/index.ts and ./sorting; only a typecheck script",
+        "apps/api": "@frisson/api; Fastify 5, better-sqlite3, drizzle-orm, sharp, fastify-type-provider-zod; src/{plugins,routes,services,db}; migrations in apps/api/drizzle (0000-0002); runs .ts directly via node, no build",
+        "apps/web": "@frisson/web; Vue 3, Pinia, vue-router, Vite 6; build = vite build to apps/web/dist; dev proxies /api and /covers to 127.0.0.1:3000"
+      },
+      "app_assembly": {
+        "app.ts": "buildApp(opts: dbPath, coversDir, auth, webDir) returns an unstarted Fastify; logger off when NODE_ENV=test; trustProxy from TRUST_PROXY; Zod validator/serializer compilers set",
+        "registration_order": [
+          "errorHandlerPlugin",
+          "authPlugin (adminPassword/sessionSecret/production from env, overridden by opts.auth)",
+          "dbPlugin (decorates app.db, closes on onClose)",
+          "coversPlugin (decorates coversDir)",
+          "healthRoutes /api",
+          "sessionRoutes /api",
+          "crateRoutes /api",
+          "albumRoutes /api",
+          "coverRoutes /api",
+          "webPlugin (last; static + SPA notFound handler; no-op unless dir/WEB_DIR set)"
+        ],
+        "server.ts": "imports buildApp, listens on PORT (3000) / HOST (127.0.0.1)",
+        "auth_hook": "onRequest hook blocks write methods under /api/ (except /api/session) unless canEdit; modes: open (no password, non-prod), login (password set), read-only (no password, production)"
+      },
+      "docker_ci": {
+        "Dockerfile": "multi-stage node:22-bookworm-slim (manifests, web-build, api-deps, runtime); runs node apps/api/src/server.ts as user node; /data volume; healthcheck /api/health",
+        "compose.yaml": "services app and caddy (docker/Caddyfile)",
+        "ci": ".github/workflows/ci.yml on PR and push to main; job check: npm ci, format:check, lint, typecheck, test, build; job docker: image build + smoke test"
+      },
+      "tooling": "eslint.config.js (flat), .prettierrc.json, tsconfig.base.json, .editorconfig"
+    },
+    "tests": {
+      "runner": "vitest ^3.2 in api and web; no vitest config file in apps/api (defaults); web config inline in vite.config.ts with environment happy-dom; @vue/test-utils for components",
+      "root_commands": {
+        "test": "npm run test --workspaces --if-present (runs vitest run in apps/api and apps/web)",
+        "typecheck": "npm run typecheck --workspaces --if-present",
+        "build": "npm run build --workspaces --if-present",
+        "lint": "eslint .",
+        "format:check": "prettier --check ."
+      },
+      "api_tests": "apps/api/test/*.test.ts: albums, auth, covers, crates, health, schema, sorting, web (about 71 it() cases); web tests are 7+ *.test.ts colocated in apps/web/src",
+      "helpers": {
+        "file": "apps/api/test/helpers.ts",
+        "buildTestApp()": "mkdtemp covers dir in tmpdir, buildApp({dbPath ':memory:', coversDir}), onClose hook removes the dir; caller must app.close()",
+        "TestApp": "type alias of the resolved buildTestApp return",
+        "addCrate(app, name, sortOrder)": "inserts a crate directly via app.db and drizzle schema",
+        "multipart(field, fileName, contentType, buffer)": "hand-built multipart body returning payload and headers"
+      },
+      "db_in_tests": "in-memory SQLite; createDb runs drizzle migrations from apps/api/drizzle on every build, foreign_keys ON",
+      "request_style": "app.inject(); no ports opened; auth.test.ts and web.test.ts call buildApp directly with auth / webDir options; default test app has no password so is in open mode"
+    }
+  },
+  "conventionsDocs": {
+    "surveyor": "surveyor-2",
+    "concerns": [
+      "conventions",
+      "documentation"
+    ],
+    "conventions": {
+      "format": "Prettier: no semi, single quotes, width 100, trailingComma all. EditorConfig: 2-space, LF. ESLint 9 flat config (eslint-plugin-vue essential + vue-ts recommended + prettier skip-formatting). Scripts: lint, format, format:check, typecheck, test.",
+      "naming": "Package scope @frisson/*. Imports use .ts extensions (native TS on Node >=22.18). API files lowercase/kebab (error-handler.ts); plugins export xPlugin, routes export xRoutes (FastifyPluginAsyncZod), services are plain functions (db, input) such as listCrates/getCrate. Web: PascalCase .vue, useX composables/stores, api/ one file per resource.",
+      "api": "app.ts buildApp registers errorHandlerPlugin, authPlugin, dbPlugin, coversPlugin, then routes under /api prefix, webPlugin last. Zod schemas in route schema {params, body, response}. Services throw HttpError/notFound/badRequest (errors.ts); services never touch reply.",
+      "errorShape": "{ statusCode, error, message, issues? } (ApiError in @frisson/shared); handler order: zod validation 400, response serialization 500, HttpError, fastify 4xx, else 500.",
+      "shared": "packages/shared/src/index.ts: zod 4 schemas, input schemas named xInput, entities plain names, inferred types; exports ./ and ./sorting (no zod). Section dividers with box-drawing comments.",
+      "web": "Pinia setup stores (library, session) using ref/computed/functions; api/client.ts request<T>() with ApiRequestError and errorMessage(); api modules call request. Stores import api as namespace or named fns.",
+      "tests": "Vitest; api tests in apps/api/test, web tests colocated *.test.ts."
+    },
+    "documentation": {
+      "files": [
+        "README.md",
+        "docs/SPEC.md",
+        "docs/DEPLOY.md",
+        "docs/adr/0001-stack.md",
+        "docs/adr/0002-native-typescript-and-shared-package.md",
+        "docs/adr/0003-deployment.md",
+        ".env.example"
+      ],
+      "auth": "README 'Who can edit' table: ADMIN_PASSWORD set = browse public, editing needs Staff log in; unset in dev/test = open; unset in production = read-only. Logins 30 days, rate limit 10 per 15 min, password change logs everyone out; SESSION_SECRET decouples. Single shared admin password, cookie frisson_session; no per-user accounts. Matches code in plugins/auth.ts.",
+      "adminPassword": "Required by compose (:? check), .env.example says deployment refuses to start without it (app itself only goes read-only). DEPLOY.md suggests openssl rand -base64 24; change by editing .env and docker compose up -d.",
+      "deployEnvVars": "ADMIN_PASSWORD, DOMAIN (no http:// for real certs), SESSION_SECRET (optional), TRUST_PROXY=true set in compose, DATA_DIR/DATABASE_PATH/COVERS_DIR/WEB_DIR documented in README.",
+      "futureAccounts": "Absent. SPEC section 8 only says 'read-only public mode plus a simple admin login'. ADR 0003 says fail closed. No ADR or doc mentions multi-user, accounts or roles. ADR 0001 says single-user collection.",
+      "staleness": "DEPLOY.md and README still reference crate-digger: git clone URL github.com/ThomF/crate-digger, cd crate-digger, crate.db, crate-data volume, crate-backup (db filename and volume likely intentional); README title says Frisson. SPEC calls self-hosting '(later)' while README says deployment done."
+    }
+  },
+  "relevant": {
+    "concern": "relevant",
+    "target": "/home/claude/crate-digger",
+    "request": "user accounts and auth",
+    "api": {
+      "auth_plugin": {
+        "file": "apps/api/src/plugins/auth.ts",
+        "notes": "AuthOptions L14-20 (adminPassword, production, sessionSecret); Access {canEdit, canLogIn} L22; FastifyInstance.auth decorator L24-33 (access, checkPassword, logIn, logOut); SESSION_COOKIE='frisson_session' L35; modes open/read-only/password L43; signed cookie 'admin:<ts>' via @fastify/cookie L56-65,82-90; global onRequest write gate L98-107 (POST/PUT/PATCH/DELETE under /api/, skips /api/session*; 401 if canLogIn else 403; HttpError)"
+      },
+      "session_routes": {
+        "file": "apps/api/src/routes/session.ts",
+        "notes": "GET /session L10, POST /session L14 (rate-limit 10/15min, L19; body loginInput), DELETE /session L31; all use app.auth.*; rate-limit registered in plugin L8"
+      },
+      "consumers_of_app_auth": [
+        "apps/api/src/plugins/auth.ts L102",
+        "apps/api/src/routes/session.ts L11,22,23,26,32,35",
+        "apps/api/test/auth.test.ts (imports AuthOptions, SESSION_COOKIE)"
+      ],
+      "guarding": "No per-route preHandler. One global onRequest hook in auth.ts L98 gates all write methods under /api/. Routes (crates.ts, albums.ts, covers.ts) have no auth code and no req.user. Write routes: crates.ts L27 POST,L33 PATCH,L40 DELETE,L45 PUT(order); albums.ts L41 POST,L47 PATCH,L53 DELETE,L59 PATCH,L67 POST(spins),L73 PUT; covers.ts L9 POST,L22 DELETE. Services in apps/api/src/services/{crates,albums,covers}.ts take no user param; crates select list at services/crates.ts L8-13 (id,name,color,label,sortBy,sortOrder) and shared `crate` zod at packages/shared/src/index.ts L118",
+      "app_ts": "apps/api/src/app.ts: AppOptions.auth L21; registers authPlugin L43-48 with env ADMIN_PASSWORD/SESSION_SECRET/NODE_ENV==='production' then ...opts.auth; authPlugin registered BEFORE dbPlugin (L49) so auth has no app.db at register time; sessionRoutes L53; trustProxy from TRUST_PROXY L34",
+      "server_ts": "apps/api/src/server.ts: only PORT, HOST read (L3-4); buildApp() reads auth env itself",
+      "schema": "apps/api/src/db/schema.ts: timestamps helper L8-16; crates L18-27 (no owner); albums L31-56; tracks L60-74; relations L78-89; types L91-96; no users/sessions tables",
+      "migrations": "drizzle-kit generate (apps/api/package.json L10 db:generate); apps/api/drizzle.config.ts L4-11 (sqlite, schema ./src/db/schema.ts, out ./drizzle); migrations apps/api/drizzle/0000_init.sql,0001_crate_sort_by.sql,0002_album_spin_count.sql; journal apps/api/drizzle/meta/_journal.json (3 entries, idx 0-2) + meta/000N_snapshot.json; run at startup by createDb() in apps/api/src/db/client.ts L27 migrate(db,{migrationsFolder}) via dbPlugin apps/api/src/plugins/db.ts L15; foreign_keys ON L22. Hand-written backfill would go in a migration SQL (0002 is simple ALTER TABLE ADD).",
+      "seed": "apps/api/src/db/seed.ts: wipes tracks/albums/crates L318-321, inserts crates L324-333 with no owner; refuses in production L307; uses createDb() L312; no users",
+      "other_db_scripts": [
+        "apps/api/src/db/backup.ts",
+        "apps/api/src/db/restore.ts"
+      ],
+      "shared": "packages/shared/src/index.ts: sessionInfo L153-158 {canEdit, canLogIn}; loginInput L160 {password}; SessionInfo type L193; crate schema L118"
+    },
+    "config": {
+      ".env.example": "L5 ADMIN_PASSWORD= (required for compose), L9 DOMAIN, L13 SESSION_SECRET (optional); no ADMIN_EMAIL",
+      "compose.yaml": "L27 ADMIN_PASSWORD: ${ADMIN_PASSWORD:?...} required, L28 SESSION_SECRET: ${SESSION_SECRET:-}, L30 TRUST_PROXY",
+      "other_ADMIN_PASSWORD_refs": [
+        "Dockerfile L8",
+        ".github/workflows/ci.yml L44 (docker run -e ADMIN_PASSWORD=ci-only)",
+        "README.md L41-47,73,118",
+        "docs/DEPLOY.md L23,68",
+        "docs/adr/0003-deployment.md L24"
+      ]
+    },
+    "web": {
+      "session_store": "apps/web/src/stores/session.ts: info ref L9, canEdit/canLogIn computed L12-13, load() L16, logIn(password) L27, logOut L31",
+      "api_session": "apps/web/src/api/session.ts: getSession L3, logIn(password) L7, logOut L11 (request from api/client.ts)",
+      "login_view": "apps/web/src/views/LoginView.vue: password-only form; 'Staff only' copy L90; submit L72-85 uses session.logIn + safeRedirect(props.next); focus input L65-70; styles L112+",
+      "router": "apps/web/src/router.ts: RouteMeta.requiresEdit L7; routes /crates L173 (requiresEdit), /login L179 (props next), /albums/new L196, /albums/:id/edit L204 (requiresEdit); no signup route; beforeEach guard L218-224 (load session; canEdit else login?next= or home)",
+      "app_vue": "apps/web/src/App.vue: header .masthead L241-244 (no user menu); onMounted session.load L232; logOut L234-237 pushes library if route requiresEdit; footer 'Staff log in'/'Log out' L250-253 shown when canLogIn",
+      "canEdit_consumers": [
+        "apps/web/src/components/LibraryToolbar.vue L15",
+        "apps/web/src/components/crate/EmptyShelf.vue L11",
+        "apps/web/src/views/LibraryView.vue L118,220,239,246,282",
+        "apps/web/src/views/AlbumView.vue L78",
+        "apps/web/src/views/CrateView.vue L41 (also gates spinAlbum call), L96"
+      ],
+      "other": "apps/web/src/utils/redirect.ts (safeRedirect) + redirect.test.ts; api/client.ts request/errorMessage"
+    },
+    "tests": {
+      "auth.test.ts": "apps/api/test/auth.test.ts (183 lines): appWith(AuthOptions) L53; open mode L76, read-only L88, admin password L100-182 (401, wrong pw, cookie flags L127, forged cookie L138, empty SESSION_SECRET L146, password change logs out L155, logout L164, rate limit L174); all assert old SessionInfo shape and password-only POST /api/session",
+      "helpers.ts": "apps/api/test/helpers.ts: buildTestApp() L11 calls buildApp({dbPath ':memory:', coversDir}) with NO auth opts (relies on open mode when no env); addCrate() L21 inserts crates directly with {name, sortOrder} (no owner_id); multipart L29",
+      "web.test.ts": "apps/api/test/web.test.ts L18 buildApp({dbPath, coversDir, webDir}); no auth assertions",
+      "other_users_of_helpers": [
+        "crates.test.ts",
+        "albums.test.ts",
+        "covers.test.ts",
+        "health.test.ts"
+      ],
+      "schema.test.ts": "apps/api/test/schema.test.ts (db schema)",
+      "web_unit": "no web tests reference session store; apps/web/src/stores/library.test.ts exists, redirect.test.ts"
+    },
+    "absent": [
+      "users table",
+      "sessions table",
+      "owner_id",
+      "scrypt/password hashing (only sha256 timing compare)",
+      "signup/me endpoints",
+      "ADMIN_EMAIL",
+      "signup page",
+      "header user menu",
+      "per-route preHandler",
+      "request.user"
+    ]
+  },
+  "testCommand": "npm run format:check && npm run typecheck && npm run lint && npm test && npm run build"
+}

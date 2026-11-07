@@ -1,0 +1,193 @@
+{
+  "cycle": 1,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Foundation: shared auth contract, DB schema + 0003 migration, password hashing",
+      "description": "Lay the contracts every other task builds on. (1) packages/shared/src/index.ts: add a new '\u2500\u2500 Accounts \u2500\u2500' section with USER_ROLES ['user','admin'], publicUser {id, email, username, displayName, role} (NO password field of any kind), signupInput {email: trimmed+lower-cased email, username: trimmed+lower-cased 3-32 of [a-z0-9_-], displayName optional 1-60 (defaults to username server-side), password string min(8,'At least 8 characters') max(200)} built with z.object (unknown keys such as role are stripped), credentialsInput {email trimmed+lower-cased, password min(1) max(200)} (do NOT name it loginInput; that name is banned by AC12), and types PublicUser/SignupInput/CredentialsInput. Extend the crate schema with ownerId: number|null, ownerUsername: string|null, ownerDisplayName: string|null. Do NOT remove sessionInfo/loginInput/SessionInfo yet (T5 removes them once the web stops importing them). (2) apps/api/src/db/schema.ts: users table (id pk autoinc, email text notNull unique, username text notNull unique, display_name text notNull, password_hash text notNull, role text enum USER_ROLES notNull default 'user', created_at integer timestamp default unixepoch like other tables); sessions table (id text pk = sha256 hex of the token, user_id integer notNull references users.id onDelete cascade, created_at, expires_at integer timestamp notNull, index on user_id); crates.owner_id integer nullable references users.id onDelete 'set null'; relations. (3) Generate the migration with `npm run db:generate -w apps/api -- --name accounts` (drizzle-kit). Never edit 0000-0002 or their snapshots, and never hand-edit the generated 0003 SQL. Inspect the SQL: if drizzle-kit emitted a crates table rebuild (__new_crates, DROP TABLE), the rebuild will fail or cascade with foreign_keys=ON because albums reference crates; fix this in app code in apps/api/src/db/client.ts by switching `foreign_keys = OFF` before migrate() and back ON after, followed by `PRAGMA foreign_key_check` that throws if it returns rows. Re-run `cd apps/api && npx drizzle-kit generate` and confirm 'No schema changes'. (4) apps/api/src/services/crates.ts: only change the select (crateColumns) to also return ownerId and the owner's username/displayName via LEFT JOIN users (group by still crates.id), so crate responses satisfy the new shared schema. No authorization logic here (T3 owns that). (5) apps/api/src/services/passwords.ts: async hashPassword(plain) using node:crypto scrypt (promisified, N=16384 r=8 p=1 keylen 64, maxmem sized accordingly) with a 16-byte crypto.randomBytes salt per call, stored as 'scrypt$<saltB64>$<hashB64>' (or similar self-describing format); throws new HttpError(400, ...) for passwords under 8 chars; async verifyPassword(plain, stored) using timingSafeEqual (length-checked) and returning false on malformed input; export verifyAgainstDummy(plain) (or a DUMMY_HASH constant) so login can spend the same scrypt time for unknown emails. No new dependencies. (6) Tests: apps/api/test/migration.test.ts with test 'migration 0003 preserves existing crates, albums and tracks': copy 0000-0002 SQL + a 3-entry _journal.json into a temp migrations folder, migrate a temp FILE db with it (better-sqlite3 + drizzle migrate, foreign_keys ON), insert crates/albums/tracks rows with raw bound statements, close, then open the same file with createDb(path) (full migrations) and assert every row/column intact, crates.owner_id NULL, users and sessions tables exist. apps/api/test/passwords.test.ts with exactly 'hashes with a random salt (same password gives different hashes)', 'verifies the right password and rejects a wrong one', 'rejects passwords shorter than 8 characters'. apps/api/test/shared-auth.test.ts with 'signupInput rejects short passwords' plus normalisation/role-stripping cases. Update apps/api/test/schema.test.ts only if it enumerates tables. All gates green before committing.",
+      "criteria": [
+        "AC1",
+        "AC2",
+        "AC3",
+        "AC4",
+        "AC13",
+        "AC17"
+      ],
+      "files": [
+        "packages/shared/src/index.ts",
+        "apps/api/src/db/schema.ts",
+        "apps/api/src/db/client.ts",
+        "apps/api/drizzle/0003_accounts.sql",
+        "apps/api/drizzle/meta/_journal.json",
+        "apps/api/drizzle/meta/0003_snapshot.json",
+        "apps/api/src/services/crates.ts",
+        "apps/api/src/services/passwords.ts",
+        "apps/api/test/migration.test.ts",
+        "apps/api/test/passwords.test.ts",
+        "apps/api/test/shared-auth.test.ts",
+        "apps/api/test/schema.test.ts",
+        "apps/web/src/stores/library.test.ts",
+        "apps/web/src/components/crate/CrateBox.test.ts"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "T2",
+      "title": "API auth core: users/sessions services, auth plugin, /api/auth routes, bootstrap admin, test helpers",
+      "description": "Replace the single-password auth with accounts. (1) apps/api/src/services/users.ts: createUser(db, input, role='user') (hashes via passwords.ts, displayName defaults to username, maps UNIQUE violations or pre-checks to new HttpError(409, 'Email already registered' / 'Username taken')), findUserByEmail, getUserById, toPublicUser (never includes passwordHash). (2) apps/api/src/services/sessions.ts: SESSION_TTL_MS = 30 days; createSession(db, userId) -> {token, expiresAt} with token = crypto.randomBytes(32).toString('base64url') and only sha256(token) hex stored as sessions.id; findSessionUser(db, token) returning PublicUser|null (rejects and deletes expired rows); deleteSession(db, token). (3) apps/api/src/services/permissions.ts (consumed by T3/T4, so get the signatures right): requireUser(user: PublicUser|null): PublicUser throws new HttpError(401, 'Sign in to make changes'); canEditOwner(user, ownerId: number|null): boolean (admin always; otherwise ownerId !== null && ownerId === user.id); assertCanEditCrate(db, user, crateId): requires user, 404 via notFound if crate missing, new HttpError(403, ...) if not permitted; assertCanEditAlbum(db, user, albumId): looks up the album's crate then same rules; returns the user. Literal `new HttpError(401|403|409|429...)` calls must appear (AC18 greps for them). (4) apps/api/src/plugins/auth.ts: rewrite. Options {production?: boolean}. Must be registered AFTER dbPlugin (needs app.db). Keeps SESSION_COOKIE = 'frisson_session'; decorateRequest('user', null) typed PublicUser|null via module augmentation; an onRequest hook reads the cookie (plain, unsigned) and sets request.user via findSessionUser; decorates helpers to set the cookie (httpOnly, sameSite 'lax', path '/', secure only when production, expires = session expiry) and clear it. Remove the global write gate, the open/read-only/login modes, checkPassword/logIn/logOut, the 'admin:' signed cookie and SESSION_SECRET usage. Writes become unguarded until T3/T4 add per-route checks; that is expected for this task. Do not use identifiers adminPassword, canLogIn, checkPassword, loginInput anywhere. (5) apps/api/src/routes/auth.ts: authRoutes under prefix /api: POST /auth/signup (body signupInput, response publicUser, 201, sets cookie), POST /auth/login (body credentialsInput; unknown email still runs a dummy scrypt verify; both failure paths throw the identical new HttpError(401, 'Email or password is incorrect')), POST /auth/logout (deletes the session row, clears cookie, 204; fine when signed out), GET /auth/me (publicUser or new HttpError(401, ...)). Register @fastify/rate-limit inside this plugin (global: false) and apply config.rateLimit to signup and login only, keyed by IP, max/timeWindow from plugin options (default 10 per 15 minutes); the 429 must reach the client through the error handler (use errorResponseBuilder returning new HttpError(429, ...) or let the error-handler map it; no reply.code(...).send in this file). (6) Delete apps/api/src/routes/session.ts and apps/api/test/auth.test.ts. (7) apps/api/src/app.ts: AppOptions.auth becomes {production?: boolean; rateLimit?: {max: number; timeWindow: number}}; register errorHandler, db, auth (production from NODE_ENV unless overridden), covers, health, authRoutes, crates, albums, covers, web. No ADMIN_PASSWORD/SESSION_SECRET reading in buildApp. (8) apps/api/src/services/bootstrap.ts: bootstrapAdmin(db, {email, password}, log?) : if either is missing log a warning and skip creation; if no user with role 'admin' exists, create one with username 'admin' (suffix -2, -3... if taken), displayName 'Admin', role 'admin'; never change an existing admin's password; then assign every crate with owner_id NULL to the earliest admin (runs every startup, idempotent). Export bootstrapFromEnv(db, env = process.env, log) reading ADMIN_EMAIL/ADMIN_PASSWORD. apps/api/src/server.ts awaits bootstrapFromEnv(app.db, process.env, app.log) after buildApp and before listen. (9) apps/api/test/helpers.ts (owned here; T3/T4 depend on it): buildTestApp(opts?) passes auth {production:false, rateLimit: generous default} and accepts overrides; signUp(app, overrides?) -> {user, cookie, headers} using unique email/username per call; createAdmin(app) -> same (insert via createUser with role admin + createSession); addCrate(app, name, sortOrder, ownerId?: number|null) keeps its old positional signature. Keep multipart helper. (10) Tests: apps/api/test/auth-accounts.test.ts with every test name listed in AC5, AC6, AC7, AC8 verbatim (rate-limit tests build an app with a small max, e.g. 3). apps/api/test/bootstrap.test.ts with every name in AC9 verbatim ('bootstrap admin can log in with ADMIN_PASSWORD' calls bootstrapAdmin then POST /api/auth/login). Existing crates/albums/covers/web/health tests must still pass unchanged (they still run with open writes at this point).",
+      "criteria": [
+        "AC1",
+        "AC5",
+        "AC6",
+        "AC7",
+        "AC8",
+        "AC9",
+        "AC12",
+        "AC17",
+        "AC18"
+      ],
+      "files": [
+        "apps/api/src/services/users.ts",
+        "apps/api/src/services/sessions.ts",
+        "apps/api/src/services/permissions.ts",
+        "apps/api/src/services/bootstrap.ts",
+        "apps/api/src/plugins/auth.ts",
+        "apps/api/src/plugins/error-handler.ts",
+        "apps/api/src/routes/auth.ts",
+        "apps/api/src/routes/session.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/server.ts",
+        "apps/api/test/helpers.ts",
+        "apps/api/test/auth.test.ts",
+        "apps/api/test/auth-accounts.test.ts",
+        "apps/api/test/bootstrap.test.ts"
+      ],
+      "dependsOn": [
+        "T1"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Crate ownership: guard crate routes, set owner on create, start ownership.test.ts",
+      "description": "Using services/permissions.ts from T2: POST /api/crates requires a user (401) and sets owner_id = user.id; PATCH /crates/:id and DELETE /crates/:id call assertCanEditCrate (401/403/404); PUT /api/crates/order requires a user and, unless admin, every crate in the list must be owned by them (any unowned/other-owned id -> new HttpError(403, ...)). Pass request.user from routes into services; services take the user as a parameter and never touch reply. Keep the DB queries in the Drizzle builder (no sql.raw). Rewrite apps/api/test/crates.test.ts so every write signs in via helpers.signUp and uses crates owned by that user (addCrate(app, name, order, user.id)); this includes the album writes in that file (POST /api/albums, PATCH position): send the same cookie so they keep passing after T4 adds album checks. Keep every existing assertion's intent; do not weaken coverage. Create apps/api/test/ownership.test.ts with describe blocks for crates containing these AC10/AC11 tests verbatim: 'anonymous can GET crates, crate, albums and album', 'anonymous POST /api/crates returns 401', 'anonymous PATCH crate returns 401', 'anonymous DELETE crate returns 401', 'anonymous PUT /api/crates/order returns 401', 'creating a crate sets ownerId to the current user', 'owner can patch and delete own crate', 'non-owner gets 403 patching another user's crate', 'non-owner gets 403 deleting another user's crate', 'non-owner gets 403 reordering crates they do not own', 'ownerless crate is editable only by admin' (crate part; T4 may extend), and a crate-only portion of 'admin can edit and delete any user's crate and album' is left for T4 to write in full. Do not touch albums/covers routes, services or tests (T4) or packages/shared (T5).",
+      "criteria": [
+        "AC1",
+        "AC10",
+        "AC11",
+        "AC17",
+        "AC18"
+      ],
+      "files": [
+        "apps/api/src/routes/crates.ts",
+        "apps/api/src/services/crates.ts",
+        "apps/api/test/crates.test.ts",
+        "apps/api/test/ownership.test.ts"
+      ],
+      "dependsOn": [
+        "T2"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Album, track and cover ownership; finish ownership.test.ts",
+      "description": "Guard every album/track/cover write with services/permissions.ts: POST /api/albums -> assertCanEditCrate(target crateId); PATCH /albums/:id and PUT /albums/:id/tracks and DELETE /albums/:id -> assertCanEditAlbum; when a PATCH or move/position request changes crateId, also assertCanEditCrate on the TARGET crate (and the source via the album); album reorder/position -> assertCanEditAlbum (and target crate); POST /albums/:id/spins requires a session and edit permission like the rest; POST/DELETE /albums/:id/cover -> assertCanEditAlbum. Anonymous gets 401 (check before 404 lookups are fine either way, but anonymous must never get 200). Rewrite apps/api/test/albums.test.ts and apps/api/test/covers.test.ts to sign in via helpers.signUp and use crates owned by that user; keep every existing assertion's intent. Append to apps/api/test/ownership.test.ts (created by T3; keep its tests) these verbatim: 'anonymous POST/PATCH/DELETE album returns 401', 'anonymous cover upload and delete return 401', 'non-owner gets 403 adding an album to another user's crate', 'non-owner gets 403 patching and deleting an album in another user's crate', 'non-owner gets 403 moving an album into someone else's crate', 'non-owner gets 403 on cover upload for another user's album', 'owner can add, edit and delete albums and tracks in own crate', 'admin can edit and delete any user's crate and album', and extend 'ownerless crate is editable only by admin' to cover albums if useful. Do not touch crates routes/services or packages/shared. Also (harbormaster): update ADR 0003 to note it is superseded by ADR 0004, and the Dockerfile usage comment for ADMIN_EMAIL + an 8+ char ADMIN_PASSWORD.",
+      "criteria": [
+        "AC1",
+        "AC10",
+        "AC11",
+        "AC17",
+        "AC18"
+      ],
+      "files": [
+        "apps/api/src/routes/albums.ts",
+        "apps/api/src/services/albums.ts",
+        "apps/api/src/routes/covers.ts",
+        "apps/api/src/services/covers.ts",
+        "apps/api/test/albums.test.ts",
+        "apps/api/test/covers.test.ts",
+        "apps/api/test/ownership.test.ts",
+        "docs/adr/0003-deployment.md",
+        "Dockerfile"
+      ],
+      "dependsOn": [
+        "T3"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Web accounts core: auth API client, session store, permissions helper, Sign up / Log in pages, router, header user menu",
+      "description": "(1) Replace apps/web/src/api/session.ts with apps/web/src/api/auth.ts: me() GET /api/auth/me (treat 401 as signed out -> null), signUp(input) POST /api/auth/signup, logIn(credentials) POST /api/auth/login, logOut() POST /api/auth/logout; delete api/session.ts. (2) apps/web/src/stores/session.ts: setup store with user ref (PublicUser|null), loaded flag, signedIn and isAdmin computeds, load(), logIn(email,password), signUp(input), logOut(). Keep a TEMPORARY `canEdit = computed(() => signedIn.value)` export so existing views still typecheck; T6 removes it and all its uses. Remove canLogIn and the password-only logIn. (3) apps/web/src/utils/permissions.ts: canEditCrate(user: PublicUser|null, crate: {ownerId: number|null}|null|undefined): boolean (admin -> true incl. ownerless; owner -> true; else false). Tests: apps/web/src/stores/session.test.ts with 'session store loads the current user, logs in, signs up and logs out' (mock the api module with vi.mock) and apps/web/src/utils/permissions.test.ts with exactly 'canEditCrate is false when signed out', 'canEditCrate is true for the owner', 'canEditCrate is false for another user', 'canEditCrate is true for admin on any crate', 'canEditCrate is true for admin on ownerless crate and false for a user'. (4) apps/web/src/views/LoginView.vue: email (type=\"email\") + password form using session.logIn, keeps ?next= via safeRedirect, generic error display via errorMessage, link to /signup; remove 'Staff only' copy. New apps/web/src/views/SignupView.vue: email, username (hint: 3-32 lower-case letters, digits, - or _), optional display name, password (min 8) with client-side check via signupInput.safeParse, shows 409/400 messages, signs in and redirects to next or library. Match LoginView's existing styling. (5) apps/web/src/router.ts: add { path: '/signup', name: 'signup', props next } route; rename meta requiresEdit to requiresAuth; beforeEach loads the session and redirects signed-out users to login?next=. (6) apps/web/src/App.vue: header user menu in the masthead: signed out -> 'Log in' and 'Sign up' links; signed in -> display name/username and a 'Log out' button (after logout, leave requiresAuth routes); remove the footer 'Staff log in' link. (7) packages/shared/src/index.ts: delete sessionInfo, loginInput and SessionInfo (the old contract) once nothing imports them; nothing else in shared changes. Do not edit LibraryView, CrateView, AlbumView, CratesView, AlbumEditorView or components (T6).",
+      "criteria": [
+        "AC1",
+        "AC12",
+        "AC13",
+        "AC14",
+        "AC15"
+      ],
+      "files": [
+        "apps/web/src/api/auth.ts",
+        "apps/web/src/api/session.ts",
+        "apps/web/src/stores/session.ts",
+        "apps/web/src/stores/session.test.ts",
+        "apps/web/src/utils/permissions.ts",
+        "apps/web/src/utils/permissions.test.ts",
+        "apps/web/src/views/LoginView.vue",
+        "apps/web/src/views/SignupView.vue",
+        "apps/web/src/router.ts",
+        "apps/web/src/App.vue",
+        "packages/shared/src/index.ts"
+      ],
+      "dependsOn": [
+        "T2"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Web per-crate edit controls",
+      "description": "Replace every session.canEdit use with canEditCrate(session.user, crate) where a specific crate is in play, and session.signedIn where the action is global (create crate, add album: only offer crates the user can edit in the album form's crate picker). Sites (from the codebase map): components/LibraryToolbar.vue L15, components/crate/EmptyShelf.vue L11, views/LibraryView.vue L118/220/239/246/282 (per-crate drag/reorder/settings), views/AlbumView.vue L78 (resolve the album's crate from the library store by crateId, or fetch it), views/CrateView.vue L41 (also gates the spinAlbum call) and L96, plus CrateSettings/CrateBox/AlbumEditorView/CratesView/AlbumForm if they gate edits. Crate reordering in LibraryView/CratesView: only for admins, or restricted to crates the user owns (the API 403s on mixed lists; simplest: enable drag only when every crate is editable). AlbumEditorView edit route: if the album's crate is not editable, redirect to the album page. canEditCrate must appear in CrateView, AlbumView and LibraryView (or their components). Then delete the temporary canEdit computed from apps/web/src/stores/session.ts so that `grep -rn 'session.canEdit\\|\\.canEdit\\b' apps/web/src` is empty. Update existing colocated component tests (CrateBox.test.ts etc.) only if they break. Do not touch App.vue, router.ts, LoginView/SignupView or packages/shared.",
+      "criteria": [
+        "AC1",
+        "AC15"
+      ],
+      "files": [
+        "apps/web/src/components/LibraryToolbar.vue",
+        "apps/web/src/components/crate/EmptyShelf.vue",
+        "apps/web/src/components/crate/CrateBox.vue",
+        "apps/web/src/components/crate/CrateBox.test.ts",
+        "apps/web/src/components/crate/CrateSettings.vue",
+        "apps/web/src/components/forms/AlbumForm.vue",
+        "apps/web/src/views/LibraryView.vue",
+        "apps/web/src/views/AlbumView.vue",
+        "apps/web/src/views/CrateView.vue",
+        "apps/web/src/views/CratesView.vue",
+        "apps/web/src/views/AlbumEditorView.vue",
+        "apps/web/src/stores/session.ts"
+      ],
+      "dependsOn": [
+        "T5"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Docs and deploy config for accounts and ADMIN_EMAIL",
+      "description": "Document the new model without moving data paths. .env.example: add ADMIN_EMAIL next to ADMIN_PASSWORD (both used to bootstrap the first admin account on first start; changing ADMIN_PASSWORD later does NOT change an existing admin's password); mark SESSION_SECRET as no longer used (may be left empty). compose.yaml: add ADMIN_EMAIL: ${ADMIN_EMAIL:?...} beside ADMIN_PASSWORD; keep SESSION_SECRET passthrough harmless (or remove it from environment without breaking existing .env files); do not touch the crate-data volume, /data or crate.db. docs/DEPLOY.md: ADMIN_EMAIL setup, upgrade note (instances that only set ADMIN_PASSWORD must add ADMIN_EMAIL or they have no admin and existing crates stay admin-only), everyone re-logs in once after upgrade, TRUST_PROXY needed for per-IP rate limit. README.md: replace the 'Who can edit' table with the accounts model (anyone browses; signed-in users create crates and edit only their own; admins edit anything; sign up at /signup; 30-day sessions; login/signup rate limited 10 per 15 min per IP) and mention ADMIN_EMAIL in the env var list. docs/SPEC.md section 8: update auth wording. Add docs/adr/0004-user-accounts.md (scrypt via node:crypto, hashed opaque session tokens, ownership via crates.owner_id with NULL meaning admin-owned, backfill in app code at startup, SameSite=Lax as CSRF mitigation). .github/workflows/ci.yml: add -e ADMIN_EMAIL=ci@example.invalid to the docker smoke run if present (keep ADMIN_PASSWORD). Do not change Dockerfile data paths. Prettier must pass on all markdown/yaml.",
+      "criteria": [
+        "AC1",
+        "AC16",
+        "AC17"
+      ],
+      "files": [
+        ".env.example",
+        "compose.yaml",
+        "docs/DEPLOY.md",
+        "README.md",
+        "docs/SPEC.md",
+        "docs/adr/0004-user-accounts.md",
+        ".github/workflows/ci.yml"
+      ],
+      "dependsOn": [
+        "T2"
+      ]
+    }
+  ]
+}

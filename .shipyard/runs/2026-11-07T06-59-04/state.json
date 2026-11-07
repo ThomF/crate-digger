@@ -1,0 +1,73 @@
+{
+  "runId": "2026-11-07T06-59-04",
+  "target": "/home/claude/crate-digger",
+  "request": "Frisson 1.0 Phase 1: user accounts and auth (signup, login, logout, sessions, admin/user roles, crate ownership). Push to main.",
+  "branch": "shipyard/user-accounts-auth-2026-11-07T06-59-04",
+  "stage": "done",
+  "cycle": 1,
+  "maxCycles": 3,
+  "fixRound": 0,
+  "maxFixRounds": 3,
+  "criteria": {
+    "AC1": "pass",
+    "AC2": "pass",
+    "AC3": "pass",
+    "AC4": "pass",
+    "AC5": "pass",
+    "AC6": "pass",
+    "AC7": "pass",
+    "AC8": "pass",
+    "AC9": "pass",
+    "AC10": "pass",
+    "AC11": "pass",
+    "AC12": "pass",
+    "AC13": "pass",
+    "AC14": "pass",
+    "AC15": "pass",
+    "AC16": "pass",
+    "AC17": "pass",
+    "AC18": "pass"
+  },
+  "tasks": {
+    "T1": "done",
+    "T2": "done",
+    "T3": "done",
+    "T4": "done",
+    "T5": "done",
+    "T6": "done",
+    "T7": "done"
+  },
+  "deaths": [],
+  "verdict": "shipped",
+  "baseCommit": "b628a8defcdbc00c7ff1578a963673267c01e4f4",
+  "startedAt": "2026-11-07T06:59:04Z",
+  "endedAt": "2026-11-07T07:44:09Z",
+  "stageTimes": {
+    "intake": {
+      "start": "2026-11-07T06:59:04Z",
+      "end": "2026-11-07T07:02:46Z"
+    },
+    "survey": {
+      "start": "2026-11-07T06:59:04Z",
+      "end": "2026-11-07T07:02:46Z"
+    },
+    "plan": {
+      "start": "2026-11-07T07:02:46Z",
+      "end": "2026-11-07T07:07:48Z"
+    },
+    "build": {
+      "start": "2026-11-07T07:07:48Z",
+      "end": "2026-11-07T07:37:12Z"
+    },
+    "test": {
+      "start": "2026-11-07T07:37:12Z",
+      "end": "2026-11-07T07:42:33Z"
+    },
+    "report": {
+      "start": "2026-11-07T07:42:33Z",
+      "end": "2026-11-07T07:44:09Z"
+    }
+  },
+  "active": [],
+  "fastPaths": []
+}

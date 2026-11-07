@@ -1,0 +1,62 @@
+{
+  "id": "T1",
+  "status": "done-pending-test",
+  "committed": true,
+  "commit": "cb34d03",
+  "filesChanged": [
+    "packages/shared/src/index.ts",
+    "apps/api/src/db/schema.ts",
+    "apps/api/drizzle/0003_accounts.sql",
+    "apps/api/drizzle/meta/_journal.json",
+    "apps/api/drizzle/meta/0003_snapshot.json",
+    "apps/api/src/services/crates.ts",
+    "apps/api/src/services/passwords.ts",
+    "apps/api/test/migration.test.ts",
+    "apps/api/test/passwords.test.ts",
+    "apps/api/test/shared-auth.test.ts",
+    "apps/web/src/stores/library.test.ts",
+    "apps/web/src/components/crate/CrateBox.test.ts"
+  ],
+  "filesUntouched": [
+    "apps/api/src/db/client.ts",
+    "apps/api/test/schema.test.ts"
+  ],
+  "gates": {
+    "format:check": 0,
+    "lint": 0,
+    "typecheck": 0,
+    "test": 0,
+    "build": 0
+  },
+  "criteriaSelfCheck": {
+    "AC1": "all five gates exit 0 locally (api 94 tests, web 102)",
+    "AC2": "checks pass locally: 4 journal entries, old migrations unchanged, users/sessions/owner_id in 0003, drizzle-kit reports No schema changes",
+    "AC3": "named test passes",
+    "AC4": "scrypt + timingSafeEqual in passwords.ts, 3 named tests pass, no dependencies added",
+    "AC13": "signupInput/publicUser present, 'signupInput rejects short passwords' passes",
+    "AC17": "greps return nothing"
+  },
+  "dependenciesAdded": [],
+  "findings": [
+    "drizzle-kit emitted ALTER TABLE crates ADD owner_id ... REFERENCES users(id) with no ON DELETE clause, so in the real DB the FK is NO ACTION, not SET NULL (the snapshot says set null). Deleting a user who owns crates will fail with a FK error. User deletion is out of scope; not hand-edited per rules.",
+    "No crates rebuild was emitted, so the foreign_keys OFF/ON toggle in client.ts was not needed and client.ts is unchanged.",
+    "Formatted the generated _journal.json and 0003_snapshot.json with Prettier (format:check requires it, as for earlier snapshots). 0003 SQL not edited."
+  ],
+  "blockerResolved": {
+    "by": "Harbormaster",
+    "change": "T1 given apps/web/src/stores/library.test.ts and apps/web/src/components/crate/CrateBox.test.ts; added ownerId/ownerUsername/ownerDisplayName: null to the 3 Crate fixtures, nothing else.",
+    "previous": {
+      "summary": "Adding required ownerId/ownerUsername/ownerDisplayName to the shared crate schema breaks apps/web typecheck in two test fixtures T1 does not own.",
+      "files": [
+        "apps/web/src/stores/library.test.ts",
+        "apps/web/src/components/crate/CrateBox.test.ts"
+      ],
+      "errors": [
+        "apps/web/src/components/crate/CrateBox.test.ts(6,7): TS2739 missing ownerId, ownerUsername, ownerDisplayName",
+        "apps/web/src/stores/library.test.ts(7,3): TS2739 missing ownerId, ownerUsername, ownerDisplayName",
+        "apps/web/src/stores/library.test.ts(16,3): TS2739 missing ownerId, ownerUsername, ownerDisplayName"
+      ],
+      "fix": "Add ownerId: null, ownerUsername: null, ownerDisplayName: null to the 3 Crate fixtures (add both files to T1, or to a small follow-up task). Weakening the schema to .nullish() was rejected as a contract change."
+    }
+  }
+}

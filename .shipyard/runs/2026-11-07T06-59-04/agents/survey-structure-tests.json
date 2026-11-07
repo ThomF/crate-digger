@@ -1,0 +1,43 @@
+{
+  "concerns": ["structure", "tests"],
+  "structure": {
+    "type": "npm workspaces monorepo, ESM, root package name 'frisson'; workspaces packages/* and apps/*; node >=22.18, .nvmrc 22",
+    "workspaces": {
+      "packages/shared": "@frisson/shared; zod; exports ./src/index.ts and ./sorting; only a typecheck script",
+      "apps/api": "@frisson/api; Fastify 5, better-sqlite3, drizzle-orm, sharp, fastify-type-provider-zod; src/{plugins,routes,services,db}; migrations in apps/api/drizzle (0000-0002); runs .ts directly via node, no build",
+      "apps/web": "@frisson/web; Vue 3, Pinia, vue-router, Vite 6; build = vite build to apps/web/dist; dev proxies /api and /covers to 127.0.0.1:3000"
+    },
+    "app_assembly": {
+      "app.ts": "buildApp(opts: dbPath, coversDir, auth, webDir) returns an unstarted Fastify; logger off when NODE_ENV=test; trustProxy from TRUST_PROXY; Zod validator/serializer compilers set",
+      "registration_order": ["errorHandlerPlugin", "authPlugin (adminPassword/sessionSecret/production from env, overridden by opts.auth)", "dbPlugin (decorates app.db, closes on onClose)", "coversPlugin (decorates coversDir)", "healthRoutes /api", "sessionRoutes /api", "crateRoutes /api", "albumRoutes /api", "coverRoutes /api", "webPlugin (last; static + SPA notFound handler; no-op unless dir/WEB_DIR set)"],
+      "server.ts": "imports buildApp, listens on PORT (3000) / HOST (127.0.0.1)",
+      "auth_hook": "onRequest hook blocks write methods under /api/ (except /api/session) unless canEdit; modes: open (no password, non-prod), login (password set), read-only (no password, production)"
+    },
+    "docker_ci": {
+      "Dockerfile": "multi-stage node:22-bookworm-slim (manifests, web-build, api-deps, runtime); runs node apps/api/src/server.ts as user node; /data volume; healthcheck /api/health",
+      "compose.yaml": "services app and caddy (docker/Caddyfile)",
+      "ci": ".github/workflows/ci.yml on PR and push to main; job check: npm ci, format:check, lint, typecheck, test, build; job docker: image build + smoke test"
+    },
+    "tooling": "eslint.config.js (flat), .prettierrc.json, tsconfig.base.json, .editorconfig"
+  },
+  "tests": {
+    "runner": "vitest ^3.2 in api and web; no vitest config file in apps/api (defaults); web config inline in vite.config.ts with environment happy-dom; @vue/test-utils for components",
+    "root_commands": {
+      "test": "npm run test --workspaces --if-present (runs vitest run in apps/api and apps/web)",
+      "typecheck": "npm run typecheck --workspaces --if-present",
+      "build": "npm run build --workspaces --if-present",
+      "lint": "eslint .",
+      "format:check": "prettier --check ."
+    },
+    "api_tests": "apps/api/test/*.test.ts: albums, auth, covers, crates, health, schema, sorting, web (about 71 it() cases); web tests are 7+ *.test.ts colocated in apps/web/src",
+    "helpers": {
+      "file": "apps/api/test/helpers.ts",
+      "buildTestApp()": "mkdtemp covers dir in tmpdir, buildApp({dbPath ':memory:', coversDir}), onClose hook removes the dir; caller must app.close()",
+      "TestApp": "type alias of the resolved buildTestApp return",
+      "addCrate(app, name, sortOrder)": "inserts a crate directly via app.db and drizzle schema",
+      "multipart(field, fileName, contentType, buffer)": "hand-built multipart body returning payload and headers"
+    },
+    "db_in_tests": "in-memory SQLite; createDb runs drizzle migrations from apps/api/drizzle on every build, foreign_keys ON",
+    "request_style": "app.inject(); no ports opened; auth.test.ts and web.test.ts call buildApp directly with auth / webDir options; default test app has no password so is in open mode"
+  }
+}

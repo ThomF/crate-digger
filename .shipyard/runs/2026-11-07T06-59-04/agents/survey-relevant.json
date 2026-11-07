@@ -1,0 +1,41 @@
+{
+ "concern": "relevant",
+ "target": "/home/claude/crate-digger",
+ "request": "user accounts and auth",
+ "api": {
+  "auth_plugin": {"file": "apps/api/src/plugins/auth.ts", "notes": "AuthOptions L14-20 (adminPassword, production, sessionSecret); Access {canEdit, canLogIn} L22; FastifyInstance.auth decorator L24-33 (access, checkPassword, logIn, logOut); SESSION_COOKIE='frisson_session' L35; modes open/read-only/password L43; signed cookie 'admin:<ts>' via @fastify/cookie L56-65,82-90; global onRequest write gate L98-107 (POST/PUT/PATCH/DELETE under /api/, skips /api/session*; 401 if canLogIn else 403; HttpError)"},
+  "session_routes": {"file": "apps/api/src/routes/session.ts", "notes": "GET /session L10, POST /session L14 (rate-limit 10/15min, L19; body loginInput), DELETE /session L31; all use app.auth.*; rate-limit registered in plugin L8"},
+  "consumers_of_app_auth": ["apps/api/src/plugins/auth.ts L102", "apps/api/src/routes/session.ts L11,22,23,26,32,35", "apps/api/test/auth.test.ts (imports AuthOptions, SESSION_COOKIE)"],
+  "guarding": "No per-route preHandler. One global onRequest hook in auth.ts L98 gates all write methods under /api/. Routes (crates.ts, albums.ts, covers.ts) have no auth code and no req.user. Write routes: crates.ts L27 POST,L33 PATCH,L40 DELETE,L45 PUT(order); albums.ts L41 POST,L47 PATCH,L53 DELETE,L59 PATCH,L67 POST(spins),L73 PUT; covers.ts L9 POST,L22 DELETE. Services in apps/api/src/services/{crates,albums,covers}.ts take no user param; crates select list at services/crates.ts L8-13 (id,name,color,label,sortBy,sortOrder) and shared `crate` zod at packages/shared/src/index.ts L118",
+  "app_ts": "apps/api/src/app.ts: AppOptions.auth L21; registers authPlugin L43-48 with env ADMIN_PASSWORD/SESSION_SECRET/NODE_ENV==='production' then ...opts.auth; authPlugin registered BEFORE dbPlugin (L49) so auth has no app.db at register time; sessionRoutes L53; trustProxy from TRUST_PROXY L34",
+  "server_ts": "apps/api/src/server.ts: only PORT, HOST read (L3-4); buildApp() reads auth env itself",
+  "schema": "apps/api/src/db/schema.ts: timestamps helper L8-16; crates L18-27 (no owner); albums L31-56; tracks L60-74; relations L78-89; types L91-96; no users/sessions tables",
+  "migrations": "drizzle-kit generate (apps/api/package.json L10 db:generate); apps/api/drizzle.config.ts L4-11 (sqlite, schema ./src/db/schema.ts, out ./drizzle); migrations apps/api/drizzle/0000_init.sql,0001_crate_sort_by.sql,0002_album_spin_count.sql; journal apps/api/drizzle/meta/_journal.json (3 entries, idx 0-2) + meta/000N_snapshot.json; run at startup by createDb() in apps/api/src/db/client.ts L27 migrate(db,{migrationsFolder}) via dbPlugin apps/api/src/plugins/db.ts L15; foreign_keys ON L22. Hand-written backfill would go in a migration SQL (0002 is simple ALTER TABLE ADD).",
+  "seed": "apps/api/src/db/seed.ts: wipes tracks/albums/crates L318-321, inserts crates L324-333 with no owner; refuses in production L307; uses createDb() L312; no users",
+  "other_db_scripts": ["apps/api/src/db/backup.ts", "apps/api/src/db/restore.ts"],
+  "shared": "packages/shared/src/index.ts: sessionInfo L153-158 {canEdit, canLogIn}; loginInput L160 {password}; SessionInfo type L193; crate schema L118"
+ },
+ "config": {
+  ".env.example": "L5 ADMIN_PASSWORD= (required for compose), L9 DOMAIN, L13 SESSION_SECRET (optional); no ADMIN_EMAIL",
+  "compose.yaml": "L27 ADMIN_PASSWORD: ${ADMIN_PASSWORD:?...} required, L28 SESSION_SECRET: ${SESSION_SECRET:-}, L30 TRUST_PROXY",
+  "other_ADMIN_PASSWORD_refs": ["Dockerfile L8", ".github/workflows/ci.yml L44 (docker run -e ADMIN_PASSWORD=ci-only)", "README.md L41-47,73,118", "docs/DEPLOY.md L23,68", "docs/adr/0003-deployment.md L24"]
+ },
+ "web": {
+  "session_store": "apps/web/src/stores/session.ts: info ref L9, canEdit/canLogIn computed L12-13, load() L16, logIn(password) L27, logOut L31",
+  "api_session": "apps/web/src/api/session.ts: getSession L3, logIn(password) L7, logOut L11 (request from api/client.ts)",
+  "login_view": "apps/web/src/views/LoginView.vue: password-only form; 'Staff only' copy L90; submit L72-85 uses session.logIn + safeRedirect(props.next); focus input L65-70; styles L112+",
+  "router": "apps/web/src/router.ts: RouteMeta.requiresEdit L7; routes /crates L173 (requiresEdit), /login L179 (props next), /albums/new L196, /albums/:id/edit L204 (requiresEdit); no signup route; beforeEach guard L218-224 (load session; canEdit else login?next= or home)",
+  "app_vue": "apps/web/src/App.vue: header .masthead L241-244 (no user menu); onMounted session.load L232; logOut L234-237 pushes library if route requiresEdit; footer 'Staff log in'/'Log out' L250-253 shown when canLogIn",
+  "canEdit_consumers": ["apps/web/src/components/LibraryToolbar.vue L15", "apps/web/src/components/crate/EmptyShelf.vue L11", "apps/web/src/views/LibraryView.vue L118,220,239,246,282", "apps/web/src/views/AlbumView.vue L78", "apps/web/src/views/CrateView.vue L41 (also gates spinAlbum call), L96"],
+  "other": "apps/web/src/utils/redirect.ts (safeRedirect) + redirect.test.ts; api/client.ts request/errorMessage"
+ },
+ "tests": {
+  "auth.test.ts": "apps/api/test/auth.test.ts (183 lines): appWith(AuthOptions) L53; open mode L76, read-only L88, admin password L100-182 (401, wrong pw, cookie flags L127, forged cookie L138, empty SESSION_SECRET L146, password change logs out L155, logout L164, rate limit L174); all assert old SessionInfo shape and password-only POST /api/session",
+  "helpers.ts": "apps/api/test/helpers.ts: buildTestApp() L11 calls buildApp({dbPath ':memory:', coversDir}) with NO auth opts (relies on open mode when no env); addCrate() L21 inserts crates directly with {name, sortOrder} (no owner_id); multipart L29",
+  "web.test.ts": "apps/api/test/web.test.ts L18 buildApp({dbPath, coversDir, webDir}); no auth assertions",
+  "other_users_of_helpers": ["crates.test.ts", "albums.test.ts", "covers.test.ts", "health.test.ts"],
+  "schema.test.ts": "apps/api/test/schema.test.ts (db schema)",
+  "web_unit": "no web tests reference session store; apps/web/src/stores/library.test.ts exists, redirect.test.ts"
+ },
+ "absent": ["users table", "sessions table", "owner_id", "scrypt/password hashing (only sha256 timing compare)", "signup/me endpoints", "ADMIN_EMAIL", "signup page", "header user menu", "per-route preHandler", "request.user"]
+}

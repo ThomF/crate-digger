@@ -1,0 +1,1 @@
+Surveyor 1: structure and tests for crate-digger. Findings are in survey-structure-tests.json. Note: an earlier run's survey (06-38-49) named packages @crate-digger/*; current manifests say @frisson/*. Read-only otherwise; no installs or tests run.

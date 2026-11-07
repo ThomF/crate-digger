@@ -1,0 +1,138 @@
+{
+  "goal": "Phase 1 of Frisson 1.0: replace the single ADMIN_PASSWORD cookie with real user accounts (users table, scrypt passwords, server-side hashed-token sessions, signup/login/logout/me API, bootstrap admin from ADMIN_EMAIL + ADMIN_PASSWORD) and per-crate ownership (crates.owner_id): anyone browses, signed-in users create crates and edit/delete only their own (and the albums/tracks/covers in them), admins edit anything. Web gets Sign up / Log in pages, a header user menu with Log out, and edit controls only where permitted. Old single-password flow is removed.",
+  "constraints": [
+    "Never rename or move crate.db, DATA_DIR, /data or the crate-data volume.",
+    "Migrations are additive and generated with drizzle-kit (npm run db:generate -w apps/api); never edit existing files in apps/api/drizzle (0000-0002 SQL or snapshots). Hand-edits to the NEW migration for backfill are not allowed either: backfill happens in app code at startup.",
+    "Existing data (crates, albums, tracks) must survive the migration, proven by a test.",
+    "Passwords: node:crypto scrypt, random per-user salt, timingSafeEqual verify, minimum length 8; no new native dependency (no bcrypt/argon2). Pure-JS or built-in only.",
+    "Session token: random (crypto.randomBytes), only a hash stored in DB; expiry 30 days; cookie httpOnly, SameSite=Lax, Secure when NODE_ENV=production; logout deletes the session row.",
+    "Bad login returns one generic error regardless of unknown email vs wrong password.",
+    "Parameterized queries only (Drizzle query builder or bound params); no string-built SQL.",
+    "No secrets in source; errors via HttpError and the existing error-handler plugin.",
+    "ADMIN_PASSWORD keeps meaning 'admin password'; ADMIN_EMAIL documented in .env.example, compose.yaml and docs/DEPLOY.md.",
+    "Old /api/session routes, checkPassword/logIn/logOut auth decorator, web LoginView password-only flow and session store logic are replaced, not kept alongside.",
+    "Out of scope: profiles/social links, favorites, likes, follows, feed, B-Side, email verification, password reset, OAuth.",
+    "prettier --check, eslint, typecheck, vitest and build stay green. npm install must be run as npm_config_nodedir=/opt/node22 npm install (only if a dependency changes; none expected).",
+    "Do not touch the Pennant GitHub organization."
+  ],
+  "assumptions": [
+    "The 'open' dev mode (no password, anyone can edit) and 'read-only' production mode are removed: every write needs a session (401 otherwise). Existing tests in apps/api/test that rely on open mode (crates, albums, covers, auth tests) must be rewritten to sign in via a test helper; this is expected churn, not a regression.",
+    "If ADMIN_EMAIL or ADMIN_PASSWORD is unset, no admin is bootstrapped; the app still starts (logged warning) and browsing works. Compose keeps requiring ADMIN_PASSWORD and additionally requires ADMIN_EMAIL (':?' guard) for new deploys; the API itself does not crash without them.",
+    "Bootstrap admin gets username 'admin' (suffixed if taken) and display name 'Admin'. Bootstrap runs only if no user with role 'admin' exists; it never changes an existing admin's password.",
+    "Backfill: crates with owner_id NULL are assigned to the bootstrap admin when it is created at startup (and on later startups if an admin exists). NULL owner means admin-owned: only admins may edit it.",
+    "owner_id FK uses ON DELETE SET NULL (no user deletion exists in this phase). Column is nullable. users.created_at is unix-epoch integer like other tables.",
+    "Email is stored lower-cased and trimmed and unique on the lower-cased value; username is 3-32 chars of [a-z0-9_-], stored lower-case, unique. Signup does not accept a role; new accounts are always 'user'.",
+    "Signup logs the new user in (sets session cookie) and returns the user; login returns the user. User JSON never contains password hash.",
+    "Signup with a duplicate email or username returns 409 (reveals existence, accepted for signup); login stays generic 401.",
+    "Rate limit: in-memory per-IP counters via the already-installed @fastify/rate-limit (or a small hand-rolled map), applied to login and signup only; exceeding returns 429. Tests need a way to reset or configure limits (app option), default something like 10 attempts per 15 minutes.",
+    "Ownership checks cover: POST/PATCH/DELETE crates, PUT /crates/order (all ids must be owned, admin exempt, else 403), album create (target crate owned), album update/delete/move/reorder (source and target crate owned), tracks (via album PATCH), cover upload/delete. Album spin-count POST is treated as a write needing a session and edit permission like the rest (decided in build; flagged for owner).",
+    "POST /api/crates sets owner_id to the current user. Crate JSON gains ownerId (nullable) and owner username/display name for UI; album JSON unchanged except any needed field is additive.",
+    "Existing cookie name frisson_session is reused with a new opaque value; old signed 'admin:' cookies become invalid and users re-login once.",
+    "SESSION_SECRET is no longer needed to sign cookies (tokens are opaque and hashed server-side); it may be left documented as deprecated/ignored or removed from docs; compose must not break if it is still passed.",
+    "CSRF is mitigated by SameSite=Lax plus all writes being non-GET JSON/multipart; no CSRF token added.",
+    "Web routes /signup and /login; /login keeps the ?next= redirect. Router requiresEdit guard becomes: requires sign-in; per-crate edit controls use a canEditCrate(crate) helper (admin or ownerId === user.id).",
+    "Web store tests (vitest) are acceptable for UI logic; no browser/E2E tooling exists in the repo."
+  ],
+  "risks": [
+    "Rewriting open-mode tests is large; sloppy rewrites could weaken coverage of existing album/crate behaviour.",
+    "Migration adding owner_id to a populated crates table: SQLite ALTER ADD COLUMN with FK must be nullable/default NULL; drizzle-kit may emit a table rebuild instead, which risks data loss with foreign_keys=ON (albums reference crates ON DELETE restrict). Verify the generated SQL and run the data-survival test.",
+    "Account enumeration through timing: unknown email path must still run a scrypt verify against a dummy hash.",
+    "Authorization gaps: any route that mutates albums/tracks/covers but looks up the crate indirectly (move album across crates, reorder) could skip the owner check.",
+    "Bootstrap ordering: admin creation and NULL-owner backfill must be idempotent and run after migrations, before listening, and not in buildApp for tests unless env is set.",
+    "Rate limiter keyed by IP is wrong behind Caddy unless TRUST_PROXY=true; compose already sets it.",
+    "Deployed instances that set only ADMIN_PASSWORD (no ADMIN_EMAIL) will have no admin after upgrade and be unable to edit; docs must call this out.",
+    "scrypt is CPU/memory heavy: login rate limit and sensible params (N=16384, r=8, p=1, keylen 64) needed to avoid event-loop stalls; use async scrypt."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "text": "Repo gates are green.",
+      "check": "From /home/claude/crate-digger each exits 0: npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
+    },
+    {
+      "id": "AC2",
+      "text": "A new drizzle-kit generated migration exists, old migrations are untouched, and it creates users and sessions tables and adds crates.owner_id.",
+      "check": "ls apps/api/drizzle/*.sql shows exactly 0000_init.sql, 0001_crate_sort_by.sql, 0002_album_spin_count.sql plus one new 0003_*.sql; apps/api/drizzle/meta/_journal.json has 4 entries; the three old .sql files and their snapshots are byte-identical to the base commit (git diff base -- apps/api/drizzle/0000_init.sql apps/api/drizzle/0001_crate_sort_by.sql apps/api/drizzle/0002_album_spin_count.sql is empty); grep -Ei 'CREATE TABLE .users.|CREATE TABLE .sessions.|owner_id' apps/api/drizzle/0003_*.sql matches all three; cd apps/api && npx drizzle-kit generate reports 'No schema changes'."
+    },
+    {
+      "id": "AC3",
+      "text": "Existing data survives the migration.",
+      "check": "vitest test named 'migration 0003 preserves existing crates, albums and tracks' in apps/api/test/migration.test.ts passes: it applies migrations 0000-0002 to a file DB, inserts rows, applies 0003, and asserts all rows intact and crates.owner_id is NULL. Run: npm test -w apps/api -- migration"
+    },
+    {
+      "id": "AC4",
+      "text": "Password hashing uses node:crypto scrypt with salt and constant-time verify, with no new native dependency.",
+      "check": "grep -rn \"scrypt\" apps/api/src | grep -q . and grep -rn \"timingSafeEqual\" apps/api/src/services/passwords.ts (or wherever hashing lives) matches; git diff base -- package.json apps/*/package.json packages/*/package.json shows no added dependency named bcrypt, bcryptjs, argon2 or node-gyp-based package; vitest tests 'hashes with a random salt (same password gives different hashes)', 'verifies the right password and rejects a wrong one', 'rejects passwords shorter than 8 characters' in apps/api/test/passwords.test.ts pass."
+    },
+    {
+      "id": "AC5",
+      "text": "Signup works, normalises identity fields, enforces uniqueness and never stores or returns the plaintext/hash.",
+      "check": "vitest tests in apps/api/test/auth-accounts.test.ts pass: 'signup creates a user, sets a session cookie and returns no passwordHash', 'signup rejects a password under 8 characters with 400', 'signup rejects duplicate email case-insensitively with 409', 'signup rejects duplicate username with 409', 'signup rejects a non url-safe username with 400', 'signup always creates role user even if role is supplied'. Also: grep -rn 'password_hash\\|passwordHash' apps/web/src packages/shared/src returns nothing in response schemas."
+    },
+    {
+      "id": "AC6",
+      "text": "Login, me and logout behave per spec, with a generic failure message.",
+      "check": "vitest tests in apps/api/test/auth-accounts.test.ts pass: 'login with correct credentials sets session cookie', 'login email is case-insensitive', 'login failure for unknown email and wrong password return identical status and body (401)', 'me returns the current user when signed in', 'me returns 401 without a session', 'logout deletes the session row and the old cookie no longer authenticates', 'expired session is rejected'."
+    },
+    {
+      "id": "AC7",
+      "text": "Session tokens are stored only hashed, expire in 30 days, and the cookie has the required flags.",
+      "check": "vitest tests in apps/api/test/auth-accounts.test.ts pass: 'session table stores a hash, not the cookie token', 'session expires 30 days after creation', 'cookie is httpOnly with SameSite=Lax', 'cookie is Secure when NODE_ENV is production and not otherwise'."
+    },
+    {
+      "id": "AC8",
+      "text": "Login and signup are rate limited per IP in memory.",
+      "check": "vitest tests pass: 'login is rate limited per IP returning 429 after the limit' and 'signup is rate limited per IP returning 429 after the limit' in apps/api/test/auth-accounts.test.ts; grep -rn 'rateLimit\\|rate-limit' apps/api/src/routes/auth.ts matches."
+    },
+    {
+      "id": "AC9",
+      "text": "Bootstrap admin is created from ADMIN_EMAIL + ADMIN_PASSWORD when no admin exists, idempotently, and legacy crates are backfilled to it.",
+      "check": "vitest tests in apps/api/test/bootstrap.test.ts pass: 'creates an admin when ADMIN_EMAIL and ADMIN_PASSWORD are set and none exists', 'does nothing when an admin already exists', 'does not create an admin when ADMIN_EMAIL is missing', 'is idempotent across restarts', 'assigns ownerless crates to the bootstrap admin', 'bootstrap admin can log in with ADMIN_PASSWORD'."
+    },
+    {
+      "id": "AC10",
+      "text": "Anyone can browse; writes without a session get 401.",
+      "check": "vitest tests in apps/api/test/ownership.test.ts pass: 'anonymous can GET crates, crate, albums and album', and one 401 test each: 'anonymous POST /api/crates returns 401', 'anonymous PATCH crate returns 401', 'anonymous DELETE crate returns 401', 'anonymous PUT /api/crates/order returns 401', 'anonymous POST/PATCH/DELETE album returns 401', 'anonymous cover upload and delete return 401'."
+    },
+    {
+      "id": "AC11",
+      "text": "Signed-in users own what they create and can edit/delete only that; other users get 403; admins can edit anything.",
+      "check": "vitest tests in apps/api/test/ownership.test.ts pass: 'creating a crate sets ownerId to the current user', 'owner can patch and delete own crate', 'non-owner gets 403 patching another user's crate', 'non-owner gets 403 deleting another user's crate', 'non-owner gets 403 adding an album to another user's crate', 'non-owner gets 403 patching and deleting an album in another user's crate', 'non-owner gets 403 moving an album into someone else's crate', 'non-owner gets 403 on cover upload for another user's album', 'non-owner gets 403 reordering crates they do not own', 'owner can add, edit and delete albums and tracks in own crate', 'admin can edit and delete any user's crate and album', 'ownerless crate is editable only by admin'."
+    },
+    {
+      "id": "AC12",
+      "text": "The old single-password flow is gone.",
+      "check": "grep -rnE \"checkPassword|/api/session|adminPassword|'admin:'|canLogIn|loginInput\" apps packages --include=*.ts --include=*.vue --exclude-dir=node_modules returns no matches other than the bootstrap reading process.env.ADMIN_PASSWORD (allowlist: apps/api/src/app.ts or bootstrap file only); apps/api/src/routes/session.ts does not exist."
+    },
+    {
+      "id": "AC13",
+      "text": "Shared zod schemas define the auth contract used by both api and web.",
+      "check": "grep -n 'signupInput\\|loginInput\\|publicUser' packages/shared/src/index.ts matches; signupInput enforces min(8) on password: vitest 'signupInput rejects short passwords' in packages/shared or apps/api/test passes."
+    },
+    {
+      "id": "AC14",
+      "text": "Web has Sign up and Log in pages and a header with the signed-in user and Log out; no password-only login remains.",
+      "check": "ls apps/web/src/views/SignupView.vue apps/web/src/views/LoginView.vue exits 0; grep -n \"name: 'signup'\" apps/web/src/router.ts and grep -n \"path: '/signup'\" apps/web/src/router.ts match; grep -n 'Log out' apps/web/src/App.vue matches; LoginView.vue contains an email input (grep -n 'type=\"email\"' apps/web/src/views/LoginView.vue); vitest 'session store loads the current user, logs in, signs up and logs out' in apps/web/src/stores/session.test.ts passes."
+    },
+    {
+      "id": "AC15",
+      "text": "Edit controls appear only where the user may edit.",
+      "check": "vitest tests in apps/web/src/stores/session.test.ts (or utils/permissions.test.ts) pass: 'canEditCrate is false when signed out', 'canEditCrate is true for the owner', 'canEditCrate is false for another user', 'canEditCrate is true for admin on any crate', 'canEditCrate is true for admin on ownerless crate and false for a user'; grep -rn 'canEditCrate' apps/web/src/views apps/web/src/components matches in CrateView, AlbumView and LibraryView or their components; no remaining use of session.canEdit (grep -rn 'session.canEdit\\|\\.canEdit\\b' apps/web/src returns nothing)."
+    },
+    {
+      "id": "AC16",
+      "text": "Docs and deploy config mention ADMIN_EMAIL and keep ADMIN_PASSWORD working; data paths unchanged.",
+      "check": "grep -n ADMIN_EMAIL .env.example compose.yaml docs/DEPLOY.md README.md each match; grep -n ADMIN_PASSWORD .env.example compose.yaml docs/DEPLOY.md still match; grep -n 'crate-data:' compose.yaml and grep -rn 'crate.db' apps/api/src/paths.ts still match unchanged; git diff base -- Dockerfile docker | grep -E '^[-+].*(crate-data|/data|crate\\.db)' is empty."
+    },
+    {
+      "id": "AC17",
+      "text": "All queries are parameterized and no secrets are committed.",
+      "check": "grep -rnE 'sql\\.raw|\\.exec\\(|\\.prepare\\(`|\\$\\{[^}]*\\}.*(SELECT|INSERT|UPDATE|DELETE)' apps/api/src/services apps/api/src/routes apps/api/src/plugins returns nothing new versus base; git grep -nEi \"password\\s*[:=]\\s*['\\\"][^'\\\"]{4,}\" -- apps/api/src apps/web/src packages returns nothing (test files under apps/api/test exempt)."
+    },
+    {
+      "id": "AC18",
+      "text": "Errors flow through HttpError and the error handler.",
+      "check": "grep -rn 'new HttpError(40[139]\\|new HttpError(409\\|new HttpError(429' apps/api/src/services apps/api/src/plugins apps/api/src/routes matches in the auth and ownership code; grep -rn 'reply.code(40[0-9]).send' apps/api/src/routes/auth.ts returns nothing."
+    }
+  ]
+}

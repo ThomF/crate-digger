@@ -1,0 +1,40 @@
+{
+  "id": "T4",
+  "status": "done-pending-test",
+  "committed": true,
+  "commit": "0a1b027",
+  "filesChanged": [
+    "apps/api/src/routes/albums.ts",
+    "apps/api/src/services/albums.ts",
+    "apps/api/src/routes/covers.ts",
+    "apps/api/src/services/covers.ts",
+    "apps/api/test/albums.test.ts",
+    "apps/api/test/covers.test.ts",
+    "apps/api/test/ownership.test.ts",
+    "docs/adr/0003-deployment.md",
+    "Dockerfile"
+  ],
+  "filesDeleted": [],
+  "gates": {
+    "npm run format:check (root)": 0,
+    "npm run typecheck (root)": 0,
+    "npm run lint (root)": 0,
+    "npm test (root)": 0,
+    "npm run build (root)": 0
+  },
+  "criteriaSelfCheck": {
+    "AC1": "All five root gates exit 0 at commit time (api: 132 tests). First format:check run flagged apps/web/src/views/editControls.test.ts (other dev's file); it passed on re-run after their commit be8910a. Not touched by me.",
+    "AC10": "'anonymous POST/PATCH/DELETE album returns 401' (also covers position, tracks, spins) and 'anonymous cover upload and delete return 401' pass, alongside T3's crate 401 tests.",
+    "AC11": "All album/cover tests named in AC11 pass verbatim; T3's crate-part admin test replaced by \"admin can edit and delete any user's crate and album\"; 'ownerless crate is editable only by admin' extended to albums (user 403 on PATCH and POST, admin 200).",
+    "AC17": "Album/cover changes only call permissions.ts (Drizzle builders); the AC17 SQL grep returns nothing. The password git grep DOES match apps/web/src/stores/session.test.ts lines 47 and 62 (test fixtures in a web test, outside my files; the exemption only names apps/api/test). Tester/owner should decide.",
+    "AC18": "Errors via permissions.ts HttpError(401/403) and notFound/badRequest; routes never set error codes."
+  },
+  "dependenciesAdded": [],
+  "findings": [
+    "Service signatures changed: createAlbum(db, user, input), updateAlbum(db, user, id, input), moveAlbum(db, user, id, input), addSpin(db, user, id), deleteAlbum(db, user, id), replaceTracks(db, user, id, tracks), setCover(db, coversDir, user, id, upload), removeCover(db, coversDir, user, id). No other callers.",
+    "Check order keeps old status codes: create = 401, 400 missing crate, 403. Move/patch with crateId = 401, 404 missing album, 403 source, 400 missing target, 403 target. Target crate checked only when crateId changes.",
+    "POST /albums/:id/cover checks permission in the route before reading the multipart body, so anonymous/non-owner uploads are refused without buffering the file; setCover checks again.",
+    "Spins now need edit permission (as planned): anonymous visitors can no longer count plays. Web must only call spins for editable albums or ignore 401/403.",
+    "Schema validation still runs before services, so an anonymous request with an invalid body gets 400, not 401."
+  ]
+}

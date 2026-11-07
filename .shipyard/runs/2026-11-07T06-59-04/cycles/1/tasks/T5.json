@@ -1,0 +1,41 @@
+{
+  "id": "T5",
+  "status": "done-pending-test",
+  "committed": true,
+  "commit": "9b5474f",
+  "filesChanged": [
+    "apps/web/src/api/auth.ts",
+    "apps/web/src/stores/session.ts",
+    "apps/web/src/stores/session.test.ts",
+    "apps/web/src/utils/permissions.ts",
+    "apps/web/src/utils/permissions.test.ts",
+    "apps/web/src/views/LoginView.vue",
+    "apps/web/src/views/SignupView.vue",
+    "apps/web/src/router.ts",
+    "apps/web/src/App.vue",
+    "packages/shared/src/index.ts"
+  ],
+  "filesDeleted": ["apps/web/src/api/session.ts"],
+  "gates": {
+    "typecheck -w apps/web": 0,
+    "test -w apps/web": 0,
+    "build -w apps/web": 0,
+    "eslint apps/web packages/shared": 0,
+    "prettier --check apps/web packages/shared": 0,
+    "npm run typecheck (all workspaces)": 0
+  },
+  "criteriaSelfCheck": {
+    "AC1": "web/shared gates above exit 0 (web 110 tests); full repo test/build not run by me (other devs editing in parallel)",
+    "AC12": "grep returns no matches in apps or packages",
+    "AC13": "sessionInfo/loginInput/SessionInfo removed; signupInput, publicUser unchanged from T1",
+    "AC14": "SignupView/LoginView exist; signup route; 'Log out' in App.vue; type=\"email\" in LoginView; named store test passes",
+    "AC15": "PARTIAL by design: the 5 canEditCrate tests pass; view/component use of canEditCrate and removal of session.canEdit are T6 (temporary canEdit computed kept in store)"
+  },
+  "dependenciesAdded": [],
+  "findings": [
+    "logOut sends POST /api/auth/logout with no body, so request() adds no JSON content-type (avoids T2's 400).",
+    "beforeEach now awaits session.load() on every navigation (one /api/auth/me per app load, cached).",
+    "Header user menu hides until the first load settles (success or failure) to avoid a flash of Log in links.",
+    "T6 must remove the temporary canEdit computed in stores/session.ts and its uses in LibraryView, CrateView, AlbumView, LibraryToolbar, EmptyShelf."
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "id": "T6",
+  "status": "done-pending-test",
+  "committed": true,
+  "commit": "be8910a",
+  "filesChanged": [
+    "apps/web/src/components/LibraryToolbar.vue",
+    "apps/web/src/components/crate/EmptyShelf.vue",
+    "apps/web/src/stores/session.ts",
+    "apps/web/src/views/AlbumEditorView.vue",
+    "apps/web/src/views/AlbumView.vue",
+    "apps/web/src/views/CrateView.vue",
+    "apps/web/src/views/CratesView.vue",
+    "apps/web/src/views/LibraryView.vue"
+  ],
+  "filesAdded": ["apps/web/src/views/editControls.test.ts"],
+  "filesUntouched": [
+    "apps/web/src/components/crate/CrateBox.vue",
+    "apps/web/src/components/crate/CrateBox.test.ts",
+    "apps/web/src/components/crate/CrateSettings.vue",
+    "apps/web/src/components/forms/AlbumForm.vue"
+  ],
+  "gates": {
+    "typecheck -w apps/web": 0,
+    "test -w apps/web": 0,
+    "build -w apps/web": 0,
+    "eslint apps/web": 0,
+    "prettier --check apps/web": 0
+  },
+  "criteriaSelfCheck": {
+    "AC1": "web gates above exit 0 (16 files, 118 tests); full repo gates not run (apps/api being edited in parallel)",
+    "AC15": "5 named canEditCrate tests pass (T5); canEditCrate appears in CrateView, AlbumView, LibraryView (plus CratesView, AlbumEditorView); grep for session.canEdit / .canEdit returns nothing"
+  },
+  "dependenciesAdded": [],
+  "findings": [
+    "editControls.test.ts is a new file outside the owned list (no other task owns it); 8 view tests mounting real views behind a memory router with stubbed fetch.",
+    "CratesView lists only editable crates; reorder buttons and move() only for admins.",
+    "AlbumEditorView: edit route redirects (router.replace) to the album page when the album's crate is not editable; new route ignores a crateId the user cannot edit and falls back to their first crate; empty state now links to the crates page instead of the obsolete db:seed / M8 note.",
+    "LibraryView: drag, drop highlight/drop, arrows and Move-to need both source and target crates editable; Move-to lists only editable crates.",
+    "CrateView only passes addToCrateId to the toolbar when the selected crate is editable; spins are counted only for records in editable crates (the API spin endpoint itself is unguarded).",
+    "AlbumForm, CrateSettings, CrateBox needed no changes: the parent passes the filtered crate list."
+  ]
+}
