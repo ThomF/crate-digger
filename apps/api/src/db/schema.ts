@@ -1,7 +1,7 @@
 import { relations, sql } from 'drizzle-orm'
 import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { CRATE_SORTS } from '@frisson/shared/sorting'
-import { USER_ROLES } from '@frisson/shared'
+import { SOCIAL_PLATFORMS, USER_ROLES } from '@frisson/shared'
 
 // Every table here becomes a real SQLite table. After changing this file, run
 // `npm run db:generate -w apps/api` to write a new SQL migration into apps/api/drizzle/.
@@ -26,7 +26,29 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: USER_ROLES }).notNull().default('user'),
   createdAt: timestamps.createdAt,
+  // Profile fields, added in migration 0004. These are PUBLIC once shown on a profile.
+  bio: text('bio').notNull().default(''),
+  location: text('location'),
+  avatarPath: text('avatar_path'), // the public URL path of the avatar image, or NULL
+  verified: integer('verified', { mode: 'boolean' }).notNull().default(false), // set by admins only
 })
+
+// Data classification: PUBLIC. Social links shown on a user's profile.
+// 'cascade' = deleting a user deletes their links. The 6-per-user limit is enforced by the
+// app (shared zod schema + profile service), not the database.
+export const userLinks = sqliteTable(
+  'user_links',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    platform: text('platform', { enum: SOCIAL_PLATFORMS }).notNull(),
+    url: text('url').notNull(),
+    position: integer('position').notNull(), // order on the profile, 0 first
+  },
+  (t) => [index('user_links_user_position_idx').on(t.userId, t.position)],
+)
 
 // Data classification: CONFIDENTIAL (credentials). id is the sha256 hex of the opaque
 // session token; the token itself is only ever in the user's cookie.
@@ -109,6 +131,11 @@ export const tracks = sqliteTable(
 export const usersRelations = relations(users, ({ many }) => ({
   crates: many(crates),
   sessions: many(sessions),
+  links: many(userLinks),
+}))
+
+export const userLinksRelations = relations(userLinks, ({ one }) => ({
+  user: one(users, { fields: [userLinks.userId], references: [users.id] }),
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -133,6 +160,8 @@ export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Session = typeof sessions.$inferSelect
 export type NewSession = typeof sessions.$inferInsert
+export type UserLink = typeof userLinks.$inferSelect
+export type NewUserLink = typeof userLinks.$inferInsert
 export type Crate = typeof crates.$inferSelect
 export type NewCrate = typeof crates.$inferInsert
 export type Album = typeof albums.$inferSelect

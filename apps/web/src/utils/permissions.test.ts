@@ -8,6 +8,8 @@ const alice: PublicUser = {
   username: 'alice',
   displayName: 'Alice',
   role: 'user',
+  avatarUrl: null,
+  verified: false,
 }
 const bob: PublicUser = { ...alice, id: 2, email: 'bob@example.com', username: 'bob' }
 const admin: PublicUser = { ...alice, id: 3, email: 'boss@example.com', role: 'admin' }

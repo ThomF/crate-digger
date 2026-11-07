@@ -17,6 +17,8 @@ const alice: PublicUser = {
   username: 'alice',
   displayName: 'Alice',
   role: 'user',
+  avatarUrl: null,
+  verified: false,
 }
 const admin: PublicUser = { ...alice, id: 2, username: 'boss', role: 'admin' }
 

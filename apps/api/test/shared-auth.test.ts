@@ -64,10 +64,20 @@ describe('shared auth schemas', () => {
       username: 'dj',
       displayName: 'DJ',
       role: 'user',
+      avatarUrl: null,
+      verified: false,
       passwordHash: 'scrypt$secret',
       password: 'secret',
     })
 
-    expect(Object.keys(parsed).sort()).toEqual(['displayName', 'email', 'id', 'role', 'username'])
+    expect(Object.keys(parsed).sort()).toEqual([
+      'avatarUrl',
+      'displayName',
+      'email',
+      'id',
+      'role',
+      'username',
+      'verified',
+    ])
   })
 })

@@ -19,6 +19,8 @@ export function toPublicUser(user: User): PublicUser {
     username: user.username,
     displayName: user.displayName,
     role: user.role,
+    avatarUrl: user.avatarPath ?? null,
+    verified: user.verified,
   }
 }
 

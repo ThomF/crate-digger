@@ -163,24 +163,31 @@ export const publicUser = z.object({
   username: z.string(),
   displayName: z.string(),
   role: z.enum(USER_ROLES),
+  /** Where the user's avatar is served from, or null when they have none. */
+  avatarUrl: z.string().nullable(),
+  /** Set only by an admin. Users cannot verify themselves. */
+  verified: z.boolean(),
 })
+
+/** The username rule: trimmed, lower-cased, 3-32 of a-z, 0-9, _ or -. */
+const usernameField = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(
+    z
+      .string()
+      .min(3, 'At least 3 characters')
+      .max(32, 'Keep it under 32 characters')
+      .regex(/^[a-z0-9_-]+$/, 'Use letters, numbers, _ or -'),
+  )
 
 const emailField = z.string().trim().toLowerCase().pipe(z.email('Enter a valid email').max(254))
 
 // z.object strips unknown keys, so a client cannot sign itself up with `role: 'admin'`.
 export const signupInput = z.object({
   email: emailField,
-  username: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .pipe(
-      z
-        .string()
-        .min(3, 'At least 3 characters')
-        .max(32, 'Keep it under 32 characters')
-        .regex(/^[a-z0-9_-]+$/, 'Use letters, numbers, _ or -'),
-    ),
+  username: usernameField,
   /** Defaults to the username on the server when left out. */
   displayName: z
     .string()
@@ -196,6 +203,96 @@ export const credentialsInput = z.object({
   email: emailField,
   password: z.string().min(1, 'Required').max(200),
 })
+
+// ── Profiles ────────────────────────────────────────────────────────────
+
+export const SOCIAL_PLATFORMS = [
+  'instagram',
+  'x',
+  'tiktok',
+  'youtube',
+  'soundcloud',
+  'spotify',
+  'bandcamp',
+  'discogs',
+  'website',
+] as const
+
+/** Largest avatar image upload the API accepts. */
+export const MAX_AVATAR_BYTES = 5 * 1024 * 1024
+
+/** Up to this many social links per profile. */
+export const MAX_PROFILE_LINKS = 6
+
+export const usernameParams = z.object({ username: usernameField })
+
+function isSafeHttpsUrl(value: string): boolean {
+  let url: URL
+  try {
+    url = new URL(value) // throws on relative URLs and garbage
+  } catch {
+    return false
+  }
+  // URL lower-cases the scheme, so 'HTTPS://' passes. Credentials in the URL are refused.
+  return url.protocol === 'https:' && url.hostname !== '' && !url.username && !url.password
+}
+
+/** A link on a profile: an absolute https:// URL only (no http:, javascript:, data:, ...). */
+export const profileLinkUrl = z
+  .string()
+  .trim()
+  .max(2048, 'Keep it under 2048 characters')
+  .refine(isSafeHttpsUrl, 'Use a full https:// link')
+
+export const profileLinkInput = z.object({
+  platform: z.enum(SOCIAL_PLATFORMS),
+  url: profileLinkUrl,
+})
+
+// strictObject: unknown keys (verified, role, email, username, ...) are a 400, not ignored.
+export const updateProfileInput = z.strictObject({
+  displayName: requiredText(60),
+  bio: z.string().trim().max(500, 'Keep it under 500 characters').default(''),
+  location: z
+    .string()
+    .trim()
+    .max(80, 'Keep it under 80 characters')
+    .nullish()
+    .transform((value) => (value ? value : null)),
+  links: z
+    .array(profileLinkInput)
+    .max(MAX_PROFILE_LINKS, `Up to ${MAX_PROFILE_LINKS} links`)
+    .default([]),
+})
+
+export const profileLink = z.object({
+  platform: z.enum(SOCIAL_PLATFORMS),
+  url: z.string(),
+})
+
+export const profileCrate = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  color: z.string(),
+  label: z.string().nullable(),
+  albumCount: z.number().int(),
+})
+
+// Data classification: PUBLIC. Anyone may read this, signed in or not, so it must never
+// carry the user's id, email, role or anything else from the private publicUser shape.
+export const publicProfile = z.object({
+  username: z.string(),
+  displayName: z.string(),
+  bio: z.string(),
+  location: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  verified: z.boolean(),
+  links: z.array(profileLink),
+  crates: z.array(profileCrate),
+})
+
+/** Admin only: mark a user verified or not. */
+export const setVerifiedInput = z.strictObject({ verified: z.boolean() })
 
 // ── Errors ──────────────────────────────────────────────────────────────
 
@@ -230,3 +327,13 @@ export type UserRole = (typeof USER_ROLES)[number]
 export type PublicUser = z.infer<typeof publicUser>
 export type SignupInput = z.infer<typeof signupInput>
 export type CredentialsInput = z.infer<typeof credentialsInput>
+export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number]
+export type ProfileLink = z.infer<typeof profileLink>
+export type ProfileLinkInput = z.infer<typeof profileLinkInput>
+export type ProfileCrate = z.infer<typeof profileCrate>
+export type PublicProfile = z.infer<typeof publicProfile>
+/** What the API sees after validation (defaults filled in, empty location is null). */
+export type UpdateProfileInput = z.infer<typeof updateProfileInput>
+/** What a client sends. */
+export type UpdateProfileRequest = z.input<typeof updateProfileInput>
+export type SetVerifiedInput = z.infer<typeof setVerifiedInput>

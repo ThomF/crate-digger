@@ -50,6 +50,8 @@ describe('signup', () => {
       username: 'ada_l',
       displayName: 'ada_l',
       role: 'user',
+      avatarUrl: null,
+      verified: false,
     })
     expect(res.body).not.toContain('passwordHash')
     expect(res.body).not.toContain('scrypt')
@@ -175,6 +177,42 @@ describe('login, me and logout', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json<PublicUser>()).toEqual(user)
     expect(user.displayName).toBe('Ada Lovelace')
+  })
+
+  it('signup, login and me include avatarUrl null and verified false for a new user', async () => {
+    const app = await newApp()
+
+    const signup = await signupReq(app, {
+      email: 'grace@example.com',
+      username: 'grace',
+      password: PASSWORD,
+    })
+    const login = await loginReq(app, 'grace@example.com', PASSWORD)
+    const me = await meReq(app, cookieHeader(login))
+
+    for (const res of [signup, login, me]) {
+      expect(res.statusCode).toBeLessThan(300)
+      const body = res.json<PublicUser>()
+      expect(body).toHaveProperty('avatarUrl', null)
+      expect(body).toHaveProperty('verified', false)
+    }
+  })
+
+  it('me reflects avatarUrl and verified from the users row', async () => {
+    const app = await newApp()
+    const { user, headers } = await signUp(app)
+    app.db
+      .update(users)
+      .set({ avatarPath: '/avatars/1.webp', verified: true })
+      .where(eq(users.id, user.id))
+      .run()
+
+    const body = (
+      await app.inject({ method: 'GET', url: '/api/auth/me', headers })
+    ).json<PublicUser>()
+
+    expect(body.avatarUrl).toBe('/avatars/1.webp')
+    expect(body.verified).toBe(true)
   })
 
   it('me returns 401 without a session', async () => {
