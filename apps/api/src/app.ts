@@ -1,23 +1,28 @@
 import Fastify from 'fastify'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import { authPlugin } from './plugins/auth.ts'
+import { avatarsPlugin } from './plugins/avatars.ts'
 import { coversPlugin } from './plugins/covers.ts'
 import { dbPlugin } from './plugins/db.ts'
 import { errorHandlerPlugin } from './plugins/error-handler.ts'
+import { uploadsPlugin } from './plugins/uploads.ts'
 import { webPlugin } from './plugins/web.ts'
 import { albumRoutes } from './routes/albums.ts'
 import { authRoutes } from './routes/auth.ts'
+import { avatarRoutes } from './routes/avatars.ts'
 import { coverRoutes } from './routes/covers.ts'
 import { crateRoutes } from './routes/crates.ts'
 import { healthRoutes } from './routes/health.ts'
 import { profileRoutes } from './routes/profiles.ts'
-import { DEFAULT_COVERS_DIR } from './paths.ts'
+import { DEFAULT_AVATARS_DIR, DEFAULT_COVERS_DIR } from './paths.ts'
 
 export type AppOptions = {
   /** SQLite file path, or ':memory:' for tests. Defaults to DATABASE_PATH or data/crate.db. */
   dbPath?: string
   /** Where cover images are stored. Defaults to COVERS_DIR or data/covers. */
   coversDir?: string
+  /** Where avatar images are stored. Defaults to AVATARS_DIR or data/avatars. */
+  avatarsDir?: string
   /** Session cookies and login limits. `production` (Secure cookies) defaults from NODE_ENV;
    *  rateLimit defaults to 10 signup/login attempts per IP per 15 minutes. */
   auth?: {
@@ -50,7 +55,10 @@ export async function buildApp(opts: AppOptions = {}) {
   await app.register(authPlugin, {
     production: opts.auth?.production ?? process.env.NODE_ENV === 'production',
   })
+  // Multipart parsing, once, for every upload route (covers and avatars).
+  await app.register(uploadsPlugin)
   await app.register(coversPlugin, { dir: opts.coversDir ?? DEFAULT_COVERS_DIR })
+  await app.register(avatarsPlugin, { dir: opts.avatarsDir ?? DEFAULT_AVATARS_DIR })
 
   await app.register(healthRoutes, { prefix: '/api' })
   await app.register(authRoutes, { prefix: '/api', rateLimit: opts.auth?.rateLimit })
@@ -58,8 +66,9 @@ export async function buildApp(opts: AppOptions = {}) {
   await app.register(albumRoutes, { prefix: '/api' })
   await app.register(coverRoutes, { prefix: '/api' })
   await app.register(profileRoutes, { prefix: '/api' })
+  await app.register(avatarRoutes, { prefix: '/api' })
 
-  // Last, so API and cover routes always win over the web app's catch-all.
+  // Last, so API, cover and avatar routes always win over the web app's catch-all.
   await app.register(webPlugin, { dir: opts.webDir ?? process.env.WEB_DIR })
 
   return app

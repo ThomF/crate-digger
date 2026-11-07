@@ -1,8 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import fp from 'fastify-plugin'
-import multipart from '@fastify/multipart'
 import fastifyStatic from '@fastify/static'
-import { COVERS_URL_PREFIX, MAX_COVER_BYTES } from '../services/covers.ts'
+import { COVERS_URL_PREFIX } from '../services/covers.ts'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -12,17 +11,11 @@ declare module 'fastify' {
 
 export type CoversPluginOptions = { dir: string }
 
-// Everything cover files need: somewhere to put them, a way to receive uploads,
-// and a way to serve them back.
+// Everything cover files need: somewhere to put them and a way to serve them back.
+// Receiving uploads (multipart parsing) is the shared uploadsPlugin's job.
 export const coversPlugin = fp<CoversPluginOptions>(async (app, opts) => {
   await mkdir(opts.dir, { recursive: true })
   app.decorate('coversDir', opts.dir)
-
-  // Parses multipart/form-data (how browsers upload files). Limits are enforced while
-  // streaming, so an oversized upload is rejected without buffering all of it.
-  await app.register(multipart, {
-    limits: { fileSize: MAX_COVER_BYTES, files: 1, fields: 0 },
-  })
 
   // GET /covers/<file> straight from disk. File names change whenever a cover changes,
   // so browsers may cache them for a year without asking again.

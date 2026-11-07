@@ -7,20 +7,24 @@ import { buildApp } from '../src/app.ts'
 // A stand-in for apps/web/dist: an index.html and one hashed asset.
 let webDir: string
 let coversDir: string
+let avatarsDir: string
 let app: Awaited<ReturnType<typeof buildApp>>
 
 beforeAll(async () => {
   webDir = await mkdtemp(join(tmpdir(), 'frisson-web-'))
   coversDir = await mkdtemp(join(tmpdir(), 'frisson-covers-'))
+  avatarsDir = await mkdtemp(join(tmpdir(), 'frisson-avatars-'))
   await mkdir(join(webDir, 'assets'))
   await writeFile(join(webDir, 'index.html'), '<!doctype html><div id="app"></div>')
   await writeFile(join(webDir, 'assets', 'index-a1b2c3.js'), 'console.log("crate")')
-  app = await buildApp({ dbPath: ':memory:', coversDir, webDir })
+  app = await buildApp({ dbPath: ':memory:', coversDir, avatarsDir, webDir })
 })
 
 afterAll(async () => {
   await app.close()
-  await Promise.all([webDir, coversDir].map((dir) => rm(dir, { recursive: true, force: true })))
+  await Promise.all(
+    [webDir, coversDir, avatarsDir].map((dir) => rm(dir, { recursive: true, force: true })),
+  )
 })
 
 describe('serving the web app (production)', () => {
@@ -65,5 +69,22 @@ describe('serving the web app (production)', () => {
 
   it('still serves the API', async () => {
     expect((await app.inject({ url: '/api/health' })).statusCode).toBe(200)
+  })
+})
+
+describe('avatars', () => {
+  it('answers a profile URL /u/someone with index.html', async () => {
+    const res = await app.inject({ url: '/u/someone' })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toContain('<div id="app">')
+  })
+
+  it('gives a missing avatar a JSON 404, not the web page', async () => {
+    const res = await app.inject({ url: '/avatars/missing.jpg' })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.headers['content-type']).toContain('application/json')
+    expect(res.body).not.toContain('<div id="app">')
   })
 })

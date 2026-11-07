@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import sharp from 'sharp'
 import type { PublicUser, SignupInput } from '@frisson/shared'
 import { buildApp, type AppOptions } from '../src/app.ts'
 import { crates } from '../src/db/schema.ts'
@@ -12,22 +13,34 @@ import { createUser } from '../src/services/users.ts'
 const GENEROUS_RATE_LIMIT = { max: 10_000, timeWindow: 60_000 }
 
 /**
- * A fresh app on an empty in-memory database, with its own temporary covers folder
- * (deleted on close). Call `app.close()` when done. Pass overrides for anything else,
- * e.g. `{ auth: { production: true } }` or a tiny rate limit.
+ * A fresh app on an empty in-memory database, with its own temporary covers and avatars
+ * folders (deleted on close unless you passed your own). Call `app.close()` when done.
+ * Pass overrides for anything else, e.g. `{ auth: { production: true } }` or a tiny rate limit.
  */
 export async function buildTestApp(opts: AppOptions = {}) {
   const coversDir = opts.coversDir ?? (await mkdtemp(join(tmpdir(), 'frisson-covers-')))
+  const avatarsDir = opts.avatarsDir ?? (await mkdtemp(join(tmpdir(), 'frisson-avatars-')))
   const app = await buildApp({
     dbPath: ':memory:',
     ...opts,
     coversDir,
+    avatarsDir,
     auth: { production: false, rateLimit: GENEROUS_RATE_LIMIT, ...opts.auth },
   })
   if (!opts.coversDir) {
     app.addHook('onClose', async () => rm(coversDir, { recursive: true, force: true }))
   }
+  if (!opts.avatarsDir) {
+    app.addHook('onClose', async () => rm(avatarsDir, { recursive: true, force: true }))
+  }
   return app
+}
+
+/** A real image generated on the fly (a solid PNG), for upload tests. */
+export function pngBuffer(width = 1200, height = 900, background = '#c0392b') {
+  return sharp({ create: { width, height, channels: 3, background } })
+    .png()
+    .toBuffer()
 }
 
 export type TestApp = Awaited<ReturnType<typeof buildTestApp>>

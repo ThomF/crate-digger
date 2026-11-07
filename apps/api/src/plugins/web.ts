@@ -3,6 +3,9 @@ import { join } from 'node:path'
 import fp from 'fastify-plugin'
 import fastifyStatic from '@fastify/static'
 
+/** URL prefixes that are never app pages, so a miss there is a JSON 404, not index.html. */
+const NOT_PAGES = ['/api/', '/covers/', '/avatars/']
+
 export type WebPluginOptions = { dir?: string }
 
 // In production the API also serves the built Vue app (apps/web/dist), so the whole thing
@@ -28,10 +31,9 @@ export const webPlugin = fp<WebPluginOptions>(async (app, opts) => {
   })
 
   // The app's own URLs (/albums/7, /list, …) aren't files. Answer them with index.html and
-  // let Vue Router show the right page. API and cover URLs still get a real 404.
+  // let Vue Router show the right page. API, cover and avatar URLs still get a real 404.
   app.setNotFoundHandler((req, reply) => {
-    const isPage =
-      req.method === 'GET' && !req.url.startsWith('/api/') && !req.url.startsWith('/covers/')
+    const isPage = req.method === 'GET' && !NOT_PAGES.some((prefix) => req.url.startsWith(prefix))
     if (isPage) return reply.header('cache-control', 'no-cache').sendFile('index.html')
     return reply.code(404).send({
       statusCode: 404,
