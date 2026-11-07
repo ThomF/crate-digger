@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import type { AlbumDetail, AlbumSummary, Crate } from '@crate-digger/shared'
+import type { AlbumDetail, AlbumSummary, Crate } from '@frisson/shared'
 import { useLibraryStore } from './library.ts'
 
 const crates: Crate[] = [

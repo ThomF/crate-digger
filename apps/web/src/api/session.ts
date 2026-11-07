@@ -1,4 +1,4 @@
-import type { SessionInfo } from '@crate-digger/shared'
+import type { SessionInfo } from '@frisson/shared'
 import { request } from './client.ts'
 
 export function getSession() {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import type { AlbumSummary } from '@crate-digger/shared'
+import type { AlbumSummary } from '@frisson/shared'
 import { spinAlbum } from '../api/albums.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
@@ -15,7 +15,7 @@ const session = useSessionStore()
 const router = useRouter()
 
 onMounted(() => {
-  document.title = 'Crate Digger'
+  document.title = 'Frisson'
   library.load()
 })
 

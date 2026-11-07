@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
-import type { AlbumQuery } from '@crate-digger/shared'
+import type { AlbumQuery } from '@frisson/shared'
 import { SEARCH_DELAY, useAlbumSearch } from './useAlbumSearch.ts'
 
 // A fake API: each request waits until the test resolves it, so we control the timing.

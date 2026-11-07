@@ -15,7 +15,7 @@ async function logOut() {
 
 <template>
   <header class="masthead">
-    <RouterLink to="/" class="sign">Crate Digger</RouterLink>
+    <RouterLink to="/" class="sign">Frisson</RouterLink>
     <p class="tagline">Used &amp; new vinyl · est. 1994</p>
   </header>
 

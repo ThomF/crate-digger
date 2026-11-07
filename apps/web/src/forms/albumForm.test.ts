@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AlbumDetail } from '@crate-digger/shared'
+import type { AlbumDetail } from '@frisson/shared'
 import { ApiRequestError } from '../api/client.ts'
 import {
   checkCoverFile,

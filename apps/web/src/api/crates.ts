@@ -1,4 +1,4 @@
-import type { Crate, CreateCrateRequest, UpdateCrateInput } from '@crate-digger/shared'
+import type { Crate, CreateCrateRequest, UpdateCrateInput } from '@frisson/shared'
 import { request } from './client.ts'
 
 export function listCrates() {

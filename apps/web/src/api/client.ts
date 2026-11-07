@@ -1,4 +1,4 @@
-import type { ApiError } from '@crate-digger/shared'
+import type { ApiError } from '@frisson/shared'
 
 /** Thrown for any non-2xx response. `body` is the API's { statusCode, error, message, issues? }. */
 export class ApiRequestError extends Error {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, useTemplateRef } from 'vue'
-import { TRACK_SIDES } from '@crate-digger/shared'
+import { TRACK_SIDES } from '@frisson/shared'
 import {
   newTrackRow,
   trackErrorKey,

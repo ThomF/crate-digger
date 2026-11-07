@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Track } from '@crate-digger/shared'
+import type { Track } from '@frisson/shared'
 import { formatDuration, groupBySide } from '../../utils/tracks.ts'
 
 const props = defineProps<{ tracks: Track[] }>()

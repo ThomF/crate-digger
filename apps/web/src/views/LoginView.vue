@@ -15,7 +15,7 @@ const busy = ref(false)
 const input = useTemplateRef<HTMLInputElement>('input')
 
 onMounted(() => {
-  document.title = 'Log in · Crate Digger'
+  document.title = 'Log in · Frisson'
   input.value?.focus()
 })
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { CRATE_SORTS, type CrateSort } from '@crate-digger/shared/sorting'
-import type { Crate } from '@crate-digger/shared'
+import { CRATE_SORTS, type CrateSort } from '@frisson/shared/sorting'
+import type { Crate } from '@frisson/shared'
 
 // One crate's settings as a small form. The parent does the saving; this component
 // keeps an editable draft and says what changed.

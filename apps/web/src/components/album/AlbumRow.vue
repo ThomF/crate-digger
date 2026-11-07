@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import type { AlbumSummary } from '@crate-digger/shared'
+import type { AlbumSummary } from '@frisson/shared'
 import RatingStars from './RatingStars.vue'
 import { sleeveTransitionName } from '../../viewTransitions.ts'
 

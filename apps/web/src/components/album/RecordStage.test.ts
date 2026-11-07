@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
-import type { Track } from '@crate-digger/shared'
+import type { Track } from '@frisson/shared'
 import RecordStage from './RecordStage.vue'
 import SleeveBack from './SleeveBack.vue'
 import VinylDisc from './VinylDisc.vue'

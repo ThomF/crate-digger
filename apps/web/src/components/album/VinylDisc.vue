@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { AlbumSummary } from '@crate-digger/shared'
+import type { AlbumSummary } from '@frisson/shared'
 import { readableInk } from '../../utils/color.ts'
 
 const props = defineProps<{

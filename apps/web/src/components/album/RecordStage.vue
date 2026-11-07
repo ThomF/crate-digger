@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AlbumSummary, Track } from '@crate-digger/shared'
+import type { AlbumSummary, Track } from '@frisson/shared'
 import { sleeveTransitionName } from '../../viewTransitions.ts'
 import SleeveArt from '../crate/SleeveArt.vue'
 import SleeveBack from './SleeveBack.vue'

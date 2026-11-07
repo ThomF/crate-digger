@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import type { AlbumQuery, AlbumSummary } from '@crate-digger/shared'
-import { LIST_SORTS, type ListSort } from '@crate-digger/shared/sorting'
+import type { AlbumQuery, AlbumSummary } from '@frisson/shared'
+import { LIST_SORTS, type ListSort } from '@frisson/shared/sorting'
 import { errorMessage } from '../api/client.ts'
 import { useAlbumSearch } from '../composables/useAlbumSearch.ts'
 import { useLibraryStore } from '../stores/library.ts'
@@ -19,7 +19,7 @@ const route = useRoute()
 const router = useRouter()
 
 onMounted(() => {
-  document.title = 'Crate Digger'
+  document.title = 'Frisson'
   library.load()
 })
 

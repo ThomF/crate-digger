@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
-import type { AlbumSummary, Crate } from '@crate-digger/shared'
+import type { AlbumSummary, Crate } from '@frisson/shared'
 import CrateBox from './CrateBox.vue'
 
 const crate: Crate = {

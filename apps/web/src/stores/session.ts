@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { SessionInfo } from '@crate-digger/shared'
+import type { SessionInfo } from '@frisson/shared'
 import * as api from '../api/session.ts'
 
 // Whether this visitor may change the collection. The API is the real gatekeeper (it

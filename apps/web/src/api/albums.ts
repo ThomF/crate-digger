@@ -6,7 +6,7 @@ import type {
   MoveAlbumInput,
   TrackInput,
   UpdateAlbumInput,
-} from '@crate-digger/shared'
+} from '@frisson/shared'
 import { request } from './client.ts'
 
 /** `signal` lets a caller cancel a search that's been overtaken by a newer one. */

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AlbumSummary } from '@crate-digger/shared'
+import type { AlbumSummary } from '@frisson/shared'
 import { readableInk } from '../../utils/color.ts'
 
 // The front of a sleeve: the uploaded cover if there is one, otherwise a generated sleeve.

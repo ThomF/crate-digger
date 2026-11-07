@@ -11,7 +11,7 @@ import {
   type AlbumFormat,
   type CreateAlbumInput,
   type TrackSide,
-} from '@crate-digger/shared'
+} from '@frisson/shared'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { formatDuration } from '../utils/tracks.ts'
 

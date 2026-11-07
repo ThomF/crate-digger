@@ -1,5 +1,5 @@
 import { onScopeDispose, ref, watch, type Ref } from 'vue'
-import type { AlbumQuery, AlbumSummary } from '@crate-digger/shared'
+import type { AlbumQuery, AlbumSummary } from '@frisson/shared'
 import { listAlbums } from '../api/albums.ts'
 import { errorMessage } from '../api/client.ts'
 

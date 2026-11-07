@@ -1,6 +1,6 @@
-// Type-only import: erased at build time. Importing a *value* from @crate-digger/shared
+// Type-only import: erased at build time. Importing a *value* from @frisson/shared
 // would pull the whole of Zod into the browser bundle.
-import type { Track, TrackSide } from '@crate-digger/shared'
+import type { Track, TrackSide } from '@frisson/shared'
 
 export type SideGroup = { side: TrackSide; tracks: Track[] }
 

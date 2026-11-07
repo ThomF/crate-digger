@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import type { AlbumDetail } from '@crate-digger/shared'
+import type { AlbumDetail } from '@frisson/shared'
 import { getAlbum } from '../api/albums.ts'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
@@ -52,11 +52,11 @@ async function load(id: number) {
   album.value = null
   turned.value = false
   notice.value = typeof history.state?.notice === 'string' ? history.state.notice : null
-  if (summary.value) document.title = `${summary.value.title} · Crate Digger`
+  if (summary.value) document.title = `${summary.value.title} · Frisson`
   try {
     album.value = await getAlbum(id)
     status.value = 'ready'
-    document.title = `${album.value.title} · Crate Digger`
+    document.title = `${album.value.title} · Frisson`
   } catch (err) {
     if (err instanceof ApiRequestError && err.status === 404) {
       status.value = 'not-found'

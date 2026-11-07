@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
-import type { AlbumSummary, Crate } from '@crate-digger/shared'
+import type { AlbumSummary, Crate } from '@frisson/shared'
 import { useCrateFlip } from '../../composables/useCrateFlip.ts'
 import { sleevePose, visibleRange } from '../../utils/crateLayout.ts'
-import { dividerFor } from '@crate-digger/shared/sorting'
+import { dividerFor } from '@frisson/shared/sorting'
 import SleeveArt from './SleeveArt.vue'
 import { sleeveTransitionName } from '../../viewTransitions.ts'
 

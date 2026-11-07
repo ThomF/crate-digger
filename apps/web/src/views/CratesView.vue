@@ -8,7 +8,7 @@ import CrateSettings from '../components/crate/CrateSettings.vue'
 const library = useLibraryStore()
 
 onMounted(() => {
-  document.title = 'Your crates · Crate Digger'
+  document.title = 'Your crates · Frisson'
   library.load()
 })
 

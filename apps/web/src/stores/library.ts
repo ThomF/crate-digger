@@ -6,9 +6,9 @@ import type {
   Crate,
   CreateCrateRequest,
   UpdateCrateInput,
-} from '@crate-digger/shared'
+} from '@frisson/shared'
 // The sorting entry point has no Zod in it, so this import keeps the main bundle small.
-import { sortAlbums } from '@crate-digger/shared/sorting'
+import { sortAlbums } from '@frisson/shared/sorting'
 import { listAlbums, moveAlbum } from '../api/albums.ts'
 import { createCrate, deleteCrate, listCrates, reorderCrates, updateCrate } from '../api/crates.ts'
 import { errorMessage } from '../api/client.ts'

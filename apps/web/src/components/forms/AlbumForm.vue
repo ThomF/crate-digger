@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ALBUM_FORMATS, type Crate } from '@crate-digger/shared'
+import { ALBUM_FORMATS, type Crate } from '@frisson/shared'
 import { FORM_ERROR, type AlbumFormState, type FieldErrors } from '../../forms/albumForm.ts'
 import CoverUpload from './CoverUpload.vue'
 import RatingInput from './RatingInput.vue'

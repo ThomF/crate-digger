@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AlbumSummary, Track } from '@crate-digger/shared'
+import type { AlbumSummary, Track } from '@frisson/shared'
 import { groupBySide, formatDuration } from '../../utils/tracks.ts'
 import { readableInk } from '../../utils/color.ts'
 

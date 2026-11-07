@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, RouterLink, useRouter } from 'vue-router'
-import type { AlbumDetail } from '@crate-digger/shared'
+import type { AlbumDetail } from '@frisson/shared'
 import {
   createAlbum,
   deleteAlbum,
@@ -58,7 +58,7 @@ async function load() {
     }
     snapshot = JSON.stringify(form.value)
     status.value = 'ready'
-    document.title = `${heading.value} · Crate Digger`
+    document.title = `${heading.value} · Frisson`
   } catch (err) {
     if (err instanceof ApiRequestError && err.status === 404) status.value = 'not-found'
     else {

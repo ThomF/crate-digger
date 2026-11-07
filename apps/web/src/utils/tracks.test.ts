@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Track } from '@crate-digger/shared'
+import type { Track } from '@frisson/shared'
 import { formatDuration, groupBySide, totalDuration } from './tracks.ts'
 
 let nextId = 1
