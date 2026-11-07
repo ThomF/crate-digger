@@ -6,6 +6,7 @@ import { getAlbum } from '../api/albums.ts'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
+import { canEditCrate } from '../utils/permissions.ts'
 import RatingStars from '../components/album/RatingStars.vue'
 import RecordStage from '../components/album/RecordStage.vue'
 import TrackList from '../components/album/TrackList.vue'
@@ -34,11 +35,10 @@ library.load() // for the crate name; a no-op if already loaded
 const summary = computed(() => library.albums.find((a) => a.id === props.id) ?? null)
 const shown = computed(() => album.value ?? summary.value)
 
-const crateName = computed(() => {
-  if (!shown.value) return null
-  const crate = library.crateById(shown.value.crateId)
-  return crate ? (crate.label ?? crate.name) : null
-})
+const crate = computed(() => (shown.value ? library.crateById(shown.value.crateId) : undefined))
+const crateName = computed(() => (crate.value ? (crate.value.label ?? crate.value.name) : null))
+// Edit only records in your own crates (admins: any). Hidden until the library has loaded.
+const editable = computed(() => canEditCrate(session.user, crate.value))
 
 const runtime = computed(() => {
   const total = album.value ? totalDuration(album.value.tracks) : null
@@ -75,7 +75,7 @@ watch(() => props.id, load, { immediate: true })
   <nav class="top">
     <RouterLink to="/" class="back">← Back to the crates</RouterLink>
     <RouterLink
-      v-if="status === 'ready' && session.canEdit"
+      v-if="status === 'ready' && editable"
       :to="{ name: 'album-edit', params: { id } }"
       class="btn"
     >

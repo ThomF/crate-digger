@@ -13,6 +13,8 @@ import {
 } from '../api/albums.ts'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
+import { useSessionStore } from '../stores/session.ts'
+import { canEditCrate } from '../utils/permissions.ts'
 import {
   emptyForm,
   errorsFromApi,
@@ -29,6 +31,10 @@ const props = defineProps<{ id?: number; crateId?: number | null }>()
 
 const router = useRouter()
 const library = useLibraryStore()
+const session = useSessionStore()
+
+// The crate picker offers only crates you may put records in (admins: every crate).
+const editableCrates = computed(() => library.crates.filter((c) => canEditCrate(session.user, c)))
 
 const form = ref<AlbumFormState | null>(null)
 const errors = ref<FieldErrors>({})
@@ -52,9 +58,15 @@ async function load() {
     await library.load() // the crate dropdown needs crates
     if (props.id !== undefined) {
       original.value = await getAlbum(props.id)
+      // Not your crate: there's nothing you could save here, so show the record instead.
+      if (!canEditCrate(session.user, library.crateById(original.value.crateId))) {
+        await router.replace({ name: 'album', params: { id: props.id } })
+        return
+      }
       form.value = formFromAlbum(original.value)
     } else {
-      form.value = emptyForm(props.crateId ?? library.crates[0]?.id ?? null)
+      const asked = editableCrates.value.find((c) => c.id === props.crateId)
+      form.value = emptyForm(asked?.id ?? editableCrates.value[0]?.id ?? null)
     }
     snapshot = JSON.stringify(form.value)
     status.value = 'ready'
@@ -193,15 +205,15 @@ function cancel() {
   <template v-else-if="form">
     <h1>{{ heading }}</h1>
 
-    <p v-if="library.crates.length === 0" class="status-note">
-      You need a crate first. Run <code>npm run db:seed -w apps/api</code> (crate editing arrives in
-      M8).
+    <p v-if="editableCrates.length === 0" class="status-note">
+      You need a crate of your own first.
+      <RouterLink :to="{ name: 'crates' }">Make a crate.</RouterLink>
     </p>
 
     <AlbumForm
       v-else
       v-model="form"
-      :crates="library.crates"
+      :crates="editableCrates"
       :errors="errors"
       :saving="saving"
       :submit-label="isEdit ? 'Save changes' : 'Add to collection'"

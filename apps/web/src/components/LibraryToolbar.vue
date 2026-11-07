@@ -2,6 +2,8 @@
 import { RouterLink } from 'vue-router'
 import { useSessionStore } from '../stores/session.ts'
 
+// Global actions: anyone signed in may make a crate or add a record to one of theirs.
+// addToCrateId preselects a crate, so only pass one the user can edit.
 defineProps<{ addToCrateId?: number }>()
 const session = useSessionStore()
 </script>
@@ -12,7 +14,7 @@ const session = useSessionStore()
       <RouterLink :to="{ name: 'library' }" exact-active-class="active">Crates</RouterLink>
       <RouterLink :to="{ name: 'list' }" exact-active-class="active">List</RouterLink>
     </nav>
-    <div v-if="session.canEdit" class="end">
+    <div v-if="session.signedIn" class="end">
       <RouterLink :to="{ name: 'crates' }" class="manage">Edit crates</RouterLink>
       <RouterLink
         :to="{ name: 'album-new', query: addToCrateId ? { crateId: addToCrateId } : {} }"

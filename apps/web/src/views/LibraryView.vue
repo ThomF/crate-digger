@@ -7,6 +7,7 @@ import { errorMessage } from '../api/client.ts'
 import { useAlbumSearch } from '../composables/useAlbumSearch.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
+import { canEditCrate } from '../utils/permissions.ts'
 import AlbumRow from '../components/album/AlbumRow.vue'
 import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
@@ -70,6 +71,11 @@ const crateName = (crateId: number) => {
 }
 
 // ── Moving records ──────────────────────────────────────────────────────
+// A move changes both crates, so the record's crate and the target must both be yours
+// (admins: any). The API checks the same thing; this only decides what to offer.
+
+const canEditCrateId = (crateId: number) => canEditCrate(session.user, library.crateById(crateId))
+const editableCrates = computed(() => library.crates.filter((c) => canEditCrate(session.user, c)))
 
 const moving = ref(false)
 const moveMessage = ref<string | null>(null) // read out by screen readers (aria-live)
@@ -115,7 +121,7 @@ const dragged = ref<AlbumSummary | null>(null)
 const dropTarget = ref<string | null>(null)
 
 function onDragStart(event: DragEvent, album: AlbumSummary) {
-  if (!session.canEdit) return event.preventDefault()
+  if (!canEditCrateId(album.crateId)) return event.preventDefault()
   dragged.value = album
   event.dataTransfer?.setData('text/plain', album.title)
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
@@ -126,10 +132,15 @@ function onDragEnd() {
   dropTarget.value = null
 }
 
+/** Highlights where a drop would land, but only over crates you can edit. */
+function onDragOver(crateId: number, key: string) {
+  if (dragged.value && canEditCrateId(crateId)) dropTarget.value = key
+}
+
 function onDrop(crateId: number, target: AlbumSummary | null) {
   const album = dragged.value
   onDragEnd()
-  if (!album || album.id === target?.id) return
+  if (!album || album.id === target?.id || !canEditCrateId(crateId)) return
   return move(album, crateId, positionBefore(album, crateId, target))
 }
 </script>
@@ -210,14 +221,14 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
       :key="crate.id"
       class="crate"
       :class="{ 'drop-here': dropTarget === `crate-${crate.id}` }"
-      @dragover.prevent="dragged && (dropTarget = `crate-${crate.id}`)"
+      @dragover.prevent="onDragOver(crate.id, `crate-${crate.id}`)"
       @drop.prevent="onDrop(crate.id, null)"
     >
       <h2 class="crate-label" :style="{ background: crate.color }">
         {{ crate.label ?? crate.name }}
         <small>
           {{ albums.length }} {{ albums.length === 1 ? 'record' : 'records' }}
-          <template v-if="session.canEdit">
+          <template v-if="canEditCrate(session.user, crate)">
             ·
             <RouterLink :to="{ name: 'album-new', query: { crateId: crate.id } }">add</RouterLink>
           </template>
@@ -236,14 +247,14 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
             'drop-before': dropTarget === `album-${album.id}`,
             'being-dragged': dragged?.id === album.id,
           }"
-          :draggable="session.canEdit"
+          :draggable="canEditCrate(session.user, crate)"
           @dragstart="onDragStart($event, album)"
           @dragend="onDragEnd"
-          @dragover.prevent.stop="dragged && (dropTarget = `album-${album.id}`)"
+          @dragover.prevent.stop="onDragOver(crate.id, `album-${album.id}`)"
           @drop.prevent.stop="onDrop(crate.id, crate.sortBy === 'manual' ? album : null)"
         >
           <AlbumRow :album="album" />
-          <span v-if="session.canEdit" class="tools">
+          <span v-if="canEditCrate(session.user, crate)" class="tools">
             <template v-if="crate.sortBy === 'manual'">
               <button
                 type="button"
@@ -263,13 +274,13 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
               </button>
             </template>
             <select
-              v-if="library.crates.length > 1"
+              v-if="editableCrates.some((other) => other.id !== crate.id)"
               :aria-label="`Move ${album.title} to another crate`"
               :disabled="moving"
               @change="moveToCrate($event, album)"
             >
               <option value="">Move to…</option>
-              <template v-for="other in library.crates" :key="other.id">
+              <template v-for="other in editableCrates" :key="other.id">
                 <option v-if="other.id !== crate.id" :value="other.id">
                   {{ other.label ?? other.name }}
                 </option>
@@ -279,7 +290,8 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
         </li>
       </ul>
       <p v-else class="status-note">
-        Empty crate.<template v-if="session.canEdit"> Drag a record here.</template>
+        Empty crate.
+        <template v-if="canEditCrate(session.user, crate)">Drag a record here.</template>
       </p>
     </section>
   </div>
@@ -373,6 +385,10 @@ function onDrop(crateId: number, target: AlbumSummary | null) {
 
 .movable {
   cursor: grab;
+}
+
+.movable[draggable='false'] {
+  cursor: default;
 }
 
 .movable.being-dragged {

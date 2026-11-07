@@ -8,7 +8,7 @@ const isDev = import.meta.env.DEV
 </script>
 
 <template>
-  <p v-if="session.canEdit" class="status-note">
+  <p v-if="session.signedIn" class="status-note">
     No crates yet. <RouterLink :to="{ name: 'crates' }">Make your first crate.</RouterLink>
     <span v-if="isDev">
       (Or run <code>npm run db:seed -w apps/api</code> for sample records.)

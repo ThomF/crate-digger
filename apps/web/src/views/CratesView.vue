@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { useLibraryStore } from '../stores/library.ts'
+import { useSessionStore } from '../stores/session.ts'
+import { canEditCrate } from '../utils/permissions.ts'
 import CrateSettings from '../components/crate/CrateSettings.vue'
 
 const library = useLibraryStore()
+const session = useSessionStore()
+
+// Only the crates you may change are listed (admins: every crate). Reordering the shelf
+// is admin-only: it reorders everyone's crates, and the API refuses a non-admin unless
+// they own every crate on it.
+const editable = computed(() => library.crates.filter((c) => canEditCrate(session.user, c)))
 
 onMounted(() => {
   document.title = 'Your crates · Frisson'
@@ -38,6 +46,7 @@ function recordsIn(crateId: number) {
 }
 
 function move(index: number, delta: -1 | 1) {
+  if (!session.isAdmin) return
   const ids = library.crates.map((c) => c.id)
   const target = index + delta
   ;[ids[index], ids[target]] = [ids[target]!, ids[index]!]
@@ -62,8 +71,11 @@ function remove(crateId: number, name: string) {
   </p>
 
   <template v-else>
-    <ol class="shelf">
-      <li v-for="(crate, i) in library.crates" :key="crate.id">
+    <p v-if="editable.length === 0" class="status-note">
+      You don't have any crates yet. Make one below.
+    </p>
+    <ol v-else class="shelf">
+      <li v-for="(crate, i) in editable" :key="crate.id">
         <CrateSettings
           :crate="crate"
           :record-count="recordsIn(crate.id)"
@@ -72,7 +84,7 @@ function remove(crateId: number, name: string) {
           @save="(changes) => attempt(crate.id, () => library.saveCrate(crate.id, changes))"
           @delete="remove(crate.id, crate.name)"
         >
-          <template #actions>
+          <template v-if="session.isAdmin" #actions>
             <button
               type="button"
               class="order"
@@ -85,7 +97,7 @@ function remove(crateId: number, name: string) {
             <button
               type="button"
               class="order"
-              :disabled="i === library.crates.length - 1 || busy !== null"
+              :disabled="i === editable.length - 1 || busy !== null"
               :aria-label="`Move ${crate.name} down the shelf`"
               @click="move(i, 1)"
             >

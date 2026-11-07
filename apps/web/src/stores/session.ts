@@ -13,8 +13,6 @@ export const useSessionStore = defineStore('session', () => {
 
   const signedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
-  // TEMPORARY: keeps the views typechecking until T6 switches them to canEditCrate.
-  const canEdit = computed(() => signedIn.value)
 
   /** Asks the API once; later calls reuse the answer (or the request in flight). */
   function load() {
@@ -53,5 +51,5 @@ export const useSessionStore = defineStore('session', () => {
     loading = Promise.resolve()
   }
 
-  return { user, loaded, signedIn, isAdmin, canEdit, load, logIn, signUp, logOut }
+  return { user, loaded, signedIn, isAdmin, load, logIn, signUp, logOut }
 })

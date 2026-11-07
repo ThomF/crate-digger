@@ -5,6 +5,7 @@ import type { AlbumSummary } from '@frisson/shared'
 import { spinAlbum } from '../api/albums.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
+import { canEditCrate } from '../utils/permissions.ts'
 import CrateBox from '../components/crate/CrateBox.vue'
 import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
@@ -34,17 +35,20 @@ const index = computed({
 })
 
 const current = computed(() => albums.value[index.value])
+const canEditThisCrate = computed(() => canEditCrate(session.user, crate.value))
 
 async function open(album: AlbumSummary) {
   // Count the spin *before* opening the album, so the album page loads the new total
-  // instead of showing one less. Visitors can't change anything, so only when you can edit.
-  if (session.canEdit) await spinAlbum(album.id).catch(() => {}) // never block opening on it
+  // instead of showing one less. Only spins of your own records count (admins: any).
+  if (canEditCrate(session.user, library.crateById(album.crateId))) {
+    await spinAlbum(album.id).catch(() => {}) // never block opening on it
+  }
   router.push({ name: 'album', params: { id: album.id } })
 }
 </script>
 
 <template>
-  <LibraryToolbar :add-to-crate-id="crate?.id" />
+  <LibraryToolbar :add-to-crate-id="canEditThisCrate ? crate?.id : undefined" />
 
   <p v-if="library.status === 'loading' || library.status === 'idle'" class="status-note">
     Flipping through the crates…
@@ -93,7 +97,7 @@ async function open(album: AlbumSummary) {
       <p v-else class="count">
         Nothing in here yet.
         <RouterLink
-          v-if="session.canEdit"
+          v-if="canEditThisCrate"
           :to="{ name: 'album-new', query: { crateId: crate.id } }"
         >
           Add a record
