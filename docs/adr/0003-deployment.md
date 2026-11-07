@@ -1,6 +1,7 @@
 # ADR 0003 — Deployment: one container behind Caddy
 
-- **Status:** Accepted
+- **Status:** Accepted; partly superseded by [ADR 0004](0004-user-accounts.md)
+  (the shared admin password and `SESSION_SECRET`). The rest still stands.
 - **Date:** 2026-10-12
 
 ## Context
@@ -22,7 +23,9 @@ publicly, and simple to back up.
   prebuilt binary for every platform, e.g. Linux on ARM); runs as the unprivileged `node` user;
   a health check so Compose starts Caddy only once the app answers.
 - **Fail closed:** in production without `ADMIN_PASSWORD` the app is read-only, and Compose
-  refuses to start without it.
+  refuses to start without it. _Superseded by [ADR 0004](0004-user-accounts.md):_ editing now
+  needs a user account; `ADMIN_EMAIL` + `ADMIN_PASSWORD` (8+ characters) only create the first
+  admin on a start with no admin yet, and Compose requires both.
 
 ## Alternatives considered
 

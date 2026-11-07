@@ -3,11 +3,12 @@ import { rm, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import sharp from 'sharp'
-import { MAX_COVER_BYTES, type AlbumDetail } from '@frisson/shared'
+import { MAX_COVER_BYTES, type AlbumDetail, type PublicUser } from '@frisson/shared'
 import type { Db } from '../db/client.ts'
 import { albums } from '../db/schema.ts'
 import { badRequest, notFound } from '../errors.ts'
 import { getAlbum } from './albums.ts'
+import { assertCanEditAlbum } from './permissions.ts'
 
 // Cover art: uploaded images are re-encoded as square JPEGs and stored as files in the
 // covers directory. The database only stores the URL path, e.g. "/covers/12-a1b2c3d4.jpg".
@@ -58,9 +59,11 @@ export async function deleteCoverFile(coversDir: string, coverPath: string | nul
 export async function setCover(
   db: Db,
   coversDir: string,
+  user: PublicUser | null,
   albumId: number,
   upload: Buffer,
 ): Promise<AlbumDetail> {
+  assertCanEditAlbum(db, user, albumId) // 401/404/403 before doing any image work
   const previous = currentCoverPath(db, albumId) // 404 before doing any image work
   const image = await processCover(upload)
 
@@ -86,8 +89,10 @@ export async function setCover(
 export async function removeCover(
   db: Db,
   coversDir: string,
+  user: PublicUser | null,
   albumId: number,
 ): Promise<AlbumDetail> {
+  assertCanEditAlbum(db, user, albumId)
   const previous = currentCoverPath(db, albumId)
   db.update(albums).set({ coverPath: null }).where(eq(albums.id, albumId)).run()
   await deleteCoverFile(coversDir, previous)

@@ -1,6 +1,7 @@
 import { and, asc, eq, max, ne, or, sql, type SQL } from 'drizzle-orm'
 import type {
   AlbumDetail,
+  PublicUser,
   AlbumSummary,
   CreateAlbumInput,
   ListSort,
@@ -13,9 +14,15 @@ import { albums, crates, tracks } from '../db/schema.ts'
 import { compareAlbums } from '@frisson/shared/sorting'
 import { notFound } from '../errors.ts'
 import { assertCrateExists } from './crates.ts'
+import { assertCanEditAlbum, assertCanEditCrate, requireUser } from './permissions.ts'
 
 // Business logic for albums. Plain functions that take the db and validated input,
 // so they can be tested without HTTP and reused by any route.
+//
+// Reads are public. Every write takes the signed-in user (or null) and asks
+// permissions.ts first: 401 signed out, 404 missing, 403 not in a crate they own.
+// Data classification: PUBLIC (user-owned catalog content, no PII). Anyone may read it;
+// only the crate's owner or an admin may change it, enforced here, not in the routes.
 
 const summaryColumns = {
   id: albums.id,
@@ -106,9 +113,11 @@ function nextPosition(db: Pick<Db, 'select'>, crateId: number) {
   return (row?.last ?? -1) + 1
 }
 
-export function createAlbum(db: Db, input: CreateAlbumInput): AlbumDetail {
+export function createAlbum(db: Db, user: PublicUser | null, input: CreateAlbumInput): AlbumDetail {
   const { tracks: tracklist, ...fields } = input
-  assertCrateExists(db, fields.crateId)
+  requireUser(user)
+  assertCrateExists(db, fields.crateId) // 400: the crate is part of the request body
+  assertCanEditCrate(db, user, fields.crateId)
 
   // A transaction: if inserting the tracks fails, the album isn't saved either.
   const id = db.transaction((tx) => {
@@ -128,7 +137,13 @@ export function createAlbum(db: Db, input: CreateAlbumInput): AlbumDetail {
   return getAlbum(db, id)
 }
 
-export function updateAlbum(db: Db, id: number, input: UpdateAlbumInput): AlbumDetail {
+export function updateAlbum(
+  db: Db,
+  user: PublicUser | null,
+  id: number,
+  input: UpdateAlbumInput,
+): AlbumDetail {
+  assertCanEditAlbum(db, user, id) // the source crate, via the album
   const existing = db
     .select({ crateId: albums.crateId })
     .from(albums)
@@ -139,6 +154,7 @@ export function updateAlbum(db: Db, id: number, input: UpdateAlbumInput): AlbumD
   const changes: UpdateAlbumInput & { position?: number } = { ...input }
   if (input.crateId !== undefined && input.crateId !== existing.crateId) {
     assertCrateExists(db, input.crateId)
+    assertCanEditCrate(db, user, input.crateId) // and the crate it's moving into
     changes.position = nextPosition(db, input.crateId) // moved crates → back of the new one
   }
 
@@ -150,10 +166,17 @@ export function updateAlbum(db: Db, id: number, input: UpdateAlbumInput): AlbumD
  * Puts an album at `position` (0 = front) in `crateId`, shifting the others along.
  * Positions only matter in crates sorted 'manual'; sorted crates order themselves.
  */
-export function moveAlbum(db: Db, id: number, { crateId, position }: MoveAlbumInput): AlbumDetail {
+export function moveAlbum(
+  db: Db,
+  user: PublicUser | null,
+  id: number,
+  { crateId, position }: MoveAlbumInput,
+): AlbumDetail {
+  assertCanEditAlbum(db, user, id) // the source crate, via the album
   const album = db.select({ crateId: albums.crateId }).from(albums).where(eq(albums.id, id)).get()
   if (!album) throw notFound(`Album ${id}`)
   assertCrateExists(db, crateId)
+  if (crateId !== album.crateId) assertCanEditCrate(db, user, crateId)
 
   db.transaction((tx) => {
     const renumber = (inCrate: number, order: number[]) =>
@@ -190,7 +213,8 @@ export function moveAlbum(db: Db, id: number, { crateId, position }: MoveAlbumIn
 }
 
 /** Counts one spin (the record was pulled out of the crate) and returns the new total. */
-export function addSpin(db: Db, id: number): { spinCount: number } {
+export function addSpin(db: Db, user: PublicUser | null, id: number): { spinCount: number } {
+  assertCanEditAlbum(db, user, id)
   // spin_count + 1 is worked out by SQLite itself, so two spins at the same moment
   // both count (reading the number, adding one in JS and saving it back could lose one).
   const row = db
@@ -205,7 +229,12 @@ export function addSpin(db: Db, id: number): { spinCount: number } {
 }
 
 /** Deletes the album (its tracks cascade) and returns its cover path so the caller can remove the file. */
-export function deleteAlbum(db: Db, id: number): { coverPath: string | null } {
+export function deleteAlbum(
+  db: Db,
+  user: PublicUser | null,
+  id: number,
+): { coverPath: string | null } {
+  assertCanEditAlbum(db, user, id)
   const deleted = db
     .delete(albums)
     .where(eq(albums.id, id))
@@ -216,7 +245,13 @@ export function deleteAlbum(db: Db, id: number): { coverPath: string | null } {
 }
 
 /** Replaces the whole tracklist. Simpler than syncing individual track edits. */
-export function replaceTracks(db: Db, albumId: number, tracklist: TrackInput[]): AlbumDetail {
+export function replaceTracks(
+  db: Db,
+  user: PublicUser | null,
+  albumId: number,
+  tracklist: TrackInput[],
+): AlbumDetail {
+  assertCanEditAlbum(db, user, albumId)
   db.transaction((tx) => {
     const touched = tx
       .update(albums)

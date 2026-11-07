@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { albumDetail, idParams } from '@frisson/shared'
 import { badRequest } from '../errors.ts'
+import { assertCanEditAlbum } from '../services/permissions.ts'
 import { removeCover, setCover } from '../services/covers.ts'
 
 export const coverRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -10,18 +11,20 @@ export const coverRoutes: FastifyPluginAsyncZod = async (app) => {
     '/albums/:id/cover',
     { schema: { params: idParams, response: { 200: albumDetail } } },
     async (req) => {
+      // Check before reading the upload, so strangers can't make us buffer files.
+      assertCanEditAlbum(app.db, req.user, req.params.id)
       const file = await req.file()
       if (!file || file.fieldname !== 'cover') {
         throw badRequest('Attach an image in a form field named "cover"')
       }
       const upload = await file.toBuffer() // throws 413 if it's over the size limit
-      return setCover(app.db, app.coversDir, req.params.id, upload)
+      return setCover(app.db, app.coversDir, req.user, req.params.id, upload)
     },
   )
 
   app.delete(
     '/albums/:id/cover',
     { schema: { params: idParams, response: { 200: albumDetail } } },
-    async (req) => removeCover(app.db, app.coversDir, req.params.id),
+    async (req) => removeCover(app.db, app.coversDir, req.user, req.params.id),
   )
 }

@@ -5,7 +5,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import sharp from 'sharp'
 import type { AlbumDetail, ApiError } from '@frisson/shared'
 import { COVER_SIZE, MAX_COVER_BYTES } from '../src/services/covers.ts'
-import { addCrate, buildTestApp, multipart, type TestApp } from './helpers.ts'
+import {
+  addCrate,
+  buildTestApp,
+  multipart,
+  signUp,
+  type SignedIn,
+  type TestApp,
+} from './helpers.ts'
 
 /** A real image, generated on the fly: 1200×900 red PNG. */
 const pngImage = () =>
@@ -15,25 +22,31 @@ const pngImage = () =>
 
 describe('album covers', () => {
   let app: TestApp
+  let me: SignedIn
   let albumId: number
 
+  // Uploads and deletes are made as the owner of the album's crate.
   beforeEach(async () => {
     app = await buildTestApp()
-    const crate = addCrate(app)
+    me = await signUp(app)
+    const crate = addCrate(app, 'Test crate', 0, me.user.id)
     const res = await app.inject({
       method: 'POST',
       url: '/api/albums',
       payload: { crateId: crate.id, title: 'Dummy', artist: 'Portishead' },
+      headers: me.headers,
     })
     albumId = res.json<AlbumDetail>().id
   })
   afterEach(() => app.close())
 
   async function upload(data: Buffer, { field = 'cover', type = 'image/png', id = albumId } = {}) {
+    const body = multipart(field, 'cover.png', type, data)
     return app.inject({
       method: 'POST',
       url: `/api/albums/${id}/cover`,
-      ...multipart(field, 'cover.png', type, data),
+      payload: body.payload,
+      headers: { ...body.headers, ...me.headers },
     })
   }
 
@@ -72,7 +85,11 @@ describe('album covers', () => {
   it('removes the cover', async () => {
     const album = (await upload(await pngImage())).json<AlbumDetail>()
 
-    const res = await app.inject({ method: 'DELETE', url: `/api/albums/${albumId}/cover` })
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/albums/${albumId}/cover`,
+      headers: me.headers,
+    })
 
     expect(res.json<AlbumDetail>().coverPath).toBeNull()
     expect(existsSync(fileFor(album))).toBe(false)
@@ -81,7 +98,7 @@ describe('album covers', () => {
   it('deletes the cover file along with the album', async () => {
     await upload(await pngImage())
 
-    await app.inject({ method: 'DELETE', url: `/api/albums/${albumId}` })
+    await app.inject({ method: 'DELETE', url: `/api/albums/${albumId}`, headers: me.headers })
 
     expect(await coverFiles()).toEqual([])
   })

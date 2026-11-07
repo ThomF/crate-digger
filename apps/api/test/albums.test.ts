@@ -1,14 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AlbumDetail, AlbumSummary, ApiError, CreateAlbumRequest } from '@frisson/shared'
-import { addCrate, buildTestApp } from './helpers.ts'
+import { addCrate, buildTestApp, signUp, type SignedIn, type TestApp } from './helpers.ts'
 
 describe('albums API', () => {
-  let app: Awaited<ReturnType<typeof buildTestApp>>
+  let app: TestApp
+  let me: SignedIn
   let crateId: number
 
+  // Every write is made as `me`, in crates `me` owns (ownership itself is tested in
+  // ownership.test.ts).
   beforeEach(async () => {
     app = await buildTestApp()
-    crateId = addCrate(app).id
+    me = await signUp(app)
+    crateId = addCrate(app, 'Test crate', 0, me.user.id).id
   })
   afterEach(() => app.close())
 
@@ -17,6 +21,7 @@ describe('albums API', () => {
       method: 'POST',
       url: '/api/albums',
       payload: { crateId, title: 'Dummy', artist: 'Portishead', ...overrides },
+      headers: me.headers,
     })
     return { res, album: res.json<AlbumDetail>() }
   }
@@ -88,7 +93,7 @@ describe('albums API', () => {
 
   describe('GET /api/albums', () => {
     it('lists albums in crate order and can filter by crate', async () => {
-      const otherCrate = addCrate(app, 'Other', 1).id
+      const otherCrate = addCrate(app, 'Other', 1, me.user.id).id
       await create({ title: 'First' })
       await create({ title: 'Elsewhere', crateId: otherCrate })
       await create({ title: 'Second' })
@@ -137,6 +142,7 @@ describe('albums API', () => {
         method: 'PATCH',
         url: `/api/albums/${album.id}`,
         payload: { rating: 5 },
+        headers: me.headers,
       })
 
       expect(res.statusCode).toBe(200)
@@ -144,7 +150,7 @@ describe('albums API', () => {
     })
 
     it('moves an album to the back of another crate', async () => {
-      const otherCrate = addCrate(app, 'Other', 1).id
+      const otherCrate = addCrate(app, 'Other', 1, me.user.id).id
       await create({ crateId: otherCrate, title: 'Already there' })
       const { album } = await create()
 
@@ -152,6 +158,7 @@ describe('albums API', () => {
         method: 'PATCH',
         url: `/api/albums/${album.id}`,
         payload: { crateId: otherCrate },
+        headers: me.headers,
       })
 
       expect(res.json<AlbumDetail>()).toMatchObject({ crateId: otherCrate, position: 1 })
@@ -160,7 +167,12 @@ describe('albums API', () => {
     it('rejects an empty update', async () => {
       const { album } = await create()
 
-      const res = await app.inject({ method: 'PATCH', url: `/api/albums/${album.id}`, payload: {} })
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/albums/${album.id}`,
+        payload: {},
+        headers: me.headers,
+      })
 
       expect(res.statusCode).toBe(400)
     })
@@ -177,6 +189,7 @@ describe('albums API', () => {
           { side: 'A', position: 1, title: 'Mysterons' },
           { side: 'A', position: 2, title: 'Sour Times', durationSec: 254 },
         ],
+        headers: me.headers,
       })
 
       expect(res.statusCode).toBe(200)
@@ -193,13 +206,19 @@ describe('albums API', () => {
         method: 'PUT',
         url: `/api/albums/${album.id}/tracks`,
         payload: [],
+        headers: me.headers,
       })
 
       expect(res.json<AlbumDetail>().tracks).toEqual([])
     })
 
     it('returns 404 for an unknown album', async () => {
-      const res = await app.inject({ method: 'PUT', url: '/api/albums/999/tracks', payload: [] })
+      const res = await app.inject({
+        method: 'PUT',
+        url: '/api/albums/999/tracks',
+        payload: [],
+        headers: me.headers,
+      })
 
       expect(res.statusCode).toBe(404)
     })
@@ -209,8 +228,10 @@ describe('albums API', () => {
     it('deletes the album, then 404s', async () => {
       const { album } = await create()
 
-      const first = await app.inject({ method: 'DELETE', url: `/api/albums/${album.id}` })
-      const second = await app.inject({ method: 'DELETE', url: `/api/albums/${album.id}` })
+      const del = () =>
+        app.inject({ method: 'DELETE', url: `/api/albums/${album.id}`, headers: me.headers })
+      const first = await del()
+      const second = await del()
 
       expect(first.statusCode).toBe(204)
       expect(second.statusCode).toBe(404)
@@ -222,8 +243,10 @@ describe('albums API', () => {
       const { album } = await create()
       expect(album.spinCount).toBe(0)
 
-      await app.inject({ method: 'POST', url: `/api/albums/${album.id}/spins` })
-      const res = await app.inject({ method: 'POST', url: `/api/albums/${album.id}/spins` })
+      const spin = () =>
+        app.inject({ method: 'POST', url: `/api/albums/${album.id}/spins`, headers: me.headers })
+      await spin()
+      const res = await spin()
       const detail = await app.inject({ url: `/api/albums/${album.id}` })
 
       expect(res.json()).toEqual({ spinCount: 2 })
@@ -232,9 +255,24 @@ describe('albums API', () => {
     })
 
     it('returns 404 for an unknown album', async () => {
-      const res = await app.inject({ method: 'POST', url: '/api/albums/999/spins' })
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/albums/999/spins',
+        headers: me.headers,
+      })
 
       expect(res.statusCode).toBe(404)
+    })
+
+    it('needs a session, like every other write', async () => {
+      const { album } = await create()
+
+      const res = await app.inject({ method: 'POST', url: `/api/albums/${album.id}/spins` })
+
+      expect(res.statusCode).toBe(401)
+      expect(
+        (await app.inject({ url: `/api/albums/${album.id}` })).json<AlbumDetail>().spinCount,
+      ).toBe(0)
     })
   })
 })

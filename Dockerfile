@@ -5,7 +5,11 @@
 # image only holds what's needed to run.
 #
 #   docker build -t frisson .
-#   docker run -p 3000:3000 -v crate-data:/data -e ADMIN_PASSWORD=… frisson
+#   docker run -p 3000:3000 -v crate-data:/data \
+#     -e ADMIN_EMAIL=you@example.com -e ADMIN_PASSWORD=… frisson
+#
+# ADMIN_EMAIL + ADMIN_PASSWORD (at least 8 characters) create the first admin account on a
+# start with no admin yet (ADR 0004); changing them later does not change that account.
 
 # Debian-based (not Alpine): sharp ships prebuilt binaries for it, and anything that has to
 # be compiled (see below) builds against the same C library the final image uses.

@@ -25,6 +25,7 @@ import { deleteCoverFile } from '../services/covers.ts'
 // Routes stay thin: declare the schema, call a service, pick a status code.
 // Fastify validates params/query/body against the schema *before* the handler runs,
 // so req.body etc. are already typed and trustworthy here.
+// Reads are public. Writes pass request.user to the service, which answers 401/403/404.
 export const albumRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/albums',
@@ -41,17 +42,17 @@ export const albumRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/albums',
     { schema: { body: createAlbumInput, response: { 201: albumDetail } } },
-    async (req, reply) => reply.code(201).send(createAlbum(app.db, req.body)),
+    async (req, reply) => reply.code(201).send(createAlbum(app.db, req.user, req.body)),
   )
 
   app.patch(
     '/albums/:id',
     { schema: { params: idParams, body: updateAlbumInput, response: { 200: albumDetail } } },
-    async (req) => updateAlbum(app.db, req.params.id, req.body),
+    async (req) => updateAlbum(app.db, req.user, req.params.id, req.body),
   )
 
   app.delete('/albums/:id', { schema: { params: idParams } }, async (req, reply) => {
-    const { coverPath } = deleteAlbum(app.db, req.params.id)
+    const { coverPath } = deleteAlbum(app.db, req.user, req.params.id)
     await deleteCoverFile(app.coversDir, coverPath)
     return reply.code(204).send()
   })
@@ -59,20 +60,21 @@ export const albumRoutes: FastifyPluginAsyncZod = async (app) => {
   app.patch(
     '/albums/:id/position',
     { schema: { params: idParams, body: moveAlbumInput, response: { 200: albumDetail } } },
-    async (req) => moveAlbum(app.db, req.params.id, req.body),
+    async (req) => moveAlbum(app.db, req.user, req.params.id, req.body),
   )
 
   // Not part of GET /albums/:id on purpose: GET must never change anything, or reloads,
-  // link prefetching and crawlers would all count as spins.
+  // link prefetching and crawlers would all count as spins. Spins are a write, so they
+  // need a session and edit permission like the rest.
   app.post(
     '/albums/:id/spins',
     { schema: { params: idParams, response: { 200: spinResult } } },
-    async (req) => addSpin(app.db, req.params.id),
+    async (req) => addSpin(app.db, req.user, req.params.id),
   )
 
   app.put(
     '/albums/:id/tracks',
     { schema: { params: idParams, body: tracklistInput, response: { 200: albumDetail } } },
-    async (req) => replaceTracks(app.db, req.params.id, req.body),
+    async (req) => replaceTracks(app.db, req.user, req.params.id, req.body),
   )
 }
