@@ -7,6 +7,7 @@ import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
 import { canEditCrate } from '../utils/permissions.ts'
 import CrateBox from '../components/crate/CrateBox.vue'
+import OwnerLink from '../components/crate/OwnerLink.vue'
 import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 import RatingStars from '../components/album/RatingStars.vue'
@@ -76,6 +77,9 @@ async function open(album: AlbumSummary) {
         {{ c.label ?? c.name }}
       </button>
     </div>
+
+    <!-- Whose crate this is, linking to /u/<ownerUsername>. Nothing for ownerless crates. -->
+    <OwnerLink :username="crate.ownerUsername" :display-name="crate.ownerDisplayName" />
 
     <CrateBox v-model:index="index" :crate="crate" :albums="albums" @open="open" />
 

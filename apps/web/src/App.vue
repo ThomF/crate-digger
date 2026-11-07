@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { errorMessage } from './api/client.ts'
 import { useSessionStore } from './stores/session.ts'
+import VerifiedBadge from './components/profile/VerifiedBadge.vue'
 
 const session = useSessionStore()
 const router = useRouter()
@@ -29,9 +30,15 @@ async function logOut() {
 
     <nav v-if="session.loaded" class="user-menu" aria-label="Account">
       <template v-if="session.user">
-        <span class="who" :title="`@${session.user.username}`">
+        <RouterLink
+          class="who"
+          :to="`/u/${encodeURIComponent(session.user.username)}`"
+          :title="`@${session.user.username}`"
+        >
           {{ session.user.displayName || session.user.username }}
-        </span>
+          <VerifiedBadge v-if="session.user.verified" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'profile-edit' }">Edit profile</RouterLink>
         <button type="button" @click="logOut">Log out</button>
       </template>
       <template v-else>
@@ -81,9 +88,14 @@ async function logOut() {
   font-size: 0.85rem;
 }
 
-.who {
+.user-menu .who {
   color: var(--ink);
   font-weight: bold;
+  text-decoration: none;
+}
+
+.user-menu .who:hover {
+  text-decoration: underline;
 }
 
 .user-menu button {
