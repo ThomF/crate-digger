@@ -1,0 +1,756 @@
+{
+ "concern": "relevant",
+ "target": "/home/claude/crate-digger",
+ "total_files": 64,
+ "inventory": {
+  "packages/shared": [
+   {
+    "file": "packages/shared/src/sorting.ts",
+    "line": 4,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "packages/shared/package.json",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   }
+  ],
+  "docker/CI": [
+   {
+    "file": ".github/workflows/ci.yml",
+    "line": 38,
+    "variants": [
+     "crate-digger:ci"
+    ]
+   },
+   {
+    "file": ".github/workflows/ci.yml",
+    "line": 44,
+    "variants": [
+     "crate-digger:ci"
+    ]
+   },
+   {
+    "file": "Dockerfile",
+    "line": 7,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "Dockerfile",
+    "line": 8,
+    "variants": [
+     "crate-digger"
+    ]
+   }
+  ],
+  "docs": [
+   {
+    "file": "README.md",
+    "line": 1,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "docs/DEPLOY.md",
+    "line": 1,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "docs/DEPLOY.md",
+    "line": 60,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "docs/DEPLOY.md",
+    "line": 61,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "docs/SPEC.md",
+    "line": 1,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "docs/SPEC.md",
+    "line": 24,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "docs/adr/0003-deployment.md",
+    "line": 8,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "docs/adr/0001-stack.md",
+    "line": 8,
+    "variants": [
+     "Crate Digger"
+    ]
+   }
+  ],
+  "root config": [
+   {
+    "file": "package.json",
+    "line": 2,
+    "variants": [
+     "crate-digger"
+    ]
+   }
+  ],
+  "apps/web src": [
+   {
+    "file": "apps/web/src/stores/session.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/stores/library.test.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/stores/library.ts",
+    "line": 9,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/stores/library.ts",
+    "line": 11,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/album/VinylDisc.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/album/SleeveBack.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/album/AlbumRow.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/album/RecordStage.vue",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/album/RecordStage.test.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/album/TrackList.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/crate/CrateSettings.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/crate/CrateSettings.vue",
+    "line": 4,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/crate/CrateBox.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/crate/CrateBox.vue",
+    "line": 6,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/crate/CrateBox.test.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/crate/SleeveArt.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/forms/AlbumForm.vue",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/components/forms/TrackEditor.vue",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/App.vue",
+    "line": 18,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/CratesView.vue",
+    "line": 11,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/LoginView.vue",
+    "line": 18,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/AlbumView.vue",
+    "line": 4,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/AlbumView.vue",
+    "line": 55,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/AlbumView.vue",
+    "line": 59,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/AlbumEditorView.vue",
+    "line": 4,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/AlbumEditorView.vue",
+    "line": 61,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/LibraryView.vue",
+    "line": 4,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/LibraryView.vue",
+    "line": 5,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/LibraryView.vue",
+    "line": 22,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/CrateView.vue",
+    "line": 4,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/views/CrateView.vue",
+    "line": 18,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/src/api/session.ts",
+    "line": 1,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/api/albums.ts",
+    "line": 9,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/api/client.ts",
+    "line": 1,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/api/crates.ts",
+    "line": 1,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/composables/useAlbumSearch.ts",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/composables/useAlbumSearch.test.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/utils/tracks.ts",
+    "line": 1,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/utils/tracks.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/utils/tracks.test.ts",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/forms/albumForm.test.ts",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/web/src/forms/albumForm.ts",
+    "line": 14,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   }
+  ],
+  "apps/web config (index.html, package.json)": [
+   {
+    "file": "apps/web/index.html",
+    "line": 6,
+    "variants": [
+     "Crate Digger"
+    ]
+   },
+   {
+    "file": "apps/web/package.json",
+    "line": 2,
+    "variants": [
+     "@crate-digger/web"
+    ]
+   },
+   {
+    "file": "apps/web/package.json",
+    "line": 13,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   }
+  ],
+  "apps/api src": [
+   {
+    "file": "apps/api/src/services/albums.ts",
+    "line": 10,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/services/albums.ts",
+    "line": 13,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/services/covers.ts",
+    "line": 6,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/services/crates.ts",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/db/schema.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/plugins/auth.ts",
+    "line": 35,
+    "variants": [
+     "crate_digger_session"
+    ]
+   },
+   {
+    "file": "apps/api/src/plugins/auth.ts",
+    "line": 53,
+    "variants": [
+     "crate-digger-session"
+    ]
+   },
+   {
+    "file": "apps/api/src/plugins/error-handler.ts",
+    "line": 7,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/routes/health.ts",
+    "line": 7,
+    "variants": [
+     "crate-digger-api"
+    ]
+   },
+   {
+    "file": "apps/api/src/routes/session.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/routes/albums.ts",
+    "line": 12,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/routes/covers.ts",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/src/routes/crates.ts",
+    "line": 8,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   }
+  ],
+  "apps/api test": [
+   {
+    "file": "apps/api/test/crates.test.ts",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/test/covers.test.ts",
+    "line": 6,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 5,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 13,
+    "variants": [
+     "crate-digger-auth-"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 61,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 78,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 87,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 89,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 98,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 106,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 108,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 124,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/auth.test.ts",
+    "line": 134,
+    "variants": [
+     "crate-digger"
+    ]
+   },
+   {
+    "file": "apps/api/test/web.test.ts",
+    "line": 13,
+    "variants": [
+     "crate-digger-web-"
+    ]
+   },
+   {
+    "file": "apps/api/test/web.test.ts",
+    "line": 14,
+    "variants": [
+     "crate-digger-covers-"
+    ]
+   },
+   {
+    "file": "apps/api/test/helpers.ts",
+    "line": 12,
+    "variants": [
+     "crate-digger-covers-"
+    ]
+   },
+   {
+    "file": "apps/api/test/helpers.ts",
+    "line": 30,
+    "variants": [
+     "crate-digger-test-boundary"
+    ]
+   },
+   {
+    "file": "apps/api/test/albums.test.ts",
+    "line": 2,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/test/sorting.test.ts",
+    "line": 3,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   },
+   {
+    "file": "apps/api/test/health.test.ts",
+    "line": 11,
+    "variants": [
+     "crate-digger-api"
+    ]
+   }
+  ],
+  "root config (apps/api/package.json)": [
+   {
+    "file": "apps/api/package.json",
+    "line": 2,
+    "variants": [
+     "@crate-digger/api"
+    ]
+   },
+   {
+    "file": "apps/api/package.json",
+    "line": 17,
+    "variants": [
+     "@crate-digger/shared"
+    ]
+   }
+  ]
+ },
+ "do_not_rename_or_flag": [
+  {
+   "item": "crate.db",
+   "where": "apps/api/src/paths.ts:10, apps/api/drizzle.config.ts:9, apps/api/src/app.ts:16, README.md:55, docs/SPEC.md:136, docs/DEPLOY.md:7,104,105, comments in db/backup.ts, db/restore.ts, services/covers.ts:51",
+   "action": "DO NOT rename"
+  },
+  {
+   "item": "DATA_DIR / DATABASE_PATH / COVERS_DIR env vars",
+   "where": "apps/api/src/paths.ts, Dockerfile:45, README.md:58",
+   "action": "DO NOT rename"
+  },
+  {
+   "item": "Docker named volume crate-data",
+   "where": "compose.yaml:19,43; Dockerfile:8 comment; docs/DEPLOY.md:11. Renaming orphans the production DB and covers",
+   "action": "DO NOT rename (not matched by crate-digger pattern; keep)"
+  },
+  {
+   "item": "crate-backup dir, backups/crate-*.db filenames",
+   "where": "docs/DEPLOY.md:98-116",
+   "action": "leave; data-adjacent user paths, not product name"
+  },
+  {
+   "item": "drizzle migrations and snapshots",
+   "where": "apps/api/drizzle/*.sql, meta/*",
+   "action": "no product-name hits; do not touch"
+  },
+  {
+   "item": "SESSION_COOKIE 'crate_digger_session'",
+   "where": "apps/api/src/plugins/auth.ts:35 (tests import the constant)",
+   "action": "rename acceptable; logs out existing sessions once"
+  },
+  {
+   "item": "HMAC key literal 'crate-digger-session'",
+   "where": "apps/api/src/plugins/auth.ts:53",
+   "action": "FLAG: only used when SESSION_SECRET unset; renaming changes derived secret and invalidates all sessions, same effect as cookie rename but is a behaviour change. Recommend leaving or deciding explicitly"
+  },
+  {
+   "item": "localStorage/sessionStorage keys",
+   "where": "none found",
+   "action": "absent"
+  },
+  {
+   "item": "health response service: 'crate-digger-api'",
+   "where": "apps/api/src/routes/health.ts:7, apps/api/test/health.test.ts:11",
+   "action": "API-visible string; rename ok only if nothing external (Docker healthcheck, CI) greps it; CI/Dockerfile healthcheck not checked for it"
+  },
+  {
+   "item": "test password 'crate-digger'",
+   "where": "apps/api/test/auth.test.ts:61,78,87,89,98,106,108,124,134",
+   "action": "test fixture value, not branding; rename optional"
+  },
+  {
+   "item": "GitHub URL ThomF/crate-digger",
+   "where": "docs/DEPLOY.md:60-61",
+   "action": "depends on whether the repo is renamed; do not change blindly"
+  }
+ ],
+ "notes": [
+  "package-lock.json: 10 'digger' hits, regenerate with npm install (excluded from inventory)",
+  "node_modules/@crate-digger/* workspace symlinks need reinstall after rename",
+  "docs/SPEC.md:24 directory tree root 'crate-digger/'; README.md:1 has emoji prefix",
+  "docs/adr/0002 has no product-name hit; ADR 0001:8 and 0003:8 do",
+  "compose.yaml has no top-level name; Compose project name derives from checkout directory, so rename of folder would change container/volume prefix",
+  "docker/Caddyfile, .env.example, .github/pull_request_template.md, eslint/tsconfig: no hits",
+  "'crate' domain words (CrateBox, CRATE_SORTS, crates routes, crate-view branch) are not the product name"
+ ]
+}

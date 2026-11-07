@@ -1,0 +1,15 @@
+{
+  "id": "T2",
+  "status": "implemented",
+  "commit": "342ba16",
+  "filesChanged": ["apps/api/src/db/schema.ts","apps/api/src/plugins/auth.ts","apps/api/src/plugins/error-handler.ts","apps/api/src/routes/albums.ts","apps/api/src/routes/covers.ts","apps/api/src/routes/crates.ts","apps/api/src/routes/health.ts","apps/api/src/routes/session.ts","apps/api/src/services/albums.ts","apps/api/src/services/covers.ts","apps/api/src/services/crates.ts","apps/api/test/albums.test.ts","apps/api/test/auth.test.ts","apps/api/test/covers.test.ts","apps/api/test/crates.test.ts","apps/api/test/health.test.ts","apps/api/test/helpers.ts","apps/api/test/sorting.test.ts","apps/api/test/web.test.ts"],
+  "criteria": ["AC1","AC2","AC4","AC6","AC9","AC10","AC12"],
+  "verification": {
+    "typecheck": "pass (npm run typecheck -w apps/api)",
+    "test": "pass, 8 files / 82 tests (npm test -w apps/api)",
+    "lint": "pass (npx eslint apps/api)",
+    "grepOldName": "empty for apps/api"
+  },
+  "blockers": [],
+  "notes": "Session cookie and HMAC fallback label changed: existing sessions are logged out once (accepted). Drizzle, crate.db, DATA_DIR, crates/crate_sort_by untouched. Repo-wide AC1/AC2/AC4 also depend on T1 and the apps/web task."
+}

@@ -1,0 +1,836 @@
+{
+  "commit": "05d2ed6a4ffc2e6e319e5a09e639bf4a2db607a5",
+  "structureTests": {
+    "concerns": [
+      "structure",
+      "tests"
+    ],
+    "structure": {
+      "type": "npm workspaces monorepo (package-lock.json at root), ESM ('type: module')",
+      "language": "TypeScript (strict, erasableSyntaxOnly; API runs .ts directly via Node native type stripping, no API build step), Vue 3 SFCs in web",
+      "node": ">=22.18 (engines), .nvmrc = 22",
+      "workspaces": {
+        "packages/shared": "@crate-digger/shared; zod schemas/sorting; exports ./src/index.ts and ./sorting; scripts: typecheck only",
+        "apps/api": "@crate-digger/api; Fastify 5, better-sqlite3, drizzle-orm (+drizzle-kit, migrations in apps/api/drizzle), sharp, zod type provider; src/{routes,services,plugins,db}; scripts: dev, start, typecheck, test, db:*",
+        "apps/web": "@crate-digger/web; Vue 3, Pinia, vue-router, Vite 6; scripts: dev, build, preview, typecheck (vue-tsc), test"
+      },
+      "build_system": "Only apps/web has a build (vite build -> apps/web/dist). API and shared have no build.",
+      "docker_ci": {
+        "Dockerfile": "multi-stage node:22-bookworm-slim; builds web, prod deps for api, runtime runs node apps/api/src/server.ts as user node, /data volume, healthcheck /api/health",
+        "compose.yaml": "app + caddy (docker/Caddyfile) for HTTPS",
+        "ci": ".github/workflows/ci.yml: job check (npm ci, format:check, lint, typecheck, test, build); job docker (image build + smoke test of /api/health)"
+      },
+      "other": "ESLint 9 flat config (eslint.config.js, vue+ts), Prettier (.prettierrc.json), tsconfig.base.json; docs/ (SPEC, DEPLOY, 3 ADRs); .env.example"
+    },
+    "tests": {
+      "runner": "vitest ^3.2 in apps/api (node env, no config file, 9 files in apps/api/test) and apps/web (happy-dom via vite.config.ts, 13 colocated *.test.ts files, uses @vue/test-utils); packages/shared has no tests and no test script",
+      "commands_from_repo_root": {
+        "install": "npm ci",
+        "typecheck": "npm run typecheck   (tsc --noEmit in shared and api, vue-tsc --noEmit in web)",
+        "lint": "npm run lint   (eslint .)",
+        "format_check": "npm run format:check   (prettier --check .)",
+        "test": "npm test   (vitest run in api and web)",
+        "test_single_workspace": "npm test -w apps/api   |   npm test -w apps/web",
+        "build": "npm run build   (web only)"
+      }
+    },
+    "absent": [
+      "root vitest config / workspace file",
+      "per-workspace vitest config for api",
+      "coverage config",
+      "lint script in workspaces (lint is root-only)",
+      "e2e tests"
+    ]
+  },
+  "conventionsDocs": {
+    "concerns": [
+      "conventions",
+      "documentation"
+    ],
+    "conventions": {
+      "formatting": "Prettier: no semicolons, single quotes, printWidth 100, trailingComma all. .editorconfig: LF, 2-space, final newline. CI runs format:check.",
+      "lint": "ESLint 9 flat config: eslint-plugin-vue flat/essential + vue-ts recommended + prettier skip-formatting. No custom rules.",
+      "typescript": "tsconfig.base: strict, noUncheckedIndexedAccess, verbatimModuleSyntax, erasableSyntaxOnly (no enums). Relative imports use .ts extension; import type for types. API runs TS natively on Node >=22.18 (ADR 0002).",
+      "naming": "Files: camelCase .ts, PascalCase .vue, kebab-case plugin file error-handler.ts. Exports: camelCase, UPPER_SNAKE constants; routes/plugins as xRoutes/xPlugin. Tests colocated *.test.ts in web, apps/api/test/ in API. Pkg scope @crate-digger/*; cookie crate_digger_session.",
+      "modules": "API: routes (thin HTTP) / services (plain functions taking (db, input)) / plugins (fastify-plugin) / db. Web: api/ stores/ views/ components/<feature>/ composables/ utils/. Vue script setup. Shared Zod schemas in packages/shared.",
+      "errors": "Services throw HttpError (notFound, badRequest) from errors.ts; error-handler plugin emits {statusCode,error,message,issues?}. Web uses errorMessage in api/client.ts.",
+      "commits": "Spec says Conventional Commits, squash merge, branches feat/fix/chore. Local history is 1 commit (merge of PR #12), so style is unverifiable from git. No CLAUDE.md or CONTRIBUTING.md."
+    },
+    "documentation": {
+      "files": [
+        "README.md",
+        "docs/SPEC.md",
+        "docs/DEPLOY.md",
+        "docs/adr/0001-stack.md",
+        "docs/adr/0002-native-typescript-and-shared-package.md",
+        "docs/adr/0003-deployment.md",
+        ".github/pull_request_template.md"
+      ],
+      "product_name": "Crate Digger everywhere (display), crate-digger (slug/package scope/image/repo), crate_digger (cookie). No occurrence of 'frisson' in tracked files.",
+      "intent": "Self-hosted, manually curated music collection shown as 90s record crates; ADR 0001 says learning project as much as product. Status: milestones through deploy done, polish (M10) next.",
+      "drift": "SPEC lists docker-compose.yml, docker/Dockerfile, RecordSleeve/CrateDivider/AddAlbumView, db/migrations/, tokens.css; actual repo has compose.yaml, root Dockerfile, different component names, drizzle/ at apps/api. README is more current than SPEC."
+    },
+    "gotchas": [
+      "Branch checked out is shipyard/rename-to-frisson-2026-11-07T06-38-49",
+      "Name appears in ~94 places plus Docker image, volume, cookie, package scope, GitHub URL in DEPLOY.md",
+      "README and index.html title use emoji/display name; user pref: avoid stray dashes in prose (README uses em dash style)"
+    ]
+  },
+  "relevant": {
+    "concern": "relevant",
+    "target": "/home/claude/crate-digger",
+    "total_files": 64,
+    "inventory": {
+      "packages/shared": [
+        {
+          "file": "packages/shared/src/sorting.ts",
+          "line": 4,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "packages/shared/package.json",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        }
+      ],
+      "docker/CI": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "line": 38,
+          "variants": [
+            "crate-digger:ci"
+          ]
+        },
+        {
+          "file": ".github/workflows/ci.yml",
+          "line": 44,
+          "variants": [
+            "crate-digger:ci"
+          ]
+        },
+        {
+          "file": "Dockerfile",
+          "line": 7,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "Dockerfile",
+          "line": 8,
+          "variants": [
+            "crate-digger"
+          ]
+        }
+      ],
+      "docs": [
+        {
+          "file": "README.md",
+          "line": 1,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "docs/DEPLOY.md",
+          "line": 1,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "docs/DEPLOY.md",
+          "line": 60,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "docs/DEPLOY.md",
+          "line": 61,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "docs/SPEC.md",
+          "line": 1,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "docs/SPEC.md",
+          "line": 24,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "docs/adr/0003-deployment.md",
+          "line": 8,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "docs/adr/0001-stack.md",
+          "line": 8,
+          "variants": [
+            "Crate Digger"
+          ]
+        }
+      ],
+      "root config": [
+        {
+          "file": "package.json",
+          "line": 2,
+          "variants": [
+            "crate-digger"
+          ]
+        }
+      ],
+      "apps/web src": [
+        {
+          "file": "apps/web/src/stores/session.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/stores/library.test.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/stores/library.ts",
+          "line": 9,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/stores/library.ts",
+          "line": 11,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/album/VinylDisc.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/album/SleeveBack.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/album/AlbumRow.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/album/RecordStage.vue",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/album/RecordStage.test.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/album/TrackList.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/crate/CrateSettings.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/crate/CrateSettings.vue",
+          "line": 4,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/crate/CrateBox.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/crate/CrateBox.vue",
+          "line": 6,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/crate/CrateBox.test.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/crate/SleeveArt.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/forms/AlbumForm.vue",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/components/forms/TrackEditor.vue",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/App.vue",
+          "line": 18,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/CratesView.vue",
+          "line": 11,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/LoginView.vue",
+          "line": 18,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/AlbumView.vue",
+          "line": 4,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/AlbumView.vue",
+          "line": 55,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/AlbumView.vue",
+          "line": 59,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/AlbumEditorView.vue",
+          "line": 4,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/AlbumEditorView.vue",
+          "line": 61,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/LibraryView.vue",
+          "line": 4,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/LibraryView.vue",
+          "line": 5,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/LibraryView.vue",
+          "line": 22,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/CrateView.vue",
+          "line": 4,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/views/CrateView.vue",
+          "line": 18,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/src/api/session.ts",
+          "line": 1,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/api/albums.ts",
+          "line": 9,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/api/client.ts",
+          "line": 1,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/api/crates.ts",
+          "line": 1,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/composables/useAlbumSearch.ts",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/composables/useAlbumSearch.test.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/utils/tracks.ts",
+          "line": 1,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/utils/tracks.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/utils/tracks.test.ts",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/forms/albumForm.test.ts",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/web/src/forms/albumForm.ts",
+          "line": 14,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        }
+      ],
+      "apps/web config (index.html, package.json)": [
+        {
+          "file": "apps/web/index.html",
+          "line": 6,
+          "variants": [
+            "Crate Digger"
+          ]
+        },
+        {
+          "file": "apps/web/package.json",
+          "line": 2,
+          "variants": [
+            "@crate-digger/web"
+          ]
+        },
+        {
+          "file": "apps/web/package.json",
+          "line": 13,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        }
+      ],
+      "apps/api src": [
+        {
+          "file": "apps/api/src/services/albums.ts",
+          "line": 10,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/services/albums.ts",
+          "line": 13,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/services/covers.ts",
+          "line": 6,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/services/crates.ts",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/db/schema.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/plugins/auth.ts",
+          "line": 35,
+          "variants": [
+            "crate_digger_session"
+          ]
+        },
+        {
+          "file": "apps/api/src/plugins/auth.ts",
+          "line": 53,
+          "variants": [
+            "crate-digger-session"
+          ]
+        },
+        {
+          "file": "apps/api/src/plugins/error-handler.ts",
+          "line": 7,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/routes/health.ts",
+          "line": 7,
+          "variants": [
+            "crate-digger-api"
+          ]
+        },
+        {
+          "file": "apps/api/src/routes/session.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/routes/albums.ts",
+          "line": 12,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/routes/covers.ts",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/src/routes/crates.ts",
+          "line": 8,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        }
+      ],
+      "apps/api test": [
+        {
+          "file": "apps/api/test/crates.test.ts",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/test/covers.test.ts",
+          "line": 6,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 5,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 13,
+          "variants": [
+            "crate-digger-auth-"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 61,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 78,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 87,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 89,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 98,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 106,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 108,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 124,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/auth.test.ts",
+          "line": 134,
+          "variants": [
+            "crate-digger"
+          ]
+        },
+        {
+          "file": "apps/api/test/web.test.ts",
+          "line": 13,
+          "variants": [
+            "crate-digger-web-"
+          ]
+        },
+        {
+          "file": "apps/api/test/web.test.ts",
+          "line": 14,
+          "variants": [
+            "crate-digger-covers-"
+          ]
+        },
+        {
+          "file": "apps/api/test/helpers.ts",
+          "line": 12,
+          "variants": [
+            "crate-digger-covers-"
+          ]
+        },
+        {
+          "file": "apps/api/test/helpers.ts",
+          "line": 30,
+          "variants": [
+            "crate-digger-test-boundary"
+          ]
+        },
+        {
+          "file": "apps/api/test/albums.test.ts",
+          "line": 2,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/test/sorting.test.ts",
+          "line": 3,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        },
+        {
+          "file": "apps/api/test/health.test.ts",
+          "line": 11,
+          "variants": [
+            "crate-digger-api"
+          ]
+        }
+      ],
+      "root config (apps/api/package.json)": [
+        {
+          "file": "apps/api/package.json",
+          "line": 2,
+          "variants": [
+            "@crate-digger/api"
+          ]
+        },
+        {
+          "file": "apps/api/package.json",
+          "line": 17,
+          "variants": [
+            "@crate-digger/shared"
+          ]
+        }
+      ]
+    },
+    "do_not_rename_or_flag": [
+      {
+        "item": "crate.db",
+        "where": "apps/api/src/paths.ts:10, apps/api/drizzle.config.ts:9, apps/api/src/app.ts:16, README.md:55, docs/SPEC.md:136, docs/DEPLOY.md:7,104,105, comments in db/backup.ts, db/restore.ts, services/covers.ts:51",
+        "action": "DO NOT rename"
+      },
+      {
+        "item": "DATA_DIR / DATABASE_PATH / COVERS_DIR env vars",
+        "where": "apps/api/src/paths.ts, Dockerfile:45, README.md:58",
+        "action": "DO NOT rename"
+      },
+      {
+        "item": "Docker named volume crate-data",
+        "where": "compose.yaml:19,43; Dockerfile:8 comment; docs/DEPLOY.md:11. Renaming orphans the production DB and covers",
+        "action": "DO NOT rename (not matched by crate-digger pattern; keep)"
+      },
+      {
+        "item": "crate-backup dir, backups/crate-*.db filenames",
+        "where": "docs/DEPLOY.md:98-116",
+        "action": "leave; data-adjacent user paths, not product name"
+      },
+      {
+        "item": "drizzle migrations and snapshots",
+        "where": "apps/api/drizzle/*.sql, meta/*",
+        "action": "no product-name hits; do not touch"
+      },
+      {
+        "item": "SESSION_COOKIE 'crate_digger_session'",
+        "where": "apps/api/src/plugins/auth.ts:35 (tests import the constant)",
+        "action": "rename acceptable; logs out existing sessions once"
+      },
+      {
+        "item": "HMAC key literal 'crate-digger-session'",
+        "where": "apps/api/src/plugins/auth.ts:53",
+        "action": "FLAG: only used when SESSION_SECRET unset; renaming changes derived secret and invalidates all sessions, same effect as cookie rename but is a behaviour change. Recommend leaving or deciding explicitly"
+      },
+      {
+        "item": "localStorage/sessionStorage keys",
+        "where": "none found",
+        "action": "absent"
+      },
+      {
+        "item": "health response service: 'crate-digger-api'",
+        "where": "apps/api/src/routes/health.ts:7, apps/api/test/health.test.ts:11",
+        "action": "API-visible string; rename ok only if nothing external (Docker healthcheck, CI) greps it; CI/Dockerfile healthcheck not checked for it"
+      },
+      {
+        "item": "test password 'crate-digger'",
+        "where": "apps/api/test/auth.test.ts:61,78,87,89,98,106,108,124,134",
+        "action": "test fixture value, not branding; rename optional"
+      },
+      {
+        "item": "GitHub URL ThomF/crate-digger",
+        "where": "docs/DEPLOY.md:60-61",
+        "action": "depends on whether the repo is renamed; do not change blindly"
+      }
+    ],
+    "notes": [
+      "package-lock.json: 10 'digger' hits, regenerate with npm install (excluded from inventory)",
+      "node_modules/@crate-digger/* workspace symlinks need reinstall after rename",
+      "docs/SPEC.md:24 directory tree root 'crate-digger/'; README.md:1 has emoji prefix",
+      "docs/adr/0002 has no product-name hit; ADR 0001:8 and 0003:8 do",
+      "compose.yaml has no top-level name; Compose project name derives from checkout directory, so rename of folder would change container/volume prefix",
+      "docker/Caddyfile, .env.example, .github/pull_request_template.md, eslint/tsconfig: no hits",
+      "'crate' domain words (CrateBox, CRATE_SORTS, crates routes, crate-view branch) are not the product name"
+    ]
+  },
+  "testCommand": "npm run typecheck && npm run lint && npm test && npm run build"
+}

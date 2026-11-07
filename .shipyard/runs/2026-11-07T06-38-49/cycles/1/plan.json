@@ -1,0 +1,109 @@
+{
+  "cycle": 1,
+  "goal": "Rename product Crate Digger to Frisson with zero behaviour change and no orphaned data.",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Rename workspace packages, regenerate lockfile, ignore .shipyard in Prettier",
+      "description": "Set package names: root package.json name 'frisson'; apps/api/package.json name '@frisson/api' and its dependency '@crate-digger/shared' -> '@frisson/shared'; apps/web/package.json name '@frisson/web' and its dependency -> '@frisson/shared'; packages/shared/package.json name '@frisson/shared'. Update the comment in packages/shared/src/sorting.ts ('@crate-digger/shared/sorting' -> '@frisson/shared/sorting'). Change no versions, scripts or other fields. Regenerate package-lock.json ONLY via `npm_config_nodedir=/opt/node22 npm install` from repo root (never hand edit); confirm `grep -ci crate-digger package-lock.json` prints 0 and the lockfile diff is limited to name/link entries (no dependency version drift; if versions drift, restore the lockfile and rerun install, or report). After install, node_modules/@frisson/* symlinks exist and node_modules/@crate-digger is gone. Add a line `.shipyard` to .prettierignore. Verify `npm ci` (with the nodedir env) exits 0 and `npm run format:check` passes for the files you own.",
+      "criteria": ["AC2", "AC3", "AC4", "AC12"],
+      "files": [
+        "package.json",
+        "apps/api/package.json",
+        "apps/web/package.json",
+        "packages/shared/package.json",
+        "packages/shared/src/sorting.ts",
+        "package-lock.json",
+        ".prettierignore"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "T2",
+      "title": "Rename product name in apps/api src and tests",
+      "description": "Replace every '@crate-digger/shared' import with '@frisson/shared' in the listed API files. In apps/api/src/plugins/auth.ts set SESSION_COOKIE = 'frisson_session' and the HMAC fallback label 'crate-digger-session' -> 'frisson-session' (accepted one-time logout). In apps/api/src/routes/health.ts service 'crate-digger-api' -> 'frisson-api', and match it in apps/api/test/health.test.ts. In tests rename mkdtemp prefixes (crate-digger-auth-, crate-digger-web-, crate-digger-covers-) to frisson-*, the multipart boundary 'crate-digger-test-boundary' -> 'frisson-test-boundary', and the test admin password 'crate-digger' -> 'frisson' consistently in auth.test.ts. Touch only the product-name substring: do not alter crate.db, DATA_DIR, crates routes/tables, crate_sort_by or anything in apps/api/drizzle/**. Run `npm run typecheck -w apps/api`, `npm test -w apps/api` and `npx eslint apps/api` (all green), and `grep -rIniE 'crate[-_ ]?digger|cratedigger' apps/api` must return nothing.",
+      "criteria": ["AC1", "AC2", "AC4", "AC6", "AC9", "AC10", "AC12"],
+      "files": [
+        "apps/api/src/db/schema.ts",
+        "apps/api/src/plugins/auth.ts",
+        "apps/api/src/plugins/error-handler.ts",
+        "apps/api/src/routes/albums.ts",
+        "apps/api/src/routes/covers.ts",
+        "apps/api/src/routes/crates.ts",
+        "apps/api/src/routes/health.ts",
+        "apps/api/src/routes/session.ts",
+        "apps/api/src/services/albums.ts",
+        "apps/api/src/services/covers.ts",
+        "apps/api/src/services/crates.ts",
+        "apps/api/test/albums.test.ts",
+        "apps/api/test/auth.test.ts",
+        "apps/api/test/covers.test.ts",
+        "apps/api/test/crates.test.ts",
+        "apps/api/test/health.test.ts",
+        "apps/api/test/helpers.ts",
+        "apps/api/test/sorting.test.ts",
+        "apps/api/test/web.test.ts"
+      ],
+      "dependsOn": ["T1"]
+    },
+    {
+      "id": "T3",
+      "title": "Rename product name in apps/web (imports, title, UI copy)",
+      "description": "Replace every '@crate-digger/shared' (and '@crate-digger/shared/sorting') import with '@frisson/shared' equivalents in the listed web files. Set apps/web/index.html to <title>Frisson</title>. Change the header link text in App.vue and all 7 document.title strings (CratesView, LoginView, AlbumView x2, AlbumEditorView, LibraryView, CrateView) from 'Crate Digger' to 'Frisson', keeping surrounding separators and text exactly. Do not rename components, routes or the domain word crate (CrateBox, CrateView, CratesView, CrateSettings, crate_sort_by). Run `npm run typecheck -w apps/web`, `npm test -w apps/web`, `npm run build`, `npx eslint apps/web` (all green); `grep -rIniE 'crate[-_ ]?digger|cratedigger' apps/web --exclude-dir=node_modules --exclude-dir=dist` must return nothing.",
+      "criteria": ["AC1", "AC2", "AC4", "AC5", "AC10", "AC12"],
+      "files": [
+        "apps/web/index.html",
+        "apps/web/src/App.vue",
+        "apps/web/src/api/albums.ts",
+        "apps/web/src/api/client.ts",
+        "apps/web/src/api/crates.ts",
+        "apps/web/src/api/session.ts",
+        "apps/web/src/components/album/AlbumRow.vue",
+        "apps/web/src/components/album/RecordStage.test.ts",
+        "apps/web/src/components/album/RecordStage.vue",
+        "apps/web/src/components/album/SleeveBack.vue",
+        "apps/web/src/components/album/TrackList.vue",
+        "apps/web/src/components/album/VinylDisc.vue",
+        "apps/web/src/components/crate/CrateBox.test.ts",
+        "apps/web/src/components/crate/CrateBox.vue",
+        "apps/web/src/components/crate/CrateSettings.vue",
+        "apps/web/src/components/crate/SleeveArt.vue",
+        "apps/web/src/components/forms/AlbumForm.vue",
+        "apps/web/src/components/forms/TrackEditor.vue",
+        "apps/web/src/composables/useAlbumSearch.test.ts",
+        "apps/web/src/composables/useAlbumSearch.ts",
+        "apps/web/src/forms/albumForm.test.ts",
+        "apps/web/src/forms/albumForm.ts",
+        "apps/web/src/stores/library.test.ts",
+        "apps/web/src/stores/library.ts",
+        "apps/web/src/stores/session.ts",
+        "apps/web/src/utils/tracks.test.ts",
+        "apps/web/src/utils/tracks.ts",
+        "apps/web/src/views/AlbumEditorView.vue",
+        "apps/web/src/views/AlbumView.vue",
+        "apps/web/src/views/CrateView.vue",
+        "apps/web/src/views/CratesView.vue",
+        "apps/web/src/views/LibraryView.vue",
+        "apps/web/src/views/LoginView.vue"
+      ],
+      "dependsOn": ["T1"]
+    },
+    {
+      "id": "T4",
+      "title": "Rename product name in docs, Dockerfile and CI",
+      "description": "README.md line 1: keep the emoji, replace 'Crate Digger' with 'Frisson'. docs/SPEC.md line 1 becomes '# Frisson — Spec' and the tree root on line 24 becomes 'frisson/'. docs/DEPLOY.md line 1 becomes '# Deploying Frisson'; leave lines 60-61 (git clone https://github.com/ThomF/crate-digger.git / cd crate-digger) unchanged because the GitHub repo and checkout directory are not renamed, and the Compose project name (and therefore the crate-data volume prefix) derives from that directory. docs/adr/0001-stack.md and 0003-deployment.md: 'Crate Digger' -> 'Frisson'. Dockerfile comments lines 7-8: image tag crate-digger -> frisson, keep '-v crate-data:/data'. .github/workflows/ci.yml: tags and docker run use frisson:ci. Do NOT touch compose.yaml (no name: key), crate-data, crate.db, DATA_DIR, /data, crate-backup paths. Prose style: no new stray dashes. Run `npx prettier --check` on the files you edit.",
+      "criteria": ["AC1", "AC7", "AC8", "AC11", "AC12"],
+      "files": [
+        "README.md",
+        "docs/SPEC.md",
+        "docs/DEPLOY.md",
+        "docs/adr/0001-stack.md",
+        "docs/adr/0003-deployment.md",
+        "Dockerfile",
+        ".github/workflows/ci.yml"
+      ],
+      "dependsOn": []
+    }
+  ],
+  "finalGate": "After T1-T4: from repo root run npm run format:check, lint, typecheck, test, build (all exit 0) and the AC1 grep, which must return only docs/DEPLOY.md lines 60-61. Verify git diff touches no apps/api/drizzle/** file, no compose.yaml, no new files."
+}

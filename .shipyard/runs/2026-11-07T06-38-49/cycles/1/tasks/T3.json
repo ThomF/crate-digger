@@ -1,0 +1,19 @@
+{
+  "id": "T3",
+  "status": "implemented",
+  "commit": "3d60338",
+  "filesChanged": 33,
+  "criteria": ["AC1", "AC2", "AC4", "AC5", "AC10", "AC12"],
+  "checks": {
+    "typecheck_web": "pass",
+    "test_web": "pass (13 files, 102 tests)",
+    "build_web": "pass",
+    "build_root": "pass",
+    "eslint_web": "pass",
+    "grep_old_name_apps_web": "empty",
+    "document_title_frisson_count": 7,
+    "index_html_title": "<title>Frisson</title>"
+  },
+  "blockers": [],
+  "notes": "Mechanical replace of '@crate-digger/' -> '@frisson/' and 'Crate Digger' -> 'Frisson' in owned files only. No test asserted the old name, so no test edits beyond imports. Domain tokens (CrateBox, CrateView, crate_sort_by, etc.) untouched. apps/api changes in the worktree belong to the parallel dev and were not staged."
+}

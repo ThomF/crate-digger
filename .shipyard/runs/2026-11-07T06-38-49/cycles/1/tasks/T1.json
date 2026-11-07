@@ -1,0 +1,20 @@
+{
+  "id": "T1",
+  "status": "implemented",
+  "commit": "9251784",
+  "filesChanged": ["package.json", "apps/api/package.json", "apps/web/package.json", "packages/shared/package.json", "packages/shared/src/sorting.ts", "package-lock.json", ".prettierignore"],
+  "criteria": ["AC2", "AC3", "AC4", "AC12"],
+  "checks": {
+    "packageNames": "frisson, @frisson/api, @frisson/web, @frisson/shared",
+    "lockfileOldNameCount": 0,
+    "lockfileDiff": "name and workspace link entries only; no version drift",
+    "npmCi": 0,
+    "nodeModules": "@frisson/{api,shared,web} symlinks present; @crate-digger absent",
+    "formatCheck": 0,
+    "lint": 0,
+    "typecheck": 2,
+    "test": 1,
+    "build": 1
+  },
+  "notes": "typecheck/test/build fail only because apps/api and apps/web still import @crate-digger/shared (30 files, owned by other tasks). AC2 repo-wide grep and AC4 cannot pass until those tasks land. No new tests added: criteria are verified by commands, and packages/shared has no test script."
+}

@@ -1,0 +1,7 @@
+{
+  "id": "T4",
+  "status": "implemented",
+  "commit": "cae9e17",
+  "filesChanged": ["README.md", "docs/SPEC.md", "docs/DEPLOY.md", "docs/adr/0001-stack.md", "docs/adr/0003-deployment.md", "Dockerfile", ".github/workflows/ci.yml"],
+  "notes": "All 'Crate Digger'/'crate-digger' occurrences in owned files renamed to Frisson/frisson except docs/DEPLOY.md lines 60-61 (allowlisted clone URL and cd). Dockerfile line 8 was edited only to change the trailing image name; '-v crate-data:/data' is unchanged, but the line appears in git diff because it contains crate-data. prettier --check passes on the md and yml files. No tests written: docs/config only, verified with the AC grep checks."
+}

@@ -1,0 +1,19 @@
+{
+  "concerns": ["conventions", "documentation"],
+  "conventions": {
+    "formatting": "Prettier: no semicolons, single quotes, printWidth 100, trailingComma all. .editorconfig: LF, 2-space, final newline. CI runs format:check.",
+    "lint": "ESLint 9 flat config: eslint-plugin-vue flat/essential + vue-ts recommended + prettier skip-formatting. No custom rules.",
+    "typescript": "tsconfig.base: strict, noUncheckedIndexedAccess, verbatimModuleSyntax, erasableSyntaxOnly (no enums). Relative imports use .ts extension; import type for types. API runs TS natively on Node >=22.18 (ADR 0002).",
+    "naming": "Files: camelCase .ts, PascalCase .vue, kebab-case plugin file error-handler.ts. Exports: camelCase, UPPER_SNAKE constants; routes/plugins as xRoutes/xPlugin. Tests colocated *.test.ts in web, apps/api/test/ in API. Pkg scope @crate-digger/*; cookie crate_digger_session.",
+    "modules": "API: routes (thin HTTP) / services (plain functions taking (db, input)) / plugins (fastify-plugin) / db. Web: api/ stores/ views/ components/<feature>/ composables/ utils/. Vue script setup. Shared Zod schemas in packages/shared.",
+    "errors": "Services throw HttpError (notFound, badRequest) from errors.ts; error-handler plugin emits {statusCode,error,message,issues?}. Web uses errorMessage in api/client.ts.",
+    "commits": "Spec says Conventional Commits, squash merge, branches feat/fix/chore. Local history is 1 commit (merge of PR #12), so style is unverifiable from git. No CLAUDE.md or CONTRIBUTING.md."
+  },
+  "documentation": {
+    "files": ["README.md", "docs/SPEC.md", "docs/DEPLOY.md", "docs/adr/0001-stack.md", "docs/adr/0002-native-typescript-and-shared-package.md", "docs/adr/0003-deployment.md", ".github/pull_request_template.md"],
+    "product_name": "Crate Digger everywhere (display), crate-digger (slug/package scope/image/repo), crate_digger (cookie). No occurrence of 'frisson' in tracked files.",
+    "intent": "Self-hosted, manually curated music collection shown as 90s record crates; ADR 0001 says learning project as much as product. Status: milestones through deploy done, polish (M10) next.",
+    "drift": "SPEC lists docker-compose.yml, docker/Dockerfile, RecordSleeve/CrateDivider/AddAlbumView, db/migrations/, tokens.css; actual repo has compose.yaml, root Dockerfile, different component names, drizzle/ at apps/api. README is more current than SPEC."
+  },
+  "gotchas": ["Branch checked out is shipyard/rename-to-frisson-2026-11-07T06-38-49", "Name appears in ~94 places plus Docker image, volume, cookie, package scope, GitHub URL in DEPLOY.md", "README and index.html title use emoji/display name; user pref: avoid stray dashes in prose (README uses em dash style)"]
+}

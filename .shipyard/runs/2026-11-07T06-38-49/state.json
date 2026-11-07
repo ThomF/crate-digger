@@ -1,0 +1,78 @@
+{
+  "runId": "2026-11-07T06-38-49",
+  "target": "/home/claude/crate-digger",
+  "request": "Rename the app from Crate Digger to Frisson everywhere (packages, imports, UI, docs, Docker). Do not build B-Side shared crates. Push to main.",
+  "branch": "shipyard/rename-to-frisson-2026-11-07T06-38-49",
+  "stage": "done",
+  "cycle": 1,
+  "maxCycles": 3,
+  "fixRound": 1,
+  "maxFixRounds": 3,
+  "criteria": {
+    "AC1": "pass",
+    "AC2": "pass",
+    "AC3": "pass",
+    "AC4": "pass",
+    "AC5": "pass",
+    "AC6": "pass",
+    "AC7": "pass",
+    "AC8": "pass",
+    "AC9": "pass",
+    "AC10": "pass",
+    "AC11": "pass",
+    "AC12": "pass"
+  },
+  "tasks": {
+    "T1": "done",
+    "T2": "done",
+    "T3": "done",
+    "T4": "done"
+  },
+  "deaths": [
+    {
+      "id": "intake-1",
+      "role": "intake",
+      "at": "2026-11-07T06:39:31Z",
+      "cause": "API safeguard false positive; respawned on sonnet"
+    }
+  ],
+  "verdict": "shipped",
+  "baseCommit": "05d2ed6a4ffc2e6e319e5a09e639bf4a2db607a5",
+  "startedAt": "2026-11-07T06:38:49Z",
+  "endedAt": "2026-11-07T06:56:39Z",
+  "stageTimes": {
+    "intake": {
+      "start": "2026-11-07T06:38:49Z",
+      "end": "2026-11-07T06:40:54Z"
+    },
+    "survey": {
+      "start": "2026-11-07T06:38:49Z",
+      "end": "2026-11-07T06:40:54Z"
+    },
+    "plan": {
+      "start": "2026-11-07T06:40:54Z",
+      "end": "2026-11-07T06:42:19Z"
+    },
+    "build": {
+      "start": "2026-11-07T06:42:19Z",
+      "end": "2026-11-07T06:49:38Z"
+    },
+    "test": {
+      "start": "2026-11-07T06:49:38Z",
+      "end": "2026-11-07T06:52:57Z"
+    },
+    "fix": {
+      "start": "2026-11-07T06:52:57Z",
+      "end": "2026-11-07T06:55:01Z"
+    },
+    "report": {
+      "start": "2026-11-07T06:55:01Z",
+      "end": "2026-11-07T06:56:39Z"
+    }
+  },
+  "active": [],
+  "fastPaths": [
+    "direct-fix",
+    "scoped-retest"
+  ]
+}

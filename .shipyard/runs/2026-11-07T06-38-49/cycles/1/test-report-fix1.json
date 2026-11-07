@@ -1,0 +1,13 @@
+{
+  "criteria": {
+    "AC12": {
+      "verdict": "pass",
+      "evidence": "git diff --name-status 05d2ed6..HEAD -- . ':!.shipyard': 66 files, all M, no new files. Every changed file except .prettierignore contained the old name at base (checked via git show base:file | grep -iE 'crate[-_ ]?digger|cratedigger'; package-lock.json included). .prettierignore diff is exactly '+.shipyard', matching amended allowlist '.prettierignore: .shipyard'. All added lines outside package-lock.json contain 'frisson' except that single '+.shipyard'. No added b-side lines; grep -ri 'b-side' apps packages empty."
+    }
+  },
+  "regression": {
+    "exitCode": 0,
+    "tail": "format:check, typecheck, lint pass; api Tests 82 passed (82), web Tests 102 passed (102); vite build: 212 modules transformed, built in 2.27s (only Rollup zod comment-annotation warnings)."
+  },
+  "summary": "AC12 passes under amended allowlist. Full regression green (exit 0), so AC1-AC11 stay pass. 12/12 pass. Worktree clean apart from untracked .shipyard/."
+}

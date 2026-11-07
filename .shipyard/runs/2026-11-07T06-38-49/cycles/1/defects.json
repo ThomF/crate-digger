@@ -1,0 +1,11 @@
+{
+  "round": 1,
+  "defects": [
+    {
+      "criterion": "AC12",
+      "cause": "contract wording: planned .prettierignore line not allowlisted",
+      "resolution": "amend AC12 allowlist (harbormaster triage); no code change",
+      "owner": "T1"
+    }
+  ]
+}
