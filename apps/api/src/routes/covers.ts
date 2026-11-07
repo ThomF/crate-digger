@@ -1,5 +1,5 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
-import { albumDetail, idParams } from '@crate-digger/shared'
+import { albumDetail, idParams } from '@frisson/shared'
 import { badRequest } from '../errors.ts'
 import { removeCover, setCover } from '../services/covers.ts'
 

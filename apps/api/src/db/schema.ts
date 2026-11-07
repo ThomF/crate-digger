@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
-import { CRATE_SORTS } from '@crate-digger/shared/sorting'
+import { CRATE_SORTS } from '@frisson/shared/sorting'
 
 // Every table here becomes a real SQLite table. After changing this file, run
 // `npm run db:generate -w apps/api` to write a new SQL migration into apps/api/drizzle/.

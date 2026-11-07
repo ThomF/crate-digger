@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { AlbumDetail, AlbumSummary, ApiError, CreateAlbumRequest } from '@crate-digger/shared'
+import type { AlbumDetail, AlbumSummary, ApiError, CreateAlbumRequest } from '@frisson/shared'
 import { addCrate, buildTestApp } from './helpers.ts'
 
 describe('albums API', () => {

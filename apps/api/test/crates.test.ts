@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { AlbumDetail, AlbumSummary, ApiError, Crate } from '@crate-digger/shared'
+import type { AlbumDetail, AlbumSummary, ApiError, Crate } from '@frisson/shared'
 import { albums } from '../src/db/schema.ts'
 import { addCrate, buildTestApp, type TestApp } from './helpers.ts'
 

@@ -9,7 +9,7 @@ import {
   spinResult,
   tracklistInput,
   updateAlbumInput,
-} from '@crate-digger/shared'
+} from '@frisson/shared'
 import {
   addSpin,
   createAlbum,

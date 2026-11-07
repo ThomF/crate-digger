@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import rateLimit from '@fastify/rate-limit'
-import { loginInput, sessionInfo } from '@crate-digger/shared'
+import { loginInput, sessionInfo } from '@frisson/shared'
 import { HttpError } from '../errors.ts'
 
 export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {

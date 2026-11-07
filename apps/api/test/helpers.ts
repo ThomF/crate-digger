@@ -9,7 +9,7 @@ import { crates } from '../src/db/schema.ts'
  * (deleted on close). Call `app.close()` when done.
  */
 export async function buildTestApp() {
-  const coversDir = await mkdtemp(join(tmpdir(), 'crate-digger-covers-'))
+  const coversDir = await mkdtemp(join(tmpdir(), 'frisson-covers-'))
   const app = await buildApp({ dbPath: ':memory:', coversDir })
   app.addHook('onClose', async () => rm(coversDir, { recursive: true, force: true }))
   return app
@@ -27,7 +27,7 @@ export function addCrate(app: TestApp, name = 'Test crate', sortOrder = 0) {
  * <input type="file">. Each part is separated by a boundary line.
  */
 export function multipart(fieldName: string, fileName: string, contentType: string, data: Buffer) {
-  const boundary = '----crate-digger-test-boundary'
+  const boundary = '----frisson-test-boundary'
   const payload = Buffer.concat([
     Buffer.from(
       `--${boundary}\r\n` +

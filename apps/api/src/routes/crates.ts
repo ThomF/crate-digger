@@ -5,7 +5,7 @@ import {
   createCrateInput,
   idParams,
   updateCrateInput,
-} from '@crate-digger/shared'
+} from '@frisson/shared'
 import {
   createCrate,
   deleteCrate,

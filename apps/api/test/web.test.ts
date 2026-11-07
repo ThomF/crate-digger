@@ -10,8 +10,8 @@ let coversDir: string
 let app: Awaited<ReturnType<typeof buildApp>>
 
 beforeAll(async () => {
-  webDir = await mkdtemp(join(tmpdir(), 'crate-digger-web-'))
-  coversDir = await mkdtemp(join(tmpdir(), 'crate-digger-covers-'))
+  webDir = await mkdtemp(join(tmpdir(), 'frisson-web-'))
+  coversDir = await mkdtemp(join(tmpdir(), 'frisson-covers-'))
   await mkdir(join(webDir, 'assets'))
   await writeFile(join(webDir, 'index.html'), '<!doctype html><div id="app"></div>')
   await writeFile(join(webDir, 'assets', 'index-a1b2c3.js'), 'console.log("crate")')

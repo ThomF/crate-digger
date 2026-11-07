@@ -8,7 +8,7 @@ describe('GET /api/health', () => {
     const res = await app.inject({ method: 'GET', url: '/api/health' })
 
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ status: 'ok', service: 'crate-digger-api', db: 'ok' })
+    expect(res.json()).toEqual({ status: 'ok', service: 'frisson-api', db: 'ok' })
     await app.close()
   })
 })

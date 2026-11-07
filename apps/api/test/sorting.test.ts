@@ -1,6 +1,6 @@
 // Tests for packages/shared/src/sorting.ts (the shared package has no test runner of its own).
 import { describe, expect, it } from 'vitest'
-import { dividerFor, filingName, sortAlbums } from '@crate-digger/shared/sorting'
+import { dividerFor, filingName, sortAlbums } from '@frisson/shared/sorting'
 
 let nextId = 1
 const album = (artist: string, title: string, year: number | null = null, rating = 0) => ({

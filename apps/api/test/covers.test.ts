@@ -3,7 +3,7 @@ import { readdir } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import sharp from 'sharp'
-import type { AlbumDetail, ApiError } from '@crate-digger/shared'
+import type { AlbumDetail, ApiError } from '@frisson/shared'
 import { COVER_SIZE, MAX_COVER_BYTES } from '../src/services/covers.ts'
 import { addCrate, buildTestApp, multipart, type TestApp } from './helpers.ts'
 

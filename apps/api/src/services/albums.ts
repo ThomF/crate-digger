@@ -7,10 +7,10 @@ import type {
   MoveAlbumInput,
   TrackInput,
   UpdateAlbumInput,
-} from '@crate-digger/shared'
+} from '@frisson/shared'
 import type { Db } from '../db/client.ts'
 import { albums, crates, tracks } from '../db/schema.ts'
-import { compareAlbums } from '@crate-digger/shared/sorting'
+import { compareAlbums } from '@frisson/shared/sorting'
 import { notFound } from '../errors.ts'
 import { assertCrateExists } from './crates.ts'
 

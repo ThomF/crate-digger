@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { ApiError, SessionInfo } from '@crate-digger/shared'
+import type { ApiError, SessionInfo } from '@frisson/shared'
 import { buildApp } from '../src/app.ts'
 import type { AuthOptions } from '../src/plugins/auth.ts'
 import { SESSION_COOKIE } from '../src/plugins/auth.ts'
@@ -10,7 +10,7 @@ import { SESSION_COOKIE } from '../src/plugins/auth.ts'
 const apps: Awaited<ReturnType<typeof buildApp>>[] = []
 
 async function appWith(auth: AuthOptions) {
-  const coversDir = await mkdtemp(join(tmpdir(), 'crate-digger-auth-'))
+  const coversDir = await mkdtemp(join(tmpdir(), 'frisson-auth-'))
   const app = await buildApp({ dbPath: ':memory:', coversDir, auth })
   app.addHook('onClose', () => rm(coversDir, { recursive: true, force: true }))
   apps.push(app)
@@ -58,7 +58,7 @@ describe('read-only mode (production without a password)', () => {
 
 describe('admin password', () => {
   it('lets visitors browse but not change anything', async () => {
-    const app = await appWith({ adminPassword: 'crate-digger' })
+    const app = await appWith({ adminPassword: 'frisson' })
 
     expect((await app.inject({ url: '/api/albums' })).statusCode).toBe(200)
     expect((await newCrate(app)).statusCode).toBe(401)
@@ -75,7 +75,7 @@ describe('admin password', () => {
   })
 
   it('rejects a wrong password without setting a cookie', async () => {
-    const app = await appWith({ adminPassword: 'crate-digger' })
+    const app = await appWith({ adminPassword: 'frisson' })
 
     const res = await logIn(app, 'guess')
 
@@ -84,9 +84,9 @@ describe('admin password', () => {
   })
 
   it('lets you edit after logging in, with a locked-down cookie', async () => {
-    const app = await appWith({ adminPassword: 'crate-digger', production: true })
+    const app = await appWith({ adminPassword: 'frisson', production: true })
 
-    const res = await logIn(app, 'crate-digger')
+    const res = await logIn(app, 'frisson')
     const cookie = res.cookies.find((c) => c.name === SESSION_COOKIE)!
 
     expect(res.json<SessionInfo>()).toEqual({ canEdit: true, canLogIn: true })
@@ -95,7 +95,7 @@ describe('admin password', () => {
   })
 
   it('does not accept a cookie the visitor wrote themselves', async () => {
-    const app = await appWith({ adminPassword: 'crate-digger' })
+    const app = await appWith({ adminPassword: 'frisson' })
 
     const res = await newCrate(app, { [SESSION_COOKIE]: `admin:${Date.now()}` })
 
@@ -103,9 +103,9 @@ describe('admin password', () => {
   })
 
   it('treats an empty SESSION_SECRET as unset (Compose passes "" for missing values)', async () => {
-    const app = await appWith({ adminPassword: 'crate-digger', sessionSecret: '' })
+    const app = await appWith({ adminPassword: 'frisson', sessionSecret: '' })
 
-    const cookie = sessionCookie(await logIn(app, 'crate-digger'))
+    const cookie = sessionCookie(await logIn(app, 'frisson'))
 
     expect((await newCrate(app, cookie)).statusCode).toBe(201)
     expect((await app.inject({ url: '/api/session', cookies: cookie })).statusCode).toBe(200)
@@ -121,7 +121,7 @@ describe('admin password', () => {
   })
 
   it('logging out clears the cookie', async () => {
-    const app = await appWith({ adminPassword: 'crate-digger' })
+    const app = await appWith({ adminPassword: 'frisson' })
 
     const res = await app.inject({ method: 'DELETE', url: '/api/session' })
     const cleared = res.cookies.find((c) => c.name === SESSION_COOKIE)
@@ -131,7 +131,7 @@ describe('admin password', () => {
   })
 
   it('slows down password guessing', async () => {
-    const app = await appWith({ adminPassword: 'crate-digger' })
+    const app = await appWith({ adminPassword: 'frisson' })
 
     const statuses = []
     for (let i = 0; i < 11; i++) statuses.push((await logIn(app, `guess-${i}`)).statusCode)

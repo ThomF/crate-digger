@@ -1,5 +1,5 @@
 import { asc, count, eq, max } from 'drizzle-orm'
-import type { Crate, CreateCrateInput, UpdateCrateInput } from '@crate-digger/shared'
+import type { Crate, CreateCrateInput, UpdateCrateInput } from '@frisson/shared'
 import type { Db } from '../db/client.ts'
 import { albums, crates } from '../db/schema.ts'
 import { HttpError, badRequest, notFound } from '../errors.ts'

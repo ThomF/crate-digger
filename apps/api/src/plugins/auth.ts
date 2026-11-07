@@ -32,7 +32,7 @@ declare module 'fastify' {
   }
 }
 
-export const SESSION_COOKIE = 'crate_digger_session'
+export const SESSION_COOKIE = 'frisson_session'
 const SESSION_DAYS = 30
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -50,7 +50,7 @@ export const authPlugin = fp<AuthOptions>(async (app, opts) => {
   // fall back, or cookies would be "signed" with an empty key.
   const secret =
     opts.sessionSecret ||
-    createHmac('sha256', 'crate-digger-session')
+    createHmac('sha256', 'frisson-session')
       .update(password ?? 'none')
       .digest('hex')
   await app.register(cookie, { secret })

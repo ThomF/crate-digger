@@ -4,7 +4,7 @@ import {
   hasZodFastifySchemaValidationErrors,
   isResponseSerializationError,
 } from 'fastify-type-provider-zod'
-import type { ApiError } from '@crate-digger/shared'
+import type { ApiError } from '@frisson/shared'
 import { HttpError } from '../errors.ts'
 
 function body(statusCode: number, message: string, issues?: ApiError['issues']): ApiError {
