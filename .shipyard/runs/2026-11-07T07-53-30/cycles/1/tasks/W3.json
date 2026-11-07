@@ -1,0 +1,32 @@
+{
+  "id": "W3",
+  "status": "implemented",
+  "commit": "0341332",
+  "criteria": ["AC1", "AC17", "AC18"],
+  "filesChanged": [
+    "apps/web/src/views/EditProfileView.vue",
+    "apps/web/src/views/EditProfileView.test.ts",
+    "apps/web/src/components/profile/LinksEditor.vue",
+    "apps/web/src/components/profile/LinksEditor.test.ts",
+    "apps/web/src/components/profile/AvatarUpload.vue"
+  ],
+  "gates": {
+    "typecheck (web)": "pass",
+    "test (web)": "pass (167, incl. 10 EditProfileView + 7 LinksEditor)",
+    "build (web)": "pass",
+    "eslint apps/web": "pass",
+    "prettier --check apps/web": "pass",
+    "grep verified EditProfileView.vue": "empty",
+    "grep v-html apps/web/src": "empty"
+  },
+  "dependencies": [],
+  "notes": [
+    "AC1 is repo-wide; only web gates were run because T3/W2 are in progress in parallel.",
+    "AC17's named check is ProfileView.test.ts (owned by W2); W3 adds its own plain-text test in EditProfileView.test.ts and uses no v-html.",
+    "Save payload is built explicitly as { displayName, bio, location (null when blank), links } in display order, via session.saveProfile.",
+    "API issue paths 'body/links/1/url' are mapped to keys 'links.1.url'; the form also shows the API message.",
+    "AvatarUpload calls session.saveAvatar/deleteAvatar itself and emits 'changed'; client rejects non JPEG/PNG/WebP and files over MAX_AVATAR_BYTES before any request.",
+    "LinksEditor uses index keys (ProfileLinkInput has no id); add() returns early at MAX_PROFILE_LINKS and the Add button is disabled.",
+    "Tests mock fetch; the avatar endpoints (T3) were not exercised against a real API."
+  ]
+}

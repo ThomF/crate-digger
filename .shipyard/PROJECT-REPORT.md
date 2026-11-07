@@ -14,3 +14,10 @@
 - Deaths: none. One blocker (T1 needed two web fixtures), resolved by reassigning files
 - Known limits: owner_id FK has no ON DELETE SET NULL; reorder effectively admin-only; spins need edit permission
 - Merged and pushed to main at the owner's request
+
+## 2026-11-07T07-53-30: Frisson 1.0 Phase 2, profiles, avatars, social links, verified badge
+- Verdict: shipped (22/22 criteria, e2e smoke on base-commit DB), 1 cycle, 0 fix rounds, 7 tasks in 3 waves
+- Wall clock: 28m 7s; slowest stage: build (14m)
+- Deaths: none. Blockers: none
+- Known limits: 6-link cap app-enforced; no avatar cleanup on user delete; owner_id FK still lacks ON DELETE SET NULL
+- Merged and pushed to main at the owner's request

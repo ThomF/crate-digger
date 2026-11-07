@@ -1,0 +1,131 @@
+{
+  "cycle": 1,
+  "base": "8eaedebd510420837409cd59b5d0a2eec871c162",
+  "concurrencyCap": 4,
+  "waves": [["T1"], ["T2", "W1", "D1"], ["T3", "W2", "W3"]],
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Shared profile contracts, users/user_links schema, migration 0004",
+      "description": "Sole owner of packages/shared/src/index.ts for this cycle; add everything later tasks need now. (1) Shared, new section 'Profiles': SOCIAL_PLATFORMS = ['instagram','x','tiktok','youtube','soundcloud','spotify','bandcamp','discogs','website'] as const; MAX_AVATAR_BYTES = 5*1024*1024; AVATAR_SIZE is api-side only. usernameParams = z.object({ username }) reusing the signup username rule (trim, lowercase, 3-32, [a-z0-9_-]); extract that rule into a const and reuse it in signupInput without changing behavior. profileLinkUrl: string trimmed, max 2048, refine via new URL(): protocol must be 'https:' (URL lowercases the scheme, so 'HTTPS://' is fine), hostname non-empty, no username/password in the URL; rejects http:, javascript:, data:, ftp:, relative and garbage. profileLinkInput = z.object({ platform: z.enum(SOCIAL_PLATFORMS), url: profileLinkUrl }). updateProfileInput = z.strictObject (unknown keys such as verified, role, email, username give 400) { displayName: 1-60 trimmed required, bio: trimmed max 500 default '', location: trimmed max 80, optional/nullable, empty string normalized to null, links: z.array(profileLinkInput).max(6) default [] }. Duplicate platforms allowed. profileLink = {platform, url}; profileCrate = {id, name, color, label (nullable), albumCount}; publicProfile = z.object({ username, displayName, bio, location: nullable, avatarUrl: nullable, verified: boolean, links: profileLink[], crates: profileCrate[] }) with a 'Data classification: PUBLIC' comment and no id/email/role. setVerifiedInput = z.strictObject({ verified: z.boolean() }). Extend publicUser (the private /auth shape) with avatarUrl: string.nullable() and verified: boolean. Export types PublicProfile, ProfileLink, ProfileLinkInput, UpdateProfileInput, UpdateProfileRequest (z.input), SocialPlatform, SetVerifiedInput. (2) apps/api/src/db/schema.ts: users gain bio text not null default '', location text nullable, avatarPath (column avatar_path) text nullable, verified integer mode boolean not null default false. New table user_links (const userLinks): id pk autoincrement, user_id integer not null references users.id ON DELETE CASCADE, platform text with enum SOCIAL_PLATFORMS, not null, url text not null, position integer not null, index user_links_user_position_idx on (user_id, position) (unique is fine); relations and inferred types (UserLink, NewUserLink). 6-per-user limit is app-level (shared zod plus service). (3) Generate with `npm run db:generate -w apps/api -- --name user_profiles` (or plain db:generate if --name is not supported); never edit 0000-0003 or hand-edit 0004. Inspect: only CREATE TABLE/CREATE INDEX/ALTER TABLE ADD; contains ON DELETE cascade; no DROP/RENAME. Re-run generate to confirm 'No schema changes'. (4) apps/api/src/services/users.ts toPublicUser adds avatarUrl: user.avatarPath ?? null and verified: user.verified (sessions.ts already selects the full users row; touch it only if typecheck needs). (5) Fix every PublicUser fixture that breaks typecheck in the listed test files (add avatarUrl: null, verified: false) without changing behavior. (6) Tests: migration.test.ts gets a describe 'migration 0004' in the existing 0003 style (DB at 0003 with users, session, crates, albums, tracks; apply 0004; all rows intact; bio '', location/avatar_path NULL, verified 0/false, zero user_links rows); schema.test.ts asserts new columns, defaults and cascade (deleting a user removes their links); new apps/api/test/shared-profile.test.ts covers the AC5 matrix; auth-accounts.test.ts asserts /auth/me, signup and login include avatarUrl null and verified false. Do not touch apps/api/test/helpers.ts (owned by T3).",
+      "criteria": ["AC1", "AC2", "AC3", "AC4", "AC5", "AC13", "AC14"],
+      "files": [
+        "packages/shared/src/index.ts",
+        "apps/api/src/db/schema.ts",
+        "apps/api/drizzle/0004_*.sql",
+        "apps/api/drizzle/meta/0004_snapshot.json",
+        "apps/api/drizzle/meta/_journal.json",
+        "apps/api/src/services/users.ts",
+        "apps/api/src/services/sessions.ts",
+        "apps/api/test/migration.test.ts",
+        "apps/api/test/schema.test.ts",
+        "apps/api/test/shared-profile.test.ts",
+        "apps/api/test/auth-accounts.test.ts",
+        "apps/api/test/shared-auth.test.ts",
+        "apps/api/test/bootstrap.test.ts",
+        "apps/web/src/views/editControls.test.ts",
+        "apps/web/src/utils/permissions.test.ts",
+        "apps/web/src/stores/session.test.ts"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "T2",
+      "title": "API: public profile, PATCH /api/me/profile, admin verified flag",
+      "description": "New apps/api/src/services/profiles.ts: getPublicProfile(db, username) looks up via findUserByUsername (lower-cased), 404 via notFound('User') when missing, maps with a dedicated toPublicProfile mapper (never toPublicUser), links ordered by position asc, crates owned by the user ordered by sortOrder with albumCount (reuse crate service query helpers or a Drizzle count; no string-built SQL). updateOwnProfile(db, user, input): requireUser (401), then in one db.transaction update users (displayName, bio, location) and delete then insert user_links with position = array index; enforce links.length <= 6 again server-side; returns the caller's public profile. setVerified(db, actor, username, verified): requireUser 401, then requireAdmin 403 (add requireAdmin to permissions.ts; role check only, applies to admins' own and others' usernames; regular users get 403 even on their own name), then 404 unknown user, update, return public profile. New apps/api/src/routes/profiles.ts (profileRoutes, FastifyPluginAsyncZod): GET '/users/:username' (params usernameParams, response publicProfile), PATCH '/me/profile' (body updateProfileInput, response publicProfile), PATCH '/users/:username/verified' (params usernameParams, body setVerifiedInput, response publicProfile). Order of checks for PATCH /me/profile: 401 must win over 400 for signed-out callers; if the zod body validation runs first, add a preValidation hook that calls requireUser. No reply.code(4xx) in routes; errors only via HttpError. Register profileRoutes in app.ts under /api after coverRoutes and before webPlugin. Tests in new apps/api/test/profiles.test.ts using existing helpers (signUp, createAdmin, addCrate) without editing helpers.ts, with describe names exactly 'public profile', 'update profile', 'cannot self', 'verified'. Cover: anonymous 200 with exactly the public keys; JSON string lacks the email; role key undefined; case-insensitive lookup (/api/users/ALICE); unknown 404; empty profile gives bio '' and links []; crates listed. Update: 401 signed out; round-trip of all fields; link order preserved; [] clears; 7 links, http url, javascript: url, bad platform, bio 501, location 81 each 400 and nothing changed afterwards (atomic). 'cannot self': verified:true, role:'admin', email, username each give 400 and GET shows nothing changed; no :username edit route exists. 'verified': admin set/unset reflected in GET; 401; 403 for a user including own username; 404; bad body 400. Also a test named with 'no email' asserting crate list and crate detail JSON for an owned crate contain no 'email' key and no 'role' key (AC13).",
+      "criteria": ["AC1", "AC6", "AC7", "AC8", "AC9", "AC13", "AC14", "AC21"],
+      "files": [
+        "apps/api/src/services/profiles.ts",
+        "apps/api/src/routes/profiles.ts",
+        "apps/api/src/services/permissions.ts",
+        "apps/api/src/app.ts",
+        "apps/api/test/profiles.test.ts"
+      ],
+      "dependsOn": ["T1"]
+    },
+    {
+      "id": "T3",
+      "title": "API: avatar upload/delete, shared multipart registration, /avatars static and routing",
+      "description": "Shared upload refactor (this task is the only one touching multipart): new apps/api/src/plugins/uploads.ts (fastify-plugin) registers @fastify/multipart exactly once with limits { fileSize: Math.max(MAX_COVER_BYTES, MAX_AVATAR_BYTES), files: 1, fields: 0 }; remove the multipart registration from plugins/covers.ts; covers route passes its own limit via req.file({ limits: { fileSize: MAX_COVER_BYTES } }) so cover behavior and covers.test.ts stay unchanged. New apps/api/src/plugins/avatars.ts (mkdir, decorate app.avatarsDir, second @fastify/static with prefix AVATARS_URL_PREFIX '/avatars/', decorateReply false, immutable, maxAge 365d). paths.ts: DEFAULT_AVATARS_DIR = process.env.AVATARS_DIR ?? resolve(DATA_DIR, 'avatars'); do not change DATA_DIR, crate.db or covers paths. New apps/api/src/services/avatars.ts mirroring covers.ts: AVATAR_SIZE = 400, processAvatar (rotate for EXIF, resize 400x400 fit cover, jpeg q82 mozjpeg, same 50 MP limitInputPixels guard, non-image gives badRequest 400), file name `${userId}-${randomBytes(4).toString('hex')}.jpg`, DB stores only '/avatars/<file>' in users.avatar_path, deleteAvatarFile uses basename() and ignores ENOENT, setAvatar writes file then updates DB with try/catch cleanup of the new file on failure and deletes the old file after success, removeAvatar clears and deletes (200 no-op when none). Both return the caller's public profile via getPublicProfile from services/profiles.ts (T2). New apps/api/src/routes/avatars.ts (avatarRoutes): POST '/me/avatar' (requireUser before reading the stream; field must be 'avatar' else 400; req.file({ limits: { fileSize: MAX_AVATAR_BYTES } }) and toBuffer gives 413 over the limit), DELETE '/me/avatar'; responses publicProfile; no reply.code(4xx). app.ts: AppOptions.avatarsDir (default DEFAULT_AVATARS_DIR); register uploadsPlugin before coversPlugin, avatarsPlugin after it, avatarRoutes under /api before webPlugin. plugins/web.ts: SPA fallback also excludes '/avatars/' (so /u/someone gets index.html and /avatars/missing.jpg gets the JSON 404). apps/web/vite.config.ts: proxy '/avatars' like '/covers' (leave the test block alone). docker/Caddyfile proxies everything already; no change expected. helpers.ts (sole owner): buildTestApp gets a temp avatarsDir (mkdtemp 'frisson-avatars-', removed on close unless opts.avatarsDir given), plus any small image fixture helper (e.g. pngBuffer via sharp). Tests: new apps/api/test/avatars.test.ts covering every AC10 item (sharp metadata 400x400 jpeg, file in avatarsDir, GET /avatars/<file> 200 image/jpeg, replace deletes old, DELETE clears and deletes, DELETE with none 200, 401, non-image 400, over MAX_AVATAR_BYTES 413, wrong field 400, EXIF orientation 6 input becomes upright like covers.test); web.test.ts gains a describe named 'avatars' asserting GET /u/someone 200 index.html and GET /avatars/missing.jpg 404 JSON. No new dependency.",
+      "criteria": ["AC1", "AC10", "AC11", "AC12", "AC14", "AC21"],
+      "files": [
+        "apps/api/src/plugins/uploads.ts",
+        "apps/api/src/plugins/covers.ts",
+        "apps/api/src/plugins/avatars.ts",
+        "apps/api/src/routes/covers.ts",
+        "apps/api/src/routes/avatars.ts",
+        "apps/api/src/services/avatars.ts",
+        "apps/api/src/paths.ts",
+        "apps/api/src/plugins/web.ts",
+        "apps/api/src/app.ts",
+        "apps/web/vite.config.ts",
+        "apps/api/test/helpers.ts",
+        "apps/api/test/avatars.test.ts",
+        "apps/api/test/web.test.ts"
+      ],
+      "dependsOn": ["T1", "T2"]
+    },
+    {
+      "id": "W1",
+      "title": "Web foundation: profiles API client, session refresh, routes, verified badge",
+      "description": "New apps/web/src/api/profiles.ts using request() and shared types: getProfile(username) GET /api/users/:username (encodeURIComponent anyway), updateProfile(input: UpdateProfileRequest) PATCH /api/me/profile, uploadAvatar(file: File) POST /api/me/avatar as FormData field 'avatar', removeAvatar() DELETE /api/me/avatar, setVerified(username, verified) PATCH /api/users/:username/verified; all return PublicProfile. Add a 'Data classification: PUBLIC' comment. Session store (stores/session.ts): add refresh() that re-fetches /api/auth/me and replaces user, plus saveProfile(input), saveAvatar(file), deleteAvatar() wrappers that call the api and then refresh(); keep existing behavior. Extend stores/session.test.ts to prove refresh after each change. router.ts: add { path: '/u/:username', name: 'profile', component: () => import('./views/ProfileView.vue'), props: route => ({ username: String(route.params.username) }) } (no requiresAuth) and { path: '/profile/edit', name: 'profile-edit', component: () => import('./views/EditProfileView.vue'), meta: { requiresAuth: true } }, both before the catch-all. Create minimal placeholder views ProfileView.vue (prop username) and EditProfileView.vue that W2 and W3 replace (placeholders must lint/typecheck; EditProfileView must not contain the word 'verified'). New apps/web/src/router.test.ts: signed-out visitor to /profile/edit is redirected to login with next=/profile/edit; /u/someone resolves without redirect (mock fetch or the session store). New apps/web/src/components/profile/VerifiedBadge.vue: inline SVG or text badge with role='img' and aria-label='Verified' (title 'Verified'), styled with base.css tokens; small test VerifiedBadge.test.ts.",
+      "criteria": ["AC1", "AC15", "AC20"],
+      "files": [
+        "apps/web/src/api/profiles.ts",
+        "apps/web/src/stores/session.ts",
+        "apps/web/src/stores/session.test.ts",
+        "apps/web/src/router.ts",
+        "apps/web/src/router.test.ts",
+        "apps/web/src/views/ProfileView.vue",
+        "apps/web/src/views/EditProfileView.vue",
+        "apps/web/src/components/profile/VerifiedBadge.vue",
+        "apps/web/src/components/profile/VerifiedBadge.test.ts"
+      ],
+      "dependsOn": ["T1"]
+    },
+    {
+      "id": "W2",
+      "title": "Web: public profile page, header profile links, crate owner link",
+      "description": "Replace the ProfileView.vue placeholder: loads getProfile(username) (reload when the prop changes), statuses loading/ready/error; 404 ApiRequestError shows a 'Profile not found' message; ready state renders avatar img (alt = display name) or a placeholder with initials, displayName, VerifiedBadge only when verified, bio (preserve line breaks with CSS white-space: pre-line, not v-html), location when present, links as <a :href target=\"_blank\" rel=\"noopener noreferrer\"> with platform label and url text, and the user's crates (name, label, color swatch, album count). All text via {{ }}. If the signed-in user is the owner, show an 'Edit profile' RouterLink to /profile/edit. New ProfileView.test.ts with mocked api/profiles: renders each part; every link has target=_blank and rel='noopener noreferrer'; badge absent when verified false and present when true; 404 message; a test named with 'plain text' mounting bio and displayName '<img src=x onerror=alert(1)>' asserting no img element besides the avatar/placeholder logic (use a profile with avatarUrl null and assert wrapper.find('img').exists() is false) and the literal text appears. App.vue header user menu: displayName becomes a RouterLink to /u/<username> with VerifiedBadge when session.user.verified, plus an 'Edit profile' link to /profile/edit; keep Log out. New App.test.ts (mount with pinia and a memory router, stubbed fetch) asserting both links and the badge toggle. CrateView.vue: show the current crate's owner as 'by <RouterLink to=/u/ownerUsername>ownerDisplayName ?? ownerUsername</RouterLink>' when ownerUsername is non-null and nothing when null; extract it to a small apps/web/src/components/crate/OwnerLink.vue (props username, displayName) so it is testable; new apps/web/src/views/ownerLink.test.ts covers both cases. No v-html anywhere.",
+      "criteria": ["AC1", "AC16", "AC17", "AC19"],
+      "files": [
+        "apps/web/src/views/ProfileView.vue",
+        "apps/web/src/views/ProfileView.test.ts",
+        "apps/web/src/App.vue",
+        "apps/web/src/App.test.ts",
+        "apps/web/src/views/CrateView.vue",
+        "apps/web/src/components/crate/OwnerLink.vue",
+        "apps/web/src/views/ownerLink.test.ts"
+      ],
+      "dependsOn": ["W1"]
+    },
+    {
+      "id": "W3",
+      "title": "Web: edit profile page",
+      "description": "Replace the EditProfileView.vue placeholder (requiresAuth route). Loads current values via getProfile(session.user.username). Form: displayName (maxlength 60), bio textarea (maxlength 500 with a live 'n/500' counter), location (maxlength 80), links editor in new apps/web/src/components/profile/LinksEditor.vue (v-model of ProfileLinkInput[]; add, remove, move up/down; platform <select> options from SOCIAL_PLATFORMS; url input type=url; the Add button is disabled at 6 and add() refuses a 7th). Save sends updateProfile via session.saveProfile with exactly { displayName, bio, location (null when blank), links } in display order; shows API validation errors (errorMessage and issues per field when present). Avatar: new apps/web/src/components/profile/AvatarUpload.vue (accept image/jpeg,image/png,image/webp; client-side reject over MAX_AVATAR_BYTES with a message; hint '5 MB'; preview via object URL; Remove button) wired to session.saveAvatar / session.deleteAvatar immediately. After save, link to /u/<username>. The file EditProfileView.vue must not contain the string 'verified' anywhere (including comments) and offers no verified control. Plain text bindings only, no v-html. New EditProfileView.test.ts with mocked api: loads values, save payload shape (keys exactly displayName, bio, location, links, in order), 7th link blocked, API 400 message shown, avatar upload and remove call the api; LinksEditor.test.ts for add/remove/reorder.",
+      "criteria": ["AC1", "AC17", "AC18"],
+      "files": [
+        "apps/web/src/views/EditProfileView.vue",
+        "apps/web/src/views/EditProfileView.test.ts",
+        "apps/web/src/components/profile/LinksEditor.vue",
+        "apps/web/src/components/profile/LinksEditor.test.ts",
+        "apps/web/src/components/profile/AvatarUpload.vue"
+      ],
+      "dependsOn": ["W1"]
+    },
+    {
+      "id": "D1",
+      "title": "Docs and backup hints: avatars folder, ADR 0005, README API table",
+      "description": "docs/DEPLOY.md: Backups and Restoring sections mention the avatars folder (DATA_DIR/avatars, AVATARS_DIR override) alongside covers; Updating notes that the 0004 migration adds empty profiles automatically. apps/api/src/db/backup.ts and restore.ts console hints mention avatars next to covers (string changes only). New docs/adr/0005-user-profiles.md in the ADR template (Status Accepted, Date 2026-11-07, Context, Decision, Consequences, Alternatives considered): profile columns on users plus ordered user_links table, full-replace PATCH semantics, strict body so users cannot self-verify, admin-only verified, dedicated publicProfile schema (no email/role), https-only links without host matching, avatars via the covers sharp pipeline at 400px/5 MB under DATA_DIR/avatars, single shared multipart registration, out of scope list. README.md: API table rows for GET /api/users/:username, PATCH /api/me/profile, POST/DELETE /api/me/avatar, PATCH /api/users/:username/verified; AVATARS_DIR in Environment variables; Layout mentions profiles routes/services and the avatars folder. Docs and string changes only; prettier must pass on markdown.",
+      "criteria": ["AC1", "AC22"],
+      "files": [
+        "docs/DEPLOY.md",
+        "docs/adr/0005-user-profiles.md",
+        "README.md",
+        "apps/api/src/db/backup.ts",
+        "apps/api/src/db/restore.ts"
+      ],
+      "dependsOn": ["T1"]
+    }
+  ]
+}

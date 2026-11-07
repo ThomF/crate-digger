@@ -1,0 +1,157 @@
+{
+  "goal": "Frisson 1.0 Phase 2: user profiles. Users get bio, optional location, avatar (square JPEG via the same sharp pipeline as covers, stored under DATA_DIR/avatars), up to 6 social links in a separate ordered table, and an admin-only verified flag. API: GET /api/users/:username (public), PATCH /api/me/profile, POST/DELETE /api/me/avatar, PATCH /api/users/:username/verified (admin). Web: /u/:username public profile page, Edit profile page, header menu link to own profile, crate pages show owner name linking to the profile.",
+  "constraints": [
+    "Never rename or move crate.db, DATA_DIR, /data or the crate-data volume.",
+    "Additive migration only, generated with drizzle-kit (npm run db:generate -w apps/api) as 0004; never edit existing files in apps/api/drizzle (0000-0003 SQL or snapshots) and do not hand-edit the new migration. Existing users get empty profiles through column defaults (bio '', location NULL, avatar NULL, verified 0).",
+    "Existing data (users, sessions, crates, albums, tracks) must survive the migration, proven by a test in the style of apps/api/test/migration.test.ts.",
+    "Parameterized queries only (Drizzle builder or bound params); no string-built SQL.",
+    "No secrets in source; all errors via HttpError and the existing error-handler plugin.",
+    "Reuse the covers approach: sharp (already a dependency) re-encodes to square JPEG, random file names, basename-guarded deletes, @fastify/multipart limits, @fastify/static with immutable caching. No new dependency. If one proves unavoidable: npm_config_nodedir=/opt/node22 npm install, and report its license.",
+    "Never expose email, role, password hash or session data in any public response; the public profile shape is a dedicated zod schema in packages/shared.",
+    "Only admins may set verified. PATCH /api/me/profile must not accept or apply verified, role, email or username (unknown keys stripped or rejected), so a user cannot self-verify.",
+    "Profile text (display name, bio, location, link urls) is rendered as plain text via {{ }} bindings, never v-html. Links use target=\"_blank\" and rel=\"noopener noreferrer\".",
+    "Link urls must parse with the URL class, use protocol https:, and be at most 2048 chars; javascript:, data:, http: are rejected.",
+    "Out of scope: favorites, likes, follows, feed, B-Side, email verification, password change, account deletion.",
+    "format:check, lint, typecheck, vitest (api and web) and build stay green.",
+    "Do not touch the Pennant GitHub organization."
+  ],
+  "assumptions": [
+    "Public profile is anonymous-readable (no login needed); GET /api/users/:username 404s for unknown usernames, lookup is case-insensitive via lower-casing, and uses the same username charset as signup so /u/:username needs no escaping.",
+    "bio max 500 chars, default empty string; location optional (null when empty) max 80; displayName keeps the existing 1-60 rule; all values trimmed.",
+    "PATCH /api/me/profile is a full replacement of the editable fields (displayName, bio, location, links) with links as the complete ordered list (0-6); order in the array becomes position 0..n-1; replacement happens in one transaction. Sending the same platform twice is allowed (e.g. two websites) unless the planner decides otherwise.",
+    "PATCH /api/users/:username/verified takes body {verified: boolean}, returns the public profile, and returns 401 signed out, 403 for non-admins (including on their own username), 404 unknown user.",
+    "Avatar upload uses multipart field name 'avatar', max 5 MB (MAX_AVATAR_BYTES in shared), output 400x400 JPEG, same 50 MP input-pixel guard as covers; non-image bytes give 400; oversize gives 413. Stored as /avatars/<userId>-<8 hex>.jpg under DATA_DIR/avatars (AVATARS_DIR env override, default beside covers); the DB stores only the URL path; replacing or removing deletes the old file; DELETE with no avatar is a 200 no-op.",
+    "Avatar URL prefix is /avatars/; web plugin SPA fallback must exclude /avatars/ so missing avatar files 404 instead of returning index.html. dev proxy in apps/web/vite.config.ts and any Caddy/compose config get /avatars if /covers is proxied there.",
+    "GET /api/auth/me and signup/login responses (publicUser, private) gain avatarUrl and verified so the header can show them; email and role stay only in that private shape.",
+    "Crate responses already carry ownerUsername; crate pages link it to /u/:username. Owner display name is added to the crate schema only if needed for display (optional ownerDisplayName, nullable); NULL-owner crates show no owner link.",
+    "The public profile lists the user's crates (id, name, color, label, album count), all crates being public as today.",
+    "Verified badge is a text/SVG badge with an accessible label 'Verified', shown next to the display name on the profile page and in the header menu; elsewhere optional.",
+    "Backups: avatars are plain files like covers; docs/DEPLOY.md backup and restore notes and db/backup.ts, db/restore.ts console hints mention the avatars folder. No change to volume layout.",
+    "Existing rate limits are unchanged; avatar upload and profile PATCH need a signed-in user only. Social-link platform list lives once in packages/shared (SOCIAL_PLATFORMS) and is used by api schema, drizzle enum and web select. Platform to host matching is not enforced (any https url for any platform) unless the planner adds it."
+  ],
+  "risks": [
+    "drizzle-kit ALTER TABLE ADD COLUMN for SQLite needs defaults for NOT NULL columns (bio, verified); the generated 0004 must be checked to contain only additive statements. Phase 1 saw drizzle-kit drop an ON DELETE action on an added FK; the new social_links FK is on a CREATE TABLE, so check it reports ON DELETE CASCADE.",
+    "A second @fastify/multipart or static registration alongside covers could fail with duplicate decorator errors. Register multipart once (move or share it) and register a second fastifyStatic with decorateReply false for /avatars/.",
+    "SPA fallback in apps/api/src/plugins/web.ts hardcodes /api/ and /covers/; /avatars/ and /u/ interplay must be handled so /u/x serves index.html but /avatars/missing.jpg is a real 404.",
+    "Leaking private fields: reusing toPublicUser (which includes email, role) for the public profile would leak them. Needs a separate mapper and a test that asserts absence of email and role in the JSON.",
+    "Self-verify via mass assignment: tests must send verified:true to PATCH /api/me/profile and prove it is ignored or rejected.",
+    "Orphaned avatar files on failed DB writes or races between replace calls; follow the setCover try/catch cleanup pattern.",
+    "URL validation edge cases (uppercase scheme, credentials in URL, whitespace, very long values, unicode hosts); the shared zod schema must be the single source for api and web.",
+    "Existing web and api tests build PublicUser fixtures; adding fields to publicUser or crate schemas will break typecheck of fixtures (as in Phase 1); make new fields optional-with-default or update fixtures within the owning task.",
+    "Test fixtures that create users via createUser must keep working with the new columns' defaults.",
+    "Phase 1 left owner_id FK with NO ACTION in the live DB, not SET NULL; not in scope but do not rely on it."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "text": "All repo gates are green.",
+      "check": "cd /home/claude/crate-digger && npm run format:check && npm run lint && npm run typecheck && npm test && npm run build; echo exit=$? must print exit=0"
+    },
+    {
+      "id": "AC2",
+      "text": "Exactly one new migration (0004) is added; 0000-0003 SQL and snapshots are unchanged; drizzle-kit reports no pending schema changes; the migration contains no DROP or RENAME statements.",
+      "check": "git diff --name-status <base>..HEAD -- apps/api/drizzle shows only 'A' entries (new 0004_*.sql, meta/0004_snapshot.json) plus 'M' for meta/_journal.json only; ls apps/api/drizzle/0004_*.sql | wc -l is 1; grep -Eci 'DROP |RENAME' apps/api/drizzle/0004_*.sql is 0; cd apps/api && npx drizzle-kit generate prints 'No schema changes'"
+    },
+    {
+      "id": "AC3",
+      "text": "Existing data survives the migration and existing users get empty profiles. A vitest builds a DB at 0003 with users, a session, crates, albums and tracks, applies 0004, and asserts all rows are intact, bio is '', location and avatar are NULL, verified is false, and the user has zero social links.",
+      "check": "cd apps/api && npx vitest run test/migration.test.ts -t 'migration 0004' exits 0 and the named test exists: grep -n \"migration 0004\" apps/api/test/migration.test.ts"
+    },
+    {
+      "id": "AC4",
+      "text": "Schema: users gain bio (not null default ''), location, avatar_path, verified (not null default 0); a user_links table has user_id FK ON DELETE CASCADE, platform, url, position, an index on (user_id, position), and a check or app-level limit of 6 per user.",
+      "check": "grep -nE \"bio|location|verified\" apps/api/src/db/schema.ts shows the columns; grep -nE 'user_links|userLinks' apps/api/src/db/schema.ts matches; grep -c 'CASCADE' apps/api/drizzle/0004_*.sql is >= 1 (case-insensitive); cd apps/api && npx vitest run test/schema.test.ts exits 0"
+    },
+    {
+      "id": "AC5",
+      "text": "Shared zod contracts exist in packages/shared: SOCIAL_PLATFORMS equals exactly [instagram, x, tiktok, youtube, soundcloud, spotify, bandcamp, discogs, website]; profileLinkInput; updateProfileInput (displayName 1-60, bio max 500, location max 80 optional, links max 6); publicProfile (no email or role keys); MAX_AVATAR_BYTES. Tests cover limits and URL rules: https accepted; http, javascript:, data:, ftp:, relative and garbage rejected; 6 links ok, 7 rejected; bio 500 ok, 501 rejected; location 80 ok, 81 rejected; unknown platform rejected.",
+      "check": "cd apps/api && npx vitest run test/shared-profile.test.ts exits 0 and the file exists; grep -n 'SOCIAL_PLATFORMS' packages/shared/src/*.ts matches"
+    },
+    {
+      "id": "AC6",
+      "text": "GET /api/users/:username returns 200 for anonymous visitors with exactly the public fields (username, displayName, bio, location, avatarUrl, links ordered by position, verified, crates) and never contains email, role, passwordHash or id-bearing session data; unknown username returns 404; lookup is case-insensitive; a user with no profile data returns bio '' and links [].",
+      "check": "cd apps/api && npx vitest run test/profiles.test.ts -t 'public profile' exits 0; the tests assert JSON string does not contain the user's email and 'role' key is undefined"
+    },
+    {
+      "id": "AC7",
+      "text": "PATCH /api/me/profile: signed-out gives 401; owner can update displayName, bio, location and links; links are stored in array order and read back in that order; replacing with an empty array clears them; >6 links, non-https urls, bad platform, bio >500, location >80 all give 400; the payload is applied atomically (a failed validation changes nothing).",
+      "check": "cd apps/api && npx vitest run test/profiles.test.ts -t 'update profile' exits 0"
+    },
+    {
+      "id": "AC8",
+      "text": "Users cannot change another user's profile or sensitive fields: sending verified:true, role:'admin', email or username in PATCH /api/me/profile does not change them (stripped or 400), and a user can only ever edit their own profile (no :username path on the edit route).",
+      "check": "cd apps/api && npx vitest run test/profiles.test.ts -t 'cannot self' exits 0; grep -nE \"'/me/profile'\" apps/api/src/routes/*.ts matches and grep -nE \"/users/:username/profile\" apps/api/src/routes/*.ts is empty"
+    },
+    {
+      "id": "AC9",
+      "text": "PATCH /api/users/:username/verified: admin can set and unset it (200, reflected in GET); signed-out 401; regular user 403 including on their own username; unknown user 404; body must be {verified: boolean} else 400.",
+      "check": "cd apps/api && npx vitest run test/profiles.test.ts -t 'verified' exits 0"
+    },
+    {
+      "id": "AC10",
+      "text": "Avatar upload: POST /api/me/avatar with multipart field 'avatar' (valid PNG/JPEG/WebP) returns 200 with avatarUrl under /avatars/; the stored file is a 400x400 JPEG (checked with sharp metadata) in the avatars dir; GET of that URL returns 200 image/jpeg; replacing deletes the old file; DELETE /api/me/avatar clears avatarUrl and deletes the file; DELETE with none is 200; signed-out 401; non-image bytes 400; file over MAX_AVATAR_BYTES 413; wrong field name 400; EXIF-rotated input is normalized (same as covers).",
+      "check": "cd apps/api && npx vitest run test/avatars.test.ts exits 0 and the file exists"
+    },
+    {
+      "id": "AC11",
+      "text": "Avatar storage reuses the covers approach with no new dependency and no path traversal: file names are server-generated, deletes use basename, files live under DATA_DIR/avatars (AVATARS_DIR override), data dir layout for crate.db and covers is unchanged, and package.json files show no dependency changes.",
+      "check": "git diff <base>..HEAD --stat -- package.json apps/api/package.json apps/web/package.json packages/shared/package.json package-lock.json is empty (or the report names the license of the added package); grep -n 'basename' apps/api/src/services/avatars.ts matches; grep -n 'avatars' apps/api/src/paths.ts matches; grep -rn 'crate\\.db\\|crate-data' Dockerfile compose.yaml | diff against base shows no path changes"
+    },
+    {
+      "id": "AC12",
+      "text": "/avatars/ and /u/ routing in production mode: GET /u/someone returns index.html (200) and GET /avatars/missing.jpg returns a JSON 404, not index.html.",
+      "check": "cd apps/api && npx vitest run test/web.test.ts -t 'avatars' exits 0"
+    },
+    {
+      "id": "AC13",
+      "text": "Private responses (/api/auth/me, signup, login) include avatarUrl and verified for the signed-in user; the public profile endpoint and crate responses never include email or role of owners.",
+      "check": "cd apps/api && npx vitest run test/auth-accounts.test.ts test/profiles.test.ts exits 0 and a named test asserts crate JSON has no 'email' key: grep -n \"owner.*email\\|no email\" apps/api/test/*.test.ts matches"
+    },
+    {
+      "id": "AC14",
+      "text": "Phase 1 permissions are unchanged: existing ownership tests still pass unmodified in behavior.",
+      "check": "cd apps/api && npx vitest run test/ownership.test.ts test/crates.test.ts test/albums.test.ts test/covers.test.ts exits 0"
+    },
+    {
+      "id": "AC15",
+      "text": "Web routes exist: /u/:username (public, lazy ProfileView) and /profile/edit (requiresAuth, EditProfileView); a router test asserts the signed-out visitor is redirected from /profile/edit to /login with next, and that /u/someone does not require auth.",
+      "check": "cd apps/web && npx vitest run src/router.test.ts exits 0; grep -nE \"/u/:username|/profile/edit\" apps/web/src/router.ts matches both"
+    },
+    {
+      "id": "AC16",
+      "text": "Profile page renders avatar (or a placeholder), display name, verified badge only when verified, bio, location, links and the user's crates; links have target=\"_blank\" and rel=\"noopener noreferrer\"; a 404 profile shows a not-found message. Component tests mount with mocked API and assert each.",
+      "check": "cd apps/web && npx vitest run src/views/ProfileView.test.ts exits 0 and asserts a[target=_blank][rel='noopener noreferrer'] for every link and absence of the badge when verified is false"
+    },
+    {
+      "id": "AC17",
+      "text": "Profile text is rendered as plain text: a test mounts a profile whose bio and displayName contain '<img src=x onerror=alert(1)>' and asserts no img element is created and the text appears literally; no v-html in the web source.",
+      "check": "grep -rn 'v-html' apps/web/src is empty (exit 1 from grep); cd apps/web && npx vitest run src/views/ProfileView.test.ts -t 'plain text' exits 0"
+    },
+    {
+      "id": "AC18",
+      "text": "Edit profile page: loads current values, edits displayName/bio/location/links (add/remove/reorder up to 6, platform select from SOCIAL_PLATFORMS), shows a character counter or enforces max lengths, uploads and removes the avatar, shows API validation errors, and offers no verified control. Tests cover save payload shape and that adding a 7th link is blocked.",
+      "check": "cd apps/web && npx vitest run src/views/EditProfileView.test.ts exits 0; grep -n 'verified' apps/web/src/views/EditProfileView.vue is empty"
+    },
+    {
+      "id": "AC19",
+      "text": "Header user menu has a link to the signed-in user's profile (/u/<username>) and an Edit profile link, and shows the verified badge when the user is verified; crate pages show the owner as a link to /u/<ownerUsername> when an owner exists, and plain/no text when null.",
+      "check": "cd apps/web && npx vitest run src/App.test.ts src/views/ownerLink.test.ts exits 0 (or equivalently named tests covering both); grep -rn '/u/' apps/web/src --include=*.vue matches in App.vue and the crate view"
+    },
+    {
+      "id": "AC20",
+      "text": "Web session store and API client are updated (profile, updateProfile, uploadAvatar, removeAvatar, setVerified helpers use the shared zod types) and the session store refreshes the user after profile or avatar changes.",
+      "check": "cd apps/web && npx vitest run src/stores/session.test.ts exits 0; grep -nE 'uploadAvatar|updateProfile' apps/web/src/api/*.ts matches"
+    },
+    {
+      "id": "AC21",
+      "text": "Security hygiene: no string-built SQL in new code, no secrets committed, all new API errors are HttpError.",
+      "check": "grep -nE \"sql\\`[^\\`]*\\$\\{\" apps/api/src/services/profiles.ts apps/api/src/services/avatars.ts is empty; grep -rn 'reply.code(4\\|reply.status(4' apps/api/src/routes/profiles.ts apps/api/src/routes/avatars.ts is empty; git diff <base>..HEAD | grep -niE 'password *= *[\"'\\'']|secret|api[_-]?key' shows no new credentials"
+    },
+    {
+      "id": "AC22",
+      "text": "Docs updated: docs/DEPLOY.md backup/restore sections mention the avatars folder; a new ADR docs/adr/0005-user-profiles.md exists; db/backup.ts and db/restore.ts hints mention avatars.",
+      "check": "grep -n 'avatars' docs/DEPLOY.md apps/api/src/db/backup.ts apps/api/src/db/restore.ts all match; test -f docs/adr/0005-user-profiles.md"
+    }
+  ],
+  "notes": "Phase 1 left email/role in the private publicUser; consider renaming nothing, just add new schemas. The 'check' commands use <base> for the commit before Phase 2 work (HEAD at 8eaedeb at intake time). Test names quoted with -t are the planner's contract: the implementing dev must use those describe/it names or the planner must update the checks before dispatch."
+}

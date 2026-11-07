@@ -1,0 +1,194 @@
+{
+  "commit": "8eaedebd510420837409cd59b5d0a2eec871c162",
+  "structureTests": {
+    "concerns": [
+      "structure",
+      "tests"
+    ],
+    "structure": {
+      "layout": "npm workspaces monorepo 'frisson' (private, ESM, node>=22.18, .nvmrc 22): packages/shared (@frisson/shared: zod schemas + sorting, exports ./src/index.ts and ./sorting, no build), apps/api (@frisson/api: Fastify 5 + better-sqlite3 + drizzle, run as native TS via node, no build), apps/web (@frisson/web: Vue 3 + Pinia + vue-router + Vite 6). Other: docs/ (SPEC, DEPLOY, adr/0001-0004; 0004 is user accounts), docker/Caddyfile, .github/{workflows/ci.yml,pull_request_template.md}, tsconfig.base.json, eslint.config.js, prettier.",
+      "api_src": {
+        "top": [
+          "app.ts",
+          "server.ts",
+          "paths.ts",
+          "errors.ts"
+        ],
+        "plugins": [
+          "auth.ts",
+          "covers.ts",
+          "db.ts",
+          "error-handler.ts",
+          "web.ts"
+        ],
+        "routes": [
+          "albums.ts",
+          "auth.ts",
+          "covers.ts",
+          "crates.ts",
+          "health.ts"
+        ],
+        "services": [
+          "albums",
+          "bootstrap",
+          "covers",
+          "crates",
+          "passwords",
+          "permissions",
+          "sessions",
+          "users"
+        ],
+        "db": [
+          "schema.ts",
+          "client.ts",
+          "seed.ts",
+          "backup.ts",
+          "restore.ts"
+        ],
+        "migrations": "apps/api/drizzle/0000_init, 0001_crate_sort_by, 0002_album_spin_count, 0003_accounts (+meta snapshots)"
+      },
+      "app_ts_registration": {
+        "entry": "buildApp(opts: AppOptions) in apps/api/src/app.ts; returns un-started Fastify. AppOptions: dbPath, coversDir, auth {production, rateLimit {max,timeWindow}}, webDir.",
+        "setup": "Fastify logger off when NODE_ENV=test; trustProxy from TRUST_PROXY=='true'; zod validator/serializer compilers.",
+        "order": [
+          "errorHandlerPlugin",
+          "dbPlugin {path} (decorates app.db)",
+          "authPlugin {production} (fastify-plugin; registers @fastify/cookie, decorateRequest 'user', decorate 'auth' with set/clearSessionCookie, onRequest hook resolves cookie frisson_session -> req.user via findSessionUser; must follow dbPlugin)",
+          "coversPlugin {dir}",
+          "healthRoutes prefix /api",
+          "authRoutes prefix /api {rateLimit} (registers @fastify/rate-limit internally; POST /auth/signup, POST /auth/login presumably, POST /auth/logout, GET /auth/me)",
+          "crateRoutes prefix /api",
+          "albumRoutes prefix /api",
+          "coverRoutes prefix /api",
+          "webPlugin {dir: webDir ?? WEB_DIR} (last; static + SPA catch-all)"
+        ],
+        "server_ts": "calls buildApp then bootstrapFromEnv(app.db, process.env, app.log) (ADMIN_EMAIL/ADMIN_PASSWORD first-admin creation)."
+      },
+      "docker": "Dockerfile multi-stage on node:22-bookworm-slim: manifests -> web-build (npm ci, npm run build -w apps/web) -> api-deps (npm ci --omit=dev -w apps/api) -> runtime (NODE_ENV=production, DATA_DIR=/data, WEB_DIR=/app/apps/web/dist, user node, HEALTHCHECK /api/health, CMD node apps/api/src/server.ts). compose.yaml: app (requires ADMIN_EMAIL, ADMIN_PASSWORD from .env; TRUST_PROXY=true; volume crate-data) + caddy:2 (docker/Caddyfile, 80/443). .dockerignore present.",
+      "ci": ".github/workflows/ci.yml on pull_request and push to main. Job 'check': checkout, setup-node (.nvmrc, npm cache), npm ci, format:check, lint, typecheck, test, build. Job 'docker': buildx build image frisson:ci, run with ADMIN_EMAIL/ADMIN_PASSWORD, poll /api/health and check '/' contains <div id=\"app\">."
+    },
+    "tests": {
+      "runners": "vitest ^3.2 in both apps (script 'vitest run'). shared package has no tests and no test script.",
+      "api": {
+        "config": "no vitest config file in apps/api (defaults). Tests in apps/api/test/*.test.ts: crates, migration, ownership, schema, auth-accounts, covers, shared-auth, web, albums, bootstrap, sorting, passwords, health. tsconfig includes src and test.",
+        "helpers_file": "apps/api/test/helpers.ts",
+        "helpers": {
+          "buildTestApp(opts?)": "buildApp with dbPath ':memory:', temp covers dir (mkdtemp, removed in onClose unless opts.coversDir given), auth {production:false, rateLimit {max:10000,timeWindow:60000}} overridable. Caller must app.close().",
+          "TestApp": "Awaited<ReturnType<typeof buildTestApp>>",
+          "SignedIn": "{ user: PublicUser, cookie: string, headers: {cookie} } ; cookie is 'frisson_session=<token>' (SESSION_COOKIE)",
+          "signUp(app, overrides?)": "real POST /api/auth/signup with unique email/username (pid-counter) and password 'test-password-123'; expects 201; reads session cookie from response; returns SignedIn for a regular user.",
+          "createAdmin(app, overrides?)": "inserts admin directly via createUser(app.db, signup, 'admin') (displayName 'Admin') and createSession(app.db, user.id); returns SignedIn. Signup cannot create admins.",
+          "addCrate(app, name?, sortOrder?, ownerId?)": "inserts crate straight into db; ownerId null = legacy crate (admin-only).",
+          "multipart(fieldName, fileName, contentType, data)": "hand-built multipart body returning {payload, headers}."
+        },
+        "usage": "app.inject({method,url,headers: user.headers, payload}); no real port opened."
+      },
+      "web": {
+        "config": "test block inside apps/web/vite.config.ts: environment 'happy-dom'; no setupFiles, no separate vitest config. @vue/test-utils used. Tests colocated as *.test.ts beside source (viewTransitions, CrateBox, editControls, useCrateFlip, useAlbumSearch, permissions, redirect, crateLayout, tracks, session store, library store, TrackList, RecordStage, TrackEditor, CoverUpload, albumForm)."
+      },
+      "root_commands": {
+        "test": "npm test  (npm run test --workspaces --if-present => api + web vitest run)",
+        "single_workspace": "npm test -w apps/api ; npm test -w apps/web",
+        "single_file": "npm test -w apps/api -- test/ownership.test.ts",
+        "typecheck": "npm run typecheck (api tsc, web vue-tsc, shared tsc)",
+        "lint": "npm run lint (eslint .)",
+        "format_check": "npm run format:check",
+        "build": "npm run build (only web has a build script)",
+        "dev": "npm run dev (concurrently api + web)"
+      }
+    },
+    "absent": [
+      "vitest config files / setupFiles",
+      "tests in packages/shared",
+      "e2e/browser tests",
+      "coverage config",
+      "API build step"
+    ]
+  },
+  "conventionsDocs": {
+    "surveyor": "surveyor-2",
+    "concerns": [
+      "conventions",
+      "documentation"
+    ],
+    "conventions": {
+      "format": "Prettier: no semi, single quotes, width 100, trailingComma all. EditorConfig 2-space LF. ESLint 9 flat (vue essential + vue-ts recommended + prettier skip-formatting). Scripts: lint, format, format:check, typecheck, test, build.",
+      "naming": "Scope @frisson/*, .ts extensions in imports. Plugins export xPlugin, routes xRoutes (FastifyPluginAsyncZod), services are plain functions taking (db, user?, input). Web: PascalCase .vue, one api/*.ts file per resource.",
+      "routes": "Thin: zod schema {params, body, response}, call service with app.db, req.user, req.body. Reads public; writes pass req.user to service. 201 via reply.code(201).send, 204 on delete. Registered in app.ts under /api.",
+      "permissions": "apps/api/src/services/permissions.ts: requireUser (401), canEditOwner, assertCanEditCrate (401/404/403), assertCanEditAlbum. Rule: admin edits all, owner edits own crates and their albums, ownerless crates admin-only. Services call these; routes never decide. Web mirror: apps/web/src/utils/permissions.ts canEditCrate (UI only).",
+      "authPlugin": "plugins/auth.ts decorates request.user (PublicUser|null) and app.auth cookie helpers; onRequest hook looks up session cookie frisson_session (opaque token, hash stored). Must register after dbPlugin.",
+      "errors": "errors.ts HttpError(statusCode,message), notFound(what), badRequest(msg). error-handler plugin emits {statusCode,error,message,issues?} (ApiError in shared): zod 400 with issues, response-serialization 500, HttpError, fastify 4xx, else 500.",
+      "shared": "packages/shared/src/index.ts: zod 4; xInput for requests, plain names for responses, z.infer types, CreateXRequest = z.input. publicUser {id,email,username,displayName,role} (email present, so not for other users). Crate response carries ownerId/ownerUsername/ownerDisplayName (marked PUBLIC, never email). sorting.ts exported separately without zod.",
+      "dataClassification": "Comment convention 'Data classification: PUBLIC|CONFIDENTIAL (PII)' on code handling user data (crates.ts service, session store, api/auth.ts).",
+      "web": "Pinia setup stores (library, session) with ref/computed/functions, status idle|loading|ready|error; api/client.ts request<T>() with ApiRequestError and errorMessage(); api files wrap request with JSON.stringify bodies. Views are per route in router.ts; components grouped by feature dirs.",
+      "styling": "Scoped <style> per component; global tokens in styles/base.css: --cardboard #c8a374, --cardboard-dark, --paper #f3ead8, --paper-dark, --ink #2b2118, --ink-soft, --marker-red, --ok-green, --star; --font-display Courier New monospace, --font-body system-ui. Square corners (border-radius 0), shared .btn (ink bg, paper text, Courier), .status-note, focus-visible red outline.",
+      "tests": "API: vitest with buildTestApp helper (in-memory db, app.inject). Web: colocated *.test.ts."
+    },
+    "documentation": {
+      "files": [
+        "README.md (142 lines)",
+        "docs/SPEC.md (140)",
+        "docs/DEPLOY.md (172)",
+        "docs/adr/0001-stack",
+        "0002-native-typescript-and-shared-package",
+        "0003-deployment",
+        "0004-user-accounts (Accepted 2026-11-07; supersedes parts of 0003)"
+      ],
+      "profilesSocial": "ABSENT. No grep hits for profile, social, follow, friend in README, SPEC, DEPLOY or ADRs. Closest: accounts/ownership (README Accounts, ADR 0004, SPEC section 8) and public owner fields on crates. ADR 0004 lists out of scope: email verification, password reset/change, OAuth, deleting users. No /signup-adjacent profile page or user routes exist in the API tables.",
+      "readme": "Sections: Getting started, Scripts, Accounts, Environment variables, Database, API (full route table; says errors always {statusCode,error,message,issues?}), Layout, Deploying, Status ('through deployment done; next polish milestone 10'). Any new route needs a row in the API table and Layout mention.",
+      "spec": "SPEC.md is the original plan: sections 1 Stack, 2 Repo structure, 3 Data model (Crate/Album/Track only, no User), 4 API (no auth routes), 5 UI, 6 Milestones 0-10, 7 Git workflow, 8 Self-hosting (later; mentions accounts in one sentence). Spec is stale relative to accounts: data model and API lack users and owner_id; no profiles/social milestone.",
+      "deploy": "DEPLOY.md sections: try locally, server and domain, set up server, deploy, Updating (with 'Upgrading to user accounts'), Accounts, Backups, Restoring, Day to day, Hosting at home.",
+      "adrConvention": "Files NNNN-slug.md with Status, Date, Context, Decision, Consequences, Alternatives considered. Next number is 0005. SPEC section 7 says significant decisions get an ADR. Git: Conventional Commits, squash-merge, PR template in .github."
+    }
+  },
+  "relevant": {
+    "concern": "relevant",
+    "db": {
+      "users": "apps/api/src/db/schema.ts:21-29 (id,email,username,displayName,passwordHash,role,createdAt); no bio/location/avatar/verified columns; no social links table",
+      "relations": "schema.ts:109-112 usersRelations; timestamps helper :9-17; type exports :132-141",
+      "migrations": "apps/api/drizzle/0000-0003; latest 0003_accounts.sql; journal apps/api/drizzle/meta/_journal.json (idx 0-3; next idx 4); snapshots meta/0003_snapshot.json; generate: npm run db:generate -w apps/api (drizzle-kit)",
+      "tests": "apps/api/test/migration.test.ts:32 (0003 preserves data), schema.test.ts"
+    },
+    "auth": {
+      "plugin": "apps/api/src/plugins/auth.ts:32-59; onRequest hook :55-58 sets req.user (PublicUser|null) via findSessionUser; cookie frisson_session",
+      "sessions": "apps/api/src/services/sessions.ts:28-43 joins users, returns toPublicUser",
+      "publicUser": "apps/api/src/services/users.ts:15-23 (id,email,username,displayName,role); shared publicUser packages/shared/src/index.ts:160-166",
+      "permissions": "apps/api/src/services/permissions.ts: requireUser :15, canEditOwner :21 (admin check = user.role==='admin'); no admin-only assert exists yet",
+      "users_service": "users.ts: findUserByUsername :29 (lowercases), getUserById :33, createUser :50",
+      "routes": "apps/api/src/routes/auth.ts (/auth/signup,login,logout,me); no /users or /me/profile routes; registered in apps/api/src/app.ts:54-58 under /api"
+    },
+    "images": {
+      "library": "sharp ^0.35.5 (apps/api/package.json)",
+      "service": "apps/api/src/services/covers.ts: COVER_SIZE=800 :16, processCover :28-38 (rotate, resize cover fit, jpeg q82 mozjpeg, MAX_INPUT_PIXELS 50M :22), deleteCoverFile :54 (basename-guarded), setCover :59 (random hex filename `${albumId}-xxxx.jpg`, stores URL path '/covers/..' in albums.cover_path), removeCover :89",
+      "limit": "MAX_COVER_BYTES=10MB packages/shared/src/index.ts:14",
+      "plugin": "apps/api/src/plugins/covers.ts: mkdir dir, decorates app.coversDir, @fastify/multipart limits fileSize,files:1,fields:0 :23-25 (fields:0 applies globally), @fastify/static prefix /covers/ immutable 365d :29-35",
+      "route": "apps/api/src/routes/covers.ts: POST/DELETE /albums/:id/cover, field name 'cover', req.file().toBuffer()",
+      "paths": "apps/api/src/paths.ts: DATA_DIR, DEFAULT_COVERS_DIR (COVERS_URL env COVERS_DIR) :11; no avatars dir",
+      "other_cover_delete": "apps/api/src/routes/albums.ts:55-56 deleteCoverFile on album delete",
+      "web_serving": "apps/api/src/plugins/web.ts:32-35 SPA fallback excludes /api/ and /covers/ only; vite proxy /api,/covers apps/web/vite.config.ts:10-11"
+    },
+    "crates": {
+      "service": "apps/api/src/services/crates.ts: crateColumns :11-23 (ownerId, ownerUsername, ownerDisplayName from LEFT JOIN users), listCrates :25, getCrate :37; crate zod apps/ packages/shared/src/index.ts:118-130",
+      "routes": "apps/api/src/routes/crates.ts (reads public)",
+      "per_user_listing": "absent: no filter by owner; listCrates returns all"
+    },
+    "shared": "packages/shared/src/index.ts only (single file; sorting.ts separate). Accounts section :155-198; apiError :202; types :209-232. Helpers requiredText/optionalText :17-20, idParams :22. No users/profile schemas",
+    "web": {
+      "router": "apps/web/src/router.ts:14-68 (routes, lazy views, meta.requiresAuth :9, guard :72-77); catch-all not-found :65",
+      "session_store": "apps/web/src/stores/session.ts (user ref, isAdmin, load, signedInAs, logIn/signUp/logOut); no updateUser/refresh method",
+      "api_client": "apps/web/src/api/client.ts request() :19, FormData-aware :23-24, errorMessage :38; api/auth.ts, api/albums.ts:58-67 uploadCover/removeCover; no api/users.ts",
+      "header": "apps/web/src/App.vue:26-43 masthead; user-menu shows plain span.who :32-34 (displayName) + Log out button; styles .who ~:85",
+      "crate_owner_display": "ownerUsername/ownerDisplayName used nowhere in web views/components (only api/services and test fixtures apps/web/src/stores/library.test.ts:15-29); CrateView.vue shows no crate/owner heading (h2 :86 is album title); CrateBox.vue:116 label; CratesView.vue:64 'Your crates' (editable only)",
+      "upload_component": "apps/web/src/components/forms/CoverUpload.vue (props coverPath,sleeveColor,error; v-model file/remove; deferred upload on save; accept jpeg/png/webp/gif :74; hint 10 MB) ; used in forms/AlbumForm.vue:127; upload invoked AlbumEditorView.vue:~161",
+      "permissions_util": "apps/web/src/utils/permissions.ts canEditCrate",
+      "views": "apps/web/src/views/: CrateView, CratesView, LibraryView, AlbumView, AlbumEditorView, LoginView, SignupView, NotFoundView; no profile views"
+    },
+    "tests": {
+      "api": "apps/api/test/helpers.ts (buildTestApp, signUp, createAdmin :75, addCrate :89, multipart :102), covers.test.ts, ownership.test.ts, auth-accounts.test.ts, migration.test.ts, schema.test.ts, shared-auth.test.ts, crates.test.ts, web.test.ts",
+      "web": "apps/web/src/components/forms/CoverUpload.test.ts, stores/session.test.ts, stores/library.test.ts, utils/permissions.test.ts"
+    },
+    "docs": "docs/adr/0004-user-accounts.md, docs/SPEC.md",
+    "constraints_noted": "routes use FastifyPluginAsyncZod with zod schemas for params/body/response; services throw HttpError (apps/api/src/errors.ts: badRequest, notFound); email must stay out of public responses (crates.ts:19 comment)"
+  },
+  "testCommand": "npm run format:check && npm run typecheck && npm run lint && npm test && npm run build"
+}

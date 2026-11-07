@@ -1,0 +1,31 @@
+{
+  "id": "D1",
+  "status": "implemented",
+  "commit": "d69b9e6",
+  "criteria": ["AC1", "AC22"],
+  "filesChanged": [
+    "docs/DEPLOY.md",
+    "docs/adr/0005-user-profiles.md",
+    "README.md",
+    "apps/api/src/db/backup.ts",
+    "apps/api/src/db/restore.ts"
+  ],
+  "gates": {
+    "format:check": "pass",
+    "lint": "pass",
+    "typecheck": "pass",
+    "test": "pass (api 205, web 127)",
+    "build": "pass"
+  },
+  "checks": {
+    "AC22": "grep avatars matches in DEPLOY.md, backup.ts, restore.ts; docs/adr/0005-user-profiles.md exists",
+    "backupRestoreSmoke": "ran backup.ts and restore.ts against a temp DATA_DIR; both succeed and print the new avatars hints"
+  },
+  "dependencies": [],
+  "notes": [
+    "backup.ts/restore.ts: console string changes only.",
+    "DEPLOY: diagram, new 'Upgrading to user profiles' subsection (0004 adds empty profiles automatically), Backups lists avatars/ and AVATARS_DIR, Restoring adds an avatars copy step (mkdir -p, skip for pre-profile backups).",
+    "README avatar upload row says 'multipart image, 5 MB max' without a field name, since T3 defines the field; GET /avatars/:file row added (immutable caching per spec).",
+    "No backup/restore test files exist in the repo; gates were run on the shared worktree that includes parallel T2/W1 work in progress."
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "T2",
+  "status": "implemented",
+  "commit": "967d91e",
+  "files": [
+    "apps/api/src/services/profiles.ts",
+    "apps/api/src/routes/profiles.ts",
+    "apps/api/src/services/permissions.ts",
+    "apps/api/src/app.ts",
+    "apps/api/test/profiles.test.ts"
+  ],
+  "criteria": ["AC1", "AC6", "AC7", "AC8", "AC9", "AC13", "AC14", "AC21"],
+  "checks": {
+    "typecheck_api": "pass",
+    "test_api": "pass (15 files, 205 tests; profiles.test.ts 26)",
+    "eslint_api": "pass",
+    "prettier_api": "pass",
+    "ac21_greps": "empty as required",
+    "ac8_greps": "'/me/profile' matches; /users/:username/profile empty"
+  },
+  "notes": [
+    "Full repo gates (AC1) not run by dev: apps/web and docs are being changed in parallel.",
+    "preValidation hooks: requireUser on PATCH /me/profile, requireAdmin on PATCH verified, so 401/403 beat 400.",
+    "Unknown keys in PATCH /me/profile are a 400 (strictObject from T1).",
+    "Working tree has uncommitted changes to apps/api/src/db/backup.ts and restore.ts not made by T2; left untouched."
+  ],
+  "dependencies_added": []
+}

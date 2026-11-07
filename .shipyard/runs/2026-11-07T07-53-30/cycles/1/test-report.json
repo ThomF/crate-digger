@@ -1,0 +1,115 @@
+{
+  "criteria": {
+    "AC1": {
+      "verdict": "pass",
+      "evidence": "format:check && lint && typecheck && test && build -> exit=0. api: Test Files 16 passed, Tests 222 passed; web: Test Files 23 passed, Tests 167 passed; vite build ok (log /tmp/tester-gates.log)."
+    },
+    "AC2": {
+      "verdict": "pass",
+      "evidence": "git diff --name-status base..HEAD -- apps/api/drizzle: A 0004_user_profiles.sql, A meta/0004_snapshot.json, M meta/_journal.json. ls 0004_*.sql | wc -l = 1. grep -Eci 'DROP |RENAME' = 0. SQL is CREATE TABLE user_links, CREATE INDEX, 4x ALTER TABLE users ADD. drizzle-kit generate: 'No schema changes, nothing to migrate'."
+    },
+    "AC3": {
+      "verdict": "pass",
+      "evidence": "vitest test/migration.test.ts -t 'migration 0004': 1 passed | 1 skipped, exit 0. Test asserts SELECT * of users/sessions/crates/albums/tracks equal pre-migration snapshot, user_links count 0, foreign_key_check [], verified false, bio '', location and avatarPath null."
+    },
+    "AC4": {
+      "verdict": "pass",
+      "evidence": "schema.ts:30 bio notNull default '', :31 location, :33 verified notNull default false, :39 userLinks 'user_links' with index user_links_user_position_idx (user_id, position). 0004 SQL: FOREIGN KEY user_id REFERENCES users(id) ON DELETE cascade (grep -ci CASCADE = 1). schema.test.ts 11 passed, exit 0. 6-link limit is app-level (zod max 6)."
+    },
+    "AC5": {
+      "verdict": "pass",
+      "evidence": "shared-profile.test.ts exists, 39 passed, exit 0. Covers exact SOCIAL_PLATFORMS order, MAX_AVATAR_BYTES 5 MiB, ftp/relative/protocol-relative/garbage/http/javascript/data rejected, >2048 rejected, 6 ok 7 rejected, bio 500/501, location 80/81, myspace rejected, publicProfile strips id/email/role. SOCIAL_PLATFORMS at packages/shared/src/index.ts:209."
+    },
+    "AC6": {
+      "verdict": "pass",
+      "evidence": "profiles.test.ts -t 'public profile': 5 passed, exit 0. Asserts exact key set, res.body not containing email, body.role/email/id undefined, case-insensitive lookup, 404 unknown, bio '' links []."
+    },
+    "AC7": {
+      "verdict": "pass",
+      "evidence": "profiles.test.ts -t 'update profile': 9 passed, exit 0. 401 signed out, round-trip and reversed order, empty array clears, 7 links/http/javascript/bad platform/bio 501/location 81 each 400 and profile deep-equals before (atomic)."
+    },
+    "AC8": {
+      "verdict": "pass",
+      "evidence": "profiles.test.ts -t 'cannot self': 5 passed, exit 0 (verified, role, email, username each 400 and unchanged; no by-username edit route). grep '/me/profile' -> routes/profiles.ts:21; grep '/users/:username/profile' empty (exit 1)."
+    },
+    "AC9": {
+      "verdict": "pass",
+      "evidence": "profiles.test.ts -t 'verified': 7 passed, exit 0 (admin set/unset reflected in GET, 401, 403 incl own username, 404, bad body 400)."
+    },
+    "AC10": {
+      "verdict": "pass",
+      "evidence": "avatars.test.ts exists, 15 passed, exit 0. Asserts /avatars/<id>-<8hex>.jpg, sharp metadata jpeg 400x400, GET image/jpeg immutable, replace removes old file, DELETE removes file, DELETE none 200, 401, non-image 400, oversize 413, wrong field 400, EXIF normalized via pixel colors, traversal 404."
+    },
+    "AC11": {
+      "verdict": "pass",
+      "evidence": "git diff --stat base..HEAD for all package.json + package-lock.json: empty. avatars.ts:45 rm(join(avatarsDir, basename(avatarPath))). paths.ts:12 DEFAULT_AVATARS_DIR = AVATARS_DIR ?? DATA_DIR/avatars. git diff --stat base..HEAD -- Dockerfile compose.yaml docker: empty."
+    },
+    "AC12": {
+      "verdict": "pass",
+      "evidence": "web.test.ts -t 'avatars': 2 passed, exit 0 (/u/someone -> 200 index.html; /avatars/missing.jpg -> 404 application/json, no <div id=app>). web.ts:7 NOT_PAGES includes '/avatars/'; vite.config.ts:13 proxies /avatars. Smoke confirmed live."
+    },
+    "AC13": {
+      "verdict": "pass",
+      "evidence": "auth-accounts.test.ts + profiles.test.ts: 47 passed, exit 0. auth-accounts:182 signup/login/me include avatarUrl null and verified false; :201 me reflects DB values. profiles.test.ts:266 'crate responses: no email' asserts no email/role key in crate list/detail."
+    },
+    "AC14": {
+      "verdict": "pass",
+      "evidence": "ownership, crates, albums, covers tests: 4 files, 66 passed, exit 0."
+    },
+    "AC15": {
+      "verdict": "pass",
+      "evidence": "router.test.ts 3 passed, exit 0: signed-out /profile/edit -> login with next=/profile/edit; /u/someone no requiresAuth, props {username}. router.ts:66 '/u/:username', :73 '/profile/edit'."
+    },
+    "AC16": {
+      "verdict": "pass",
+      "evidence": "ProfileView.test.ts 14 passed, exit 0. Asserts each link target=_blank and rel='noopener noreferrer' (3/3), avatar or initials placeholder, name/bio/location, crates, no [aria-label=Verified] when false, badge when true, 'Profile not found' on 404."
+    },
+    "AC17": {
+      "verdict": "pass",
+      "evidence": "grep -rn v-html apps/web/src: empty (exit 1). ProfileView.test.ts -t 'plain text': 1 passed, exit 0; asserts no img element and literal evil text in h1, .bio, .location."
+    },
+    "AC18": {
+      "verdict": "pass",
+      "evidence": "EditProfileView.test.ts 10 passed, exit 0: loads values, maxlength 60/500/80 + live counter, save payload keys exactly [displayName,bio,location,links], 7th link blocked (add disabled, 6 inputs, payload 6), API errors shown, upload/remove avatar, no extra controls. grep verified EditProfileView.vue: empty (exit 1)."
+    },
+    "AC19": {
+      "verdict": "pass",
+      "evidence": "App.test.ts 5 + ownerLink.test.ts 4 passed, exit 0 (profile link, Edit profile, badge shown/hidden, owner link /u/alice, nothing for null owner). grep '/u/' hits App.vue:35 and components/crate/OwnerLink.vue:12 (used by CrateView.vue:81)."
+    },
+    "AC20": {
+      "verdict": "pass",
+      "evidence": "session.test.ts 8 passed, exit 0; saveProfile/saveAvatar/deleteAvatar call API then refresh via /auth/me, no refresh on failure. api/profiles.ts exports getProfile, updateProfile, uploadAvatar, removeAvatar, setVerified."
+    },
+    "AC21": {
+      "verdict": "pass",
+      "evidence": "sql`...${` grep on services/profiles.ts, avatars.ts: empty. reply.code(4/reply.status(4 grep on routes/profiles.ts, avatars.ts: empty. Credential grep on git diff hits 3 lines (README SESSION_SECRET note, shared-auth.test.ts mock 'secret'), all unchanged context lines; grep of added/removed lines only: empty."
+    },
+    "AC22": {
+      "verdict": "pass",
+      "evidence": "avatars mentioned in docs/DEPLOY.md (7, 98-99, 142, 151, 161, 166), db/backup.ts:32, db/restore.ts:30. test -f docs/adr/0005-user-profiles.md -> 0."
+    }
+  },
+  "smoke": {
+    "verdict": "pass",
+    "setup": "git archive base 8eaedeb into /tmp/sy2-base (node_modules symlinked from repo), base server on DATA_DIR=/tmp/sy2-data :3911 with ADMIN_EMAIL; signup dee, crate \"Base Crate\", album Loveless. Base DB: 4 migrations, 2 users, 1 session. Then branch server on same DATA_DIR :3912 NODE_ENV=production with ADMIN_EMAIL/ADMIN_PASSWORD.",
+    "steps": [
+      "Migration: 5 migrations applied; both users bio \"\" location null avatar_path null verified 0; sessions 1, crates 1, albums 1, user_links 0. Old dee cookie still valid on /auth/me (now with avatarUrl null, verified false).",
+      "GET /api/users/dee -> {username,displayName,bio:\"\",location:null,avatarUrl:null,verified:false,links:[],crates:[Base Crate, albumCount 1]}; grep email|role|password count 0; /users/DEE 200; /users/nobody 404.",
+      "PATCH /me/profile bio+location+2 links -> 200, GET returns links in order. 7 links -> 400 \"Up to 6 links\"; http:// -> 400 \"Use a full https:// link\"; verified:true -> 400 Unrecognized key \"verified\"; profile unchanged after rejects; signed out 401.",
+      "POST /me/avatar with sharp-generated 640x480 PNG -> 200 avatarUrl /avatars/2-f0cf654a.jpg; GET -> 200 image/jpeg, cache-control public max-age=31536000 immutable; sharp metadata jpeg 400x400. Non-image -> 400. DELETE -> 200, avatars dir empty, GET old URL -> JSON 404. DELETE again -> 200. /avatars/missing.jpg JSON 404; /u/dee 200 text/html.",
+      "Admin PATCH /users/dee/verified true -> 200 verified:true in GET; false -> 200. Non-admin on own username 403 \"Only admins can do that\", on admin 403; signed out 401.",
+      "POST /albums/1/cover PNG -> 200 coverPath /covers/1-6e92e8c5.jpg, served 200 image/jpeg 800x800.",
+      "Servers killed (pgrep none). git status: only ?? run dir."
+    ],
+    "caveat": "Base signup returned 500 (ResponseSerializationError: avatarUrl/verified missing) because the symlinked node_modules resolved @frisson/shared to the branch copy. Harness artifact, not a branch defect; user, session and crate were still created."
+  },
+  "commandsRun": [
+    "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "git diff --name-status 8eaedeb..HEAD -- apps/api/drizzle; ls/grep on 0004_*.sql; cd apps/api && npx drizzle-kit generate",
+    "grep checks for AC4, AC5, AC8, AC11, AC15, AC17-AC22; git diff --stat for package files and Dockerfile/compose/docker",
+    "cd apps/api && npx vitest run test/migration.test.ts -t \"migration 0004\" | test/schema.test.ts | test/shared-profile.test.ts | test/profiles.test.ts -t \"public profile\"/\"update profile\"/\"cannot self\"/\"verified\" | test/avatars.test.ts | test/web.test.ts -t avatars | test/auth-accounts.test.ts test/profiles.test.ts | test/ownership.test.ts test/crates.test.ts test/albums.test.ts test/covers.test.ts",
+    "cd apps/web && npx vitest run src/router.test.ts | src/views/ProfileView.test.ts (and -t \"plain text\") | src/views/EditProfileView.test.ts | src/App.test.ts src/views/ownerLink.test.ts | src/stores/session.test.ts",
+    "git archive 8eaedeb | tar -x -C /tmp/sy2-base; base + branch servers with curl smoke (see smoke.steps)"
+  ],
+  "summary": "AC1-AC22 all pass with real, non-trivial assertions; end-to-end smoke from a base-commit DB passes. No defects found. Worktree clean apart from the untracked run dir."
+}

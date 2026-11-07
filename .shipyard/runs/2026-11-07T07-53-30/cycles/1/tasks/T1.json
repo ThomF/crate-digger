@@ -1,0 +1,37 @@
+{
+  "id": "T1",
+  "status": "implemented",
+  "commit": "7d81910",
+  "criteria": ["AC1", "AC2", "AC3", "AC4", "AC5", "AC13", "AC14"],
+  "filesChanged": [
+    "packages/shared/src/index.ts",
+    "apps/api/src/db/schema.ts",
+    "apps/api/src/services/users.ts",
+    "apps/api/drizzle/0004_user_profiles.sql",
+    "apps/api/drizzle/meta/0004_snapshot.json",
+    "apps/api/drizzle/meta/_journal.json",
+    "apps/api/test/migration.test.ts",
+    "apps/api/test/schema.test.ts",
+    "apps/api/test/shared-profile.test.ts",
+    "apps/api/test/auth-accounts.test.ts",
+    "apps/api/test/shared-auth.test.ts",
+    "apps/web/src/views/editControls.test.ts",
+    "apps/web/src/utils/permissions.test.ts",
+    "apps/web/src/stores/session.test.ts"
+  ],
+  "gates": { "format:check": "pass", "typecheck": "pass", "lint": "pass", "test": "pass (api 179, web 118)", "build": "pass" },
+  "migration": {
+    "file": "apps/api/drizzle/0004_user_profiles.sql",
+    "statements": "CREATE TABLE user_links, CREATE INDEX user_links_user_position_idx, 4x ALTER TABLE users ADD",
+    "dropOrRename": 0,
+    "cascade": true,
+    "regenerate": "No schema changes, nothing to migrate"
+  },
+  "dependencies": [],
+  "notes": [
+    "Generated meta/_journal.json and 0004_snapshot.json were run through prettier (whitespace only) so format:check passes, matching how 0000-0003 are committed; drizzle-kit still reports no schema changes.",
+    "AC13 crate 'no email' test and profiles.test.ts belong to T2; T1 covers the /auth/me, signup, login half.",
+    "sessions.ts untouched (not needed).",
+    "Extra export MAX_PROFILE_LINKS = 6 and ProfileCrate type added for the service."
+  ]
+}

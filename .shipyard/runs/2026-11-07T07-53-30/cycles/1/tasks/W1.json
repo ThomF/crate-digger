@@ -1,0 +1,32 @@
+{
+  "id": "W1",
+  "status": "implemented",
+  "commit": "5b8ba91",
+  "criteria": ["AC1", "AC15", "AC20"],
+  "filesChanged": [
+    "apps/web/src/api/profiles.ts",
+    "apps/web/src/stores/session.ts",
+    "apps/web/src/stores/session.test.ts",
+    "apps/web/src/router.ts",
+    "apps/web/src/router.test.ts",
+    "apps/web/src/views/ProfileView.vue",
+    "apps/web/src/views/EditProfileView.vue",
+    "apps/web/src/components/profile/VerifiedBadge.vue",
+    "apps/web/src/components/profile/VerifiedBadge.test.ts"
+  ],
+  "gates": {
+    "typecheck (web)": "pass",
+    "test (web)": "pass (127)",
+    "build (web)": "pass",
+    "eslint apps/web": "pass",
+    "prettier --check apps/web": "pass"
+  },
+  "dependencies": [],
+  "notes": [
+    "AC1 is repo-wide; only web gates were run here because T2/D1 have uncommitted work in progress in apps/api and docs.",
+    "profiles.ts helpers: getProfile, updateProfile, uploadAvatar (FormData field 'avatar'), removeAvatar, setVerified; all typed PublicProfile from @frisson/shared.",
+    "Session store: refresh() re-fetches /auth/me; saveProfile/saveAvatar/deleteAvatar call the API then refresh() and return the PublicProfile; no refresh when the call fails.",
+    "router.test.ts uses the real router with api/auth.ts mocked.",
+    "Placeholder views are minimal; EditProfileView has no 'verified'. No v-html."
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "concerns": ["structure", "tests"],
+  "structure": {
+    "layout": "npm workspaces monorepo 'frisson' (private, ESM, node>=22.18, .nvmrc 22): packages/shared (@frisson/shared: zod schemas + sorting, exports ./src/index.ts and ./sorting, no build), apps/api (@frisson/api: Fastify 5 + better-sqlite3 + drizzle, run as native TS via node, no build), apps/web (@frisson/web: Vue 3 + Pinia + vue-router + Vite 6). Other: docs/ (SPEC, DEPLOY, adr/0001-0004; 0004 is user accounts), docker/Caddyfile, .github/{workflows/ci.yml,pull_request_template.md}, tsconfig.base.json, eslint.config.js, prettier.",
+    "api_src": {
+      "top": ["app.ts", "server.ts", "paths.ts", "errors.ts"],
+      "plugins": ["auth.ts", "covers.ts", "db.ts", "error-handler.ts", "web.ts"],
+      "routes": ["albums.ts", "auth.ts", "covers.ts", "crates.ts", "health.ts"],
+      "services": ["albums", "bootstrap", "covers", "crates", "passwords", "permissions", "sessions", "users"],
+      "db": ["schema.ts", "client.ts", "seed.ts", "backup.ts", "restore.ts"],
+      "migrations": "apps/api/drizzle/0000_init, 0001_crate_sort_by, 0002_album_spin_count, 0003_accounts (+meta snapshots)"
+    },
+    "app_ts_registration": {
+      "entry": "buildApp(opts: AppOptions) in apps/api/src/app.ts; returns un-started Fastify. AppOptions: dbPath, coversDir, auth {production, rateLimit {max,timeWindow}}, webDir.",
+      "setup": "Fastify logger off when NODE_ENV=test; trustProxy from TRUST_PROXY=='true'; zod validator/serializer compilers.",
+      "order": [
+        "errorHandlerPlugin",
+        "dbPlugin {path} (decorates app.db)",
+        "authPlugin {production} (fastify-plugin; registers @fastify/cookie, decorateRequest 'user', decorate 'auth' with set/clearSessionCookie, onRequest hook resolves cookie frisson_session -> req.user via findSessionUser; must follow dbPlugin)",
+        "coversPlugin {dir}",
+        "healthRoutes prefix /api",
+        "authRoutes prefix /api {rateLimit} (registers @fastify/rate-limit internally; POST /auth/signup, POST /auth/login presumably, POST /auth/logout, GET /auth/me)",
+        "crateRoutes prefix /api",
+        "albumRoutes prefix /api",
+        "coverRoutes prefix /api",
+        "webPlugin {dir: webDir ?? WEB_DIR} (last; static + SPA catch-all)"
+      ],
+      "server_ts": "calls buildApp then bootstrapFromEnv(app.db, process.env, app.log) (ADMIN_EMAIL/ADMIN_PASSWORD first-admin creation)."
+    },
+    "docker": "Dockerfile multi-stage on node:22-bookworm-slim: manifests -> web-build (npm ci, npm run build -w apps/web) -> api-deps (npm ci --omit=dev -w apps/api) -> runtime (NODE_ENV=production, DATA_DIR=/data, WEB_DIR=/app/apps/web/dist, user node, HEALTHCHECK /api/health, CMD node apps/api/src/server.ts). compose.yaml: app (requires ADMIN_EMAIL, ADMIN_PASSWORD from .env; TRUST_PROXY=true; volume crate-data) + caddy:2 (docker/Caddyfile, 80/443). .dockerignore present.",
+    "ci": ".github/workflows/ci.yml on pull_request and push to main. Job 'check': checkout, setup-node (.nvmrc, npm cache), npm ci, format:check, lint, typecheck, test, build. Job 'docker': buildx build image frisson:ci, run with ADMIN_EMAIL/ADMIN_PASSWORD, poll /api/health and check '/' contains <div id=\"app\">."
+  },
+  "tests": {
+    "runners": "vitest ^3.2 in both apps (script 'vitest run'). shared package has no tests and no test script.",
+    "api": {
+      "config": "no vitest config file in apps/api (defaults). Tests in apps/api/test/*.test.ts: crates, migration, ownership, schema, auth-accounts, covers, shared-auth, web, albums, bootstrap, sorting, passwords, health. tsconfig includes src and test.",
+      "helpers_file": "apps/api/test/helpers.ts",
+      "helpers": {
+        "buildTestApp(opts?)": "buildApp with dbPath ':memory:', temp covers dir (mkdtemp, removed in onClose unless opts.coversDir given), auth {production:false, rateLimit {max:10000,timeWindow:60000}} overridable. Caller must app.close().",
+        "TestApp": "Awaited<ReturnType<typeof buildTestApp>>",
+        "SignedIn": "{ user: PublicUser, cookie: string, headers: {cookie} } ; cookie is 'frisson_session=<token>' (SESSION_COOKIE)",
+        "signUp(app, overrides?)": "real POST /api/auth/signup with unique email/username (pid-counter) and password 'test-password-123'; expects 201; reads session cookie from response; returns SignedIn for a regular user.",
+        "createAdmin(app, overrides?)": "inserts admin directly via createUser(app.db, signup, 'admin') (displayName 'Admin') and createSession(app.db, user.id); returns SignedIn. Signup cannot create admins.",
+        "addCrate(app, name?, sortOrder?, ownerId?)": "inserts crate straight into db; ownerId null = legacy crate (admin-only).",
+        "multipart(fieldName, fileName, contentType, data)": "hand-built multipart body returning {payload, headers}."
+      },
+      "usage": "app.inject({method,url,headers: user.headers, payload}); no real port opened."
+    },
+    "web": {
+      "config": "test block inside apps/web/vite.config.ts: environment 'happy-dom'; no setupFiles, no separate vitest config. @vue/test-utils used. Tests colocated as *.test.ts beside source (viewTransitions, CrateBox, editControls, useCrateFlip, useAlbumSearch, permissions, redirect, crateLayout, tracks, session store, library store, TrackList, RecordStage, TrackEditor, CoverUpload, albumForm)."
+    },
+    "root_commands": {
+      "test": "npm test  (npm run test --workspaces --if-present => api + web vitest run)",
+      "single_workspace": "npm test -w apps/api ; npm test -w apps/web",
+      "single_file": "npm test -w apps/api -- test/ownership.test.ts",
+      "typecheck": "npm run typecheck (api tsc, web vue-tsc, shared tsc)",
+      "lint": "npm run lint (eslint .)",
+      "format_check": "npm run format:check",
+      "build": "npm run build (only web has a build script)",
+      "dev": "npm run dev (concurrently api + web)"
+    }
+  },
+  "absent": ["vitest config files / setupFiles", "tests in packages/shared", "e2e/browser tests", "coverage config", "API build step"]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "T3",
+  "status": "implemented",
+  "commit": "10a7668",
+  "files": [
+    "apps/api/src/plugins/uploads.ts",
+    "apps/api/src/plugins/covers.ts",
+    "apps/api/src/plugins/avatars.ts",
+    "apps/api/src/routes/covers.ts",
+    "apps/api/src/routes/avatars.ts",
+    "apps/api/src/services/avatars.ts",
+    "apps/api/src/paths.ts",
+    "apps/api/src/plugins/web.ts",
+    "apps/api/src/app.ts",
+    "apps/web/vite.config.ts",
+    "apps/api/test/helpers.ts",
+    "apps/api/test/avatars.test.ts",
+    "apps/api/test/web.test.ts"
+  ],
+  "criteria": ["AC1", "AC10", "AC11", "AC12", "AC14", "AC21"],
+  "checks": {
+    "format_check": "pass",
+    "typecheck": "pass",
+    "lint": "pass (first run failed on no-explicit-any in W2's apps/web/src/views/ProfileView.vue; clean on rerun, not touched by T3)",
+    "test": "pass (api 16 files 222 tests; web 23 files 167 tests)",
+    "build": "pass",
+    "avatars_test": "15 passed; EXIF test verified to fail with rotate() removed",
+    "web_test_avatars": "pass",
+    "ac14_suites": "ownership, crates, albums, covers pass unmodified",
+    "deps": "no package.json or lockfile changes; Dockerfile/compose unchanged"
+  },
+  "notes": "multipart registered once in uploadsPlugin (max of cover/avatar limits); covers and avatars pass per-request fileSize via req.file({ limits }), which @fastify/multipart deep-merges. 413 comes from multipart's RequestFileTooLargeError, same as covers."
+}

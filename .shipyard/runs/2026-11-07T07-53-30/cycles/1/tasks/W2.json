@@ -1,0 +1,33 @@
+{
+  "id": "W2",
+  "status": "implemented",
+  "commit": "e43bb6e",
+  "criteria": ["AC1", "AC16", "AC17", "AC19"],
+  "filesChanged": [
+    "apps/web/src/views/ProfileView.vue",
+    "apps/web/src/views/ProfileView.test.ts",
+    "apps/web/src/App.vue",
+    "apps/web/src/App.test.ts",
+    "apps/web/src/views/CrateView.vue",
+    "apps/web/src/components/crate/OwnerLink.vue",
+    "apps/web/src/views/ownerLink.test.ts"
+  ],
+  "gates": {
+    "typecheck (web)": "pass",
+    "test (web)": "pass (167, includes in-progress W3 tests present in the tree)",
+    "build (web)": "pass",
+    "eslint apps/web": "pass",
+    "prettier --check apps/web": "pass",
+    "grep v-html apps/web/src": "no matches"
+  },
+  "dependencies": [],
+  "notes": [
+    "AC1 is repo-wide; only web gates run here since T3/W3 have uncommitted work in progress.",
+    "ProfileView: statuses loading/ready/not-found/error; watch(username, immediate). 404 shows 'Profile not found.'; other errors show message plus Try again. Avatar img alt=displayName or initials placeholder (aria-hidden span). Bio uses white-space: pre-line. Edit profile RouterLink (name profile-edit) only when session.user.username matches.",
+    "ProfileView.test.ts: 14 tests incl. 'renders bio and display name as plain text, never HTML' (avatarUrl null, asserts no img and literal text).",
+    "App.vue: name is RouterLink a.who to /u/<username> with VerifiedBadge when verified; Edit profile link; Log out kept. App.test.ts: 5 tests with stubbed fetch.",
+    "OwnerLink.vue (props username: string|null, displayName?): renders nothing when username null. CrateView passes crate.ownerUsername/ownerDisplayName; CrateView contains '/u/' only in a comment, the link itself is in OwnerLink.vue.",
+    "Test quirk: a persistent vi mockRejectedValue made vitest fail the 404 test even though the view caught it; mockRejectedValueOnce is used instead.",
+    "Process note: I ran prettier --write over apps/web/src once (not only my files). It can only have reformatted files, and W3's in-progress files may have been touched by it; I committed only my own files."
+  ]
+}
