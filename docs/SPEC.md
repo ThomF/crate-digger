@@ -1,4 +1,4 @@
-# Crate Digger — Spec
+# Frisson — Spec
 
 A self-hosted music collection tracker. Your albums live as vinyl sleeves in 90s-style
 record crates: flip through them, pull one out, and it opens to show the record and its
@@ -21,7 +21,7 @@ See [ADR 0001](adr/0001-stack.md) for the reasoning.
 ## 2. Repo structure (npm workspaces monorepo)
 
 ```
-crate-digger/
+frisson/
 ├── apps/
 │   ├── web/                    # Vue frontend
 │   │   ├── src/

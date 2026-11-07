@@ -5,7 +5,7 @@
 
 ## Context
 
-Crate Digger should be easy to self-host on a small VPS or a home machine, safe to expose
+Frisson should be easy to self-host on a small VPS or a home machine, safe to expose
 publicly, and simple to back up.
 
 ## Decision

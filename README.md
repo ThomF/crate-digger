@@ -1,4 +1,4 @@
-# 🎛️ Crate Digger
+# 🎛️ Frisson
 
 Your music collection as 90s record crates. Flip through the sleeves, pull one out, and spin it.
 

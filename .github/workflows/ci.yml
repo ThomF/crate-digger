@@ -35,13 +35,13 @@ jobs:
         with:
           context: .
           load: true
-          tags: crate-digger:ci
+          tags: frisson:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test the image
         run: |
-          docker run -d --name app -p 3000:3000 -e ADMIN_PASSWORD=ci-only crate-digger:ci
+          docker run -d --name app -p 3000:3000 -e ADMIN_PASSWORD=ci-only frisson:ci
           for _ in $(seq 1 30); do
             if curl -sf localhost:3000/api/health; then
               curl -sf localhost:3000/ | grep -q '<div id="app">' && echo " web app served"

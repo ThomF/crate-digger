@@ -5,7 +5,7 @@
 
 ## Context
 
-Crate Digger is a learning project as much as a product. The frontend is fixed as Vue. The
+Frisson is a learning project as much as a product. The frontend is fixed as Vue. The
 backend should be easy to follow, cheap to self-host, and teach transferable patterns.
 
 ## Decision

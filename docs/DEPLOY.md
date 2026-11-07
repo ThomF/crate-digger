@@ -1,4 +1,4 @@
-# Deploying Crate Digger
+# Deploying Frisson
 
 One server, Docker Compose, two containers:
 
