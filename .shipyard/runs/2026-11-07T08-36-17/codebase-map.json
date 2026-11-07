@@ -1,0 +1,160 @@
+{
+  "commit": "1278ddfd8222ad32ef9c604eb62d1b303292d95c",
+  "structureTests": {
+    "concerns": [
+      "structure",
+      "tests"
+    ],
+    "structure": {
+      "root": {
+        "name": "frisson",
+        "type": "module",
+        "workspaces": [
+          "packages/*",
+          "apps/*"
+        ],
+        "node": ">=22.18",
+        "workspaceDirs": [
+          "apps/api",
+          "apps/web",
+          "packages/shared"
+        ]
+      },
+      "web": {
+        "package": "@frisson/web",
+        "stack": "Vue 3.5, vue-router 4, pinia 3, vite 6, vitest 3, happy-dom, @vue/test-utils, vue-tsc",
+        "src": {
+          "entry": [
+            "main.ts",
+            "App.vue",
+            "router.ts",
+            "env.d.ts",
+            "viewTransitions.ts"
+          ],
+          "dirs": {
+            "components": "subfolders album/, forms/, profile/, crate/ plus top-level LibraryToolbar.vue",
+            "views": "CrateView, CratesView, LibraryView, AlbumView, AlbumEditorView, LoginView, SignupView, ProfileView, EditProfileView, NotFoundView",
+            "stores": "session.ts, library.ts",
+            "api": "client, auth, albums, crates, profiles",
+            "composables": "useAlbumSearch, useCrateFlip",
+            "utils": "crateLayout, redirect, tracks, color, permissions",
+            "forms": "albumForm.ts",
+            "styles": "base.css (114 lines, only file)"
+          }
+        },
+        "router": "exports `router` (createWebHistory); lazy views for most routes; meta.requiresAuth augmented via declare module; guard uses session store"
+      }
+    },
+    "tests": {
+      "framework": "vitest run, environment happy-dom (configured in apps/web/vite.config.ts test block)",
+      "location": "colocated *.test.ts next to source",
+      "rootCommands": {
+        "test": "npm run test (workspaces --if-present)",
+        "typecheck": "npm run typecheck",
+        "lint": "npm run lint (eslint .)",
+        "format:check": "npm run format:check",
+        "build": "npm run build"
+      },
+      "webOnly": "npm run test -w apps/web",
+      "appVueMount": "App.test.ts: createPinia()+setActivePinia, createRouter with createMemoryHistory and Blank stub routes, await router.push('/') and isReady, mount(App, {global:{plugins:[pinia, router]}}), flushPromises; fetch stubbed with vi.stubGlobal",
+      "routerTest": "router.test.ts: imports real `router`, setActivePinia(createPinia()) per test, vi.mock('./api/auth.ts'), asserts router.currentRoute after router.push"
+    },
+    "absent": [
+      "web vitest setup file",
+      "separate vitest config"
+    ]
+  },
+  "conventionsDocs": {
+    "concerns": [
+      "conventions",
+      "documentation"
+    ],
+    "conventions": {
+      "vue": "All SFCs use <script setup lang=\"ts\"> then <template> then <style scoped> (28 of 30 have scoped style; EmptyShelf.vue and NotFoundView.vue have none). No unscoped component styles.",
+      "global_css": "Single file apps/web/src/styles/base.css, imported in main.ts. No fonts loaded (no @font-face, no link in index.html).",
+      "tokens": {
+        "colors": [
+          "--cardboard #c8a374",
+          "--cardboard-dark #8a6a43",
+          "--paper #f3ead8",
+          "--paper-dark #e6d9bf",
+          "--ink #2b2118",
+          "--ink-soft #6b5a48",
+          "--marker-red #c0392b",
+          "--ok-green #2e7d32",
+          "--star #d4a017"
+        ],
+        "fonts": [
+          "--font-display: 'Courier New', Courier, monospace",
+          "--font-body: system-ui, sans-serif"
+        ],
+        "note": "No spacing/radius/shadow tokens. 25 raw hex literals remain in .vue files."
+      },
+      "base_rules": "box-sizing reset; body paper bg, ink text, font-body, line-height 1.5; a{color:inherit}; button{font:inherit;cursor:pointer}; inputs flat (border 1px ink-soft, radius 0); .sr-only; .status-note; view-transition animation rules.",
+      "buttons_links": "Global .btn class (display font, ink bg, paper text, no border, padding .4rem 1rem, margin-left .5rem) used on both <button> and RouterLink. Header user-menu links use ink-soft colour; Log out is a button styled as underlined text link (scoped in App.vue). Primary identity link .who is bold ink, underline on hover only.",
+      "focus": "Global :focus-visible 3px solid --marker-red, offset 2px. Component-specific: .pick:focus-within (AvatarUpload, CoverUpload), VinylDisc .vinyl:focus-visible, CrateBox .scene:focus-visible .crate-label, RatingInput .star:has(:focus-visible). No outline:none resets found in base.css.",
+      "reduced_motion": "@media (prefers-reduced-motion: reduce) in RecordStage and VinylDisc; viewTransitions.ts checks it.",
+      "header_current": "App.vue: <header class=masthead> (centered, double bottom border) with RouterLink .sign 'Frisson' (display font, marker-red, text-shadow), p.tagline, nav.user-menu aria-label=Account (conditional on session.loaded). Second nav in LibraryToolbar.vue (aria-label=View: Crates/List, plus Edit crates and '+ Add a record' .btn) rendered inside LibraryView and CrateView, not in App header. App.test.ts selects 'nav.user-menu' by class.",
+      "prettier": "semi false, singleQuote, printWidth 100, trailingComma all; .prettierignore: dist, coverage, package-lock.json, .shipyard. Scripts: format, format:check.",
+      "eslint": "Flat config: eslint-plugin-vue flat/essential, vue-ts recommended, prettier skip-formatting. Script: lint (eslint .).",
+      "editorconfig": "utf-8, lf, 2-space, final newline, trim trailing ws (not md).",
+      "vscode": "Prettier format on save, eslint fixAll, recommended extensions Volar/ESLint/Prettier/EditorConfig.",
+      "tests": "Vitest co-located *.test.ts; no CSS/visual tests."
+    },
+    "documentation": {
+      "files": [
+        "README.md (154 lines)",
+        "docs/SPEC.md (140)",
+        "docs/DEPLOY.md (184)",
+        "docs/adr/0001-0005 (stack, native TS, deployment, user accounts, user profiles)"
+      ],
+      "header_navigation": "No doc describes the header, masthead or navigation. ADRs and README are silent. SPEC tree lists views as CrateView, AlbumView, AddAlbumView (outdated vs actual).",
+      "visual_style": "SPEC.md section 5 line ~102: '90s feel: paper/cardboard textures, price-tag stickers (rating), marker-style labels, a light grain overlay, a pixel or typewriter display font.' SPEC line 36 lists styles/ as 'tokens.css, textures, 90s fonts' but actual file is base.css only; no textures/grain/fonts present.",
+      "accessibility": "SPEC line ~104: full keyboard navigation, prefers-reduced-motion respected, real buttons behind 3D effects.",
+      "adr_on_ui": "None."
+    }
+  },
+  "relevant": {
+    "concern": "relevant",
+    "target": "apps/web",
+    "findings": {
+      "App.vue": {
+        "path": "apps/web/src/App.vue",
+        "lines": 124,
+        "script": "1-24 (imports onMounted/ref, RouterLink/RouterView/useRouter, errorMessage, useSessionStore, VerifiedBadge; session.load() onMounted L10; logOutError ref L12; logOut L14-23 calls session.logOut, sets error on throw, pushes {name:'library'} if currentRoute.meta.requiresAuth)",
+        "template": "26-55: header.masthead L27; RouterLink.sign L28; p.tagline L29; nav.user-menu v-if session.loaded L31 aria-label Account; signed-in: RouterLink.who to /u/{encodeURIComponent(username)} showing displayName||username + VerifiedBadge v-if user.verified L33-40, RouterLink profile-edit 'Edit profile' L41, button 'Log out' @click logOut L42; signed-out: Log in (hidden on route login) L45, Sign up (hidden on signup) L46 via $route.name; span.menu-error role=alert L48; main.page L52-54",
+        "styles": "scoped 57-124: .masthead text-align center, padding 2rem 1rem 1rem, border-bottom 3px double cardboard-dark (58-62; no position/flex); .sign 64-72; .tagline 74-78; .user-menu flex centered baseline wrap gap .75rem mt .75rem display font .85rem (80-89); .who 91-99; .user-menu button unstyled underlined (101-109); .user-menu a ink-soft (111-113); .menu-error 115-117; .page 119-123"
+      },
+      "tests": {
+        "App.test.ts": "apps/web/src/App.test.ts 100 lines; stubs fetch for /me (L22-33); memory router with routes library, login, signup, profile (/u/:username), profile-edit (L38-47); selector helper menu() = 'nav.user-menu' (L55); 5 tests L61-99 assert: links a[href=/u/alice] contains display name, 'Edit profile' a href /profile/edit, first button text 'Log out' (L69); no [aria-label=Verified] when unverified; a.who contains Verified badge; a.who text 'alice' with empty displayName; signed-out shows Log in/Sign up, no Edit profile, no a.who. No logout/click/error test exists.",
+        "other": "router.test.ts, session.test.ts exist; no VerifiedBadge use in tests other than VerifiedBadge.test.ts"
+      },
+      "sessionStore": {
+        "path": "apps/web/src/stores/session.ts",
+        "exports": "user L11 (PublicUser|null), loaded L12, signedIn L15, isAdmin L16, load L19, refresh L56, logIn L40, signUp L44, logOut L48-53 (api.logOut then user=null), saveProfile, saveAvatar, deleteAvatar; return L82-95",
+        "PublicUser": "packages/shared/src/index.ts L160-170: id, email, username, displayName, role, avatarUrl (string|null), verified (boolean)"
+      },
+      "VerifiedBadge": "apps/web/src/components/profile/VerifiedBadge.vue 31 lines, no props; span.verified-badge role=img aria-label=Verified, inline SVG 1em, color marker-red, margin-left .25em; test VerifiedBadge.test.ts",
+      "avatarRendering": {
+        "reusableAvatarComponent": "none",
+        "ProfileView": "apps/web/src/views/ProfileView.vue: initials computed L36-43 (displayName.trim()||username; two words -> first letters of first two words, else first 2 chars, uppercased; local to view, not exported); template L80-86: img.avatar v-if avatarUrl alt=displayName, else span.avatar.placeholder aria-hidden with initials; CSS .avatar 6rem square, 2px ink border, object-fit cover (L145-151); .placeholder cardboard bg, display font 2rem bold (L153-162)",
+        "AvatarUpload": "apps/web/src/components/profile/AvatarUpload.vue: props avatarUrl, displayName; initial = first char uppercased or '?' (L31); img preview L88 / span.empty L89",
+        "utils": "no initials helper in src/utils (color.ts, crateLayout, permissions, redirect, tracks)"
+      },
+      "routes": {
+        "file": "apps/web/src/router.ts",
+        "profile": "L65-71 path /u/:username name 'profile', public, props username",
+        "profile-edit": "L72-77 path /profile/edit name 'profile-edit', meta.requiresAuth true",
+        "others": "library '/', list, crates (requiresAuth), login, signup (props next), album, album-new/album-edit (requiresAuth), not-found",
+        "guard": "L85-90 beforeEach awaits session.load, redirects to login with query next if requiresAuth and not signed in; RouteMeta.requiresAuth typed L7-12"
+      },
+      "dropdownPatterns": "none. No click-outside, Escape handling, aria-haspopup/aria-expanded, role=menu, <details>, or popover/dropdown anywhere in apps/web/src. Only keydown uses: CrateView/CrateBox @keydown (CrateBox.vue L83), TrackEditor @keydown.enter. addEventListener only for wheel in CrateBox.vue L67. No z-index except 1 in RecordStage.vue L61 and SleeveArt.vue L86,L141. No component library.",
+      "baseCss": {
+        "path": "apps/web/src/styles/base.css",
+        "tokens": ":root L2-15: --cardboard #c8a374, --cardboard-dark #8a6a43, --paper #f3ead8, --paper-dark #e6d9bf, --ink #2b2118, --ink-soft #6b5a48, --marker-red #c0392b, --ok-green, --star, --font-display Courier New mono, --font-body system-ui",
+        "globals": "button font inherit/cursor pointer L35-38; :focus-visible 3px marker-red outline offset 2px L40-43; .btn L57-64; .status-note L46-55; .sr-only defined ~L93; inputs L67-77; no spacing/shadow tokens; card look elsewhere: paper bg, 2px ink border, 4px 4px 0 cardboard-dark shadow (ProfileView card)"
+      }
+    }
+  },
+  "testCommand": "npm run format:check && npm run typecheck && npm run lint && npm test && npm run build"
+}

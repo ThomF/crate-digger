@@ -1,0 +1,15 @@
+{
+  "id": "T2",
+  "status": "implemented",
+  "commit": "b5b6438",
+  "files": ["apps/web/src/views/ProfileView.vue"],
+  "criteria": ["AC2", "AC12", "AC13", "AC14"],
+  "gates": {"format:check": "pass", "typecheck": "pass", "lint": "pass", "test": "pass (web 180, api 222)", "build": "pass"},
+  "tests": {"ProfileView.test.ts": "14 passed, unchanged", "App.test.ts -t 'shows initials when there is no avatar'": "passed"},
+  "blockers": [],
+  "notes": [
+    "Local initials computation replaced by initials(displayName, username) from utils/initials.ts, imported as initialsFor; computed returns '' when profile is null, same as before.",
+    "Template, classes (.avatar, .placeholder), alt text and styles untouched; UserAvatar not used so the DOM stays identical.",
+    "No new tests: helper is covered by T1's initials.test.ts and ProfileView behaviour by the existing ProfileView.test.ts."
+  ]
+}

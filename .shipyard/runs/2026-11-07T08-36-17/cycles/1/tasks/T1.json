@@ -1,0 +1,24 @@
+{
+  "id": "T1",
+  "status": "implemented",
+  "commit": "179fb1c",
+  "files": [
+    "apps/web/src/utils/initials.ts",
+    "apps/web/src/utils/initials.test.ts",
+    "apps/web/src/components/profile/UserAvatar.vue",
+    "apps/web/src/components/AccountMenu.vue",
+    "apps/web/src/App.vue",
+    "apps/web/src/App.test.ts"
+  ],
+  "criteria": ["AC1","AC2","AC3","AC4","AC5","AC6","AC7","AC8","AC9","AC10","AC11","AC12","AC13","AC14"],
+  "gates": {"format:check": "pass", "typecheck": "pass", "lint": "pass", "test": "pass (web 180, api 222)", "build": "pass"},
+  "tests": {"App.test.ts": "14 passed, brief titles exact", "initials.test.ts": "4 passed"},
+  "blockers": [],
+  "notes": [
+    "Log out logic moved from App.vue into AccountMenu.vue; menu closes before awaiting logout, alert shown inside AccountMenu on failure.",
+    "Escape and outside click use document listeners added on mount, removed on unmount; outside click uses root.contains.",
+    "Signed-out links use nav.auth-links aria-label Account inside .account; nav.user-menu exists only when signed in.",
+    "Masthead padding-inline 4.75rem narrow, 10rem at >=40rem; narrow-width overlap verified by CSS reasoning only, not visually.",
+    "ProfileView still has its own inline initials (T2 scope)."
+  ]
+}

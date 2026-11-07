@@ -1,0 +1,25 @@
+{
+ "concerns": ["conventions","documentation"],
+ "conventions": {
+  "vue": "All SFCs use <script setup lang=\"ts\"> then <template> then <style scoped> (28 of 30 have scoped style; EmptyShelf.vue and NotFoundView.vue have none). No unscoped component styles.",
+  "global_css": "Single file apps/web/src/styles/base.css, imported in main.ts. No fonts loaded (no @font-face, no link in index.html).",
+  "tokens": {"colors":["--cardboard #c8a374","--cardboard-dark #8a6a43","--paper #f3ead8","--paper-dark #e6d9bf","--ink #2b2118","--ink-soft #6b5a48","--marker-red #c0392b","--ok-green #2e7d32","--star #d4a017"],"fonts":["--font-display: 'Courier New', Courier, monospace","--font-body: system-ui, sans-serif"],"note":"No spacing/radius/shadow tokens. 25 raw hex literals remain in .vue files."},
+  "base_rules": "box-sizing reset; body paper bg, ink text, font-body, line-height 1.5; a{color:inherit}; button{font:inherit;cursor:pointer}; inputs flat (border 1px ink-soft, radius 0); .sr-only; .status-note; view-transition animation rules.",
+  "buttons_links": "Global .btn class (display font, ink bg, paper text, no border, padding .4rem 1rem, margin-left .5rem) used on both <button> and RouterLink. Header user-menu links use ink-soft colour; Log out is a button styled as underlined text link (scoped in App.vue). Primary identity link .who is bold ink, underline on hover only.",
+  "focus": "Global :focus-visible 3px solid --marker-red, offset 2px. Component-specific: .pick:focus-within (AvatarUpload, CoverUpload), VinylDisc .vinyl:focus-visible, CrateBox .scene:focus-visible .crate-label, RatingInput .star:has(:focus-visible). No outline:none resets found in base.css.",
+  "reduced_motion": "@media (prefers-reduced-motion: reduce) in RecordStage and VinylDisc; viewTransitions.ts checks it.",
+  "header_current": "App.vue: <header class=masthead> (centered, double bottom border) with RouterLink .sign 'Frisson' (display font, marker-red, text-shadow), p.tagline, nav.user-menu aria-label=Account (conditional on session.loaded). Second nav in LibraryToolbar.vue (aria-label=View: Crates/List, plus Edit crates and '+ Add a record' .btn) rendered inside LibraryView and CrateView, not in App header. App.test.ts selects 'nav.user-menu' by class.",
+  "prettier": "semi false, singleQuote, printWidth 100, trailingComma all; .prettierignore: dist, coverage, package-lock.json, .shipyard. Scripts: format, format:check.",
+  "eslint": "Flat config: eslint-plugin-vue flat/essential, vue-ts recommended, prettier skip-formatting. Script: lint (eslint .).",
+  "editorconfig": "utf-8, lf, 2-space, final newline, trim trailing ws (not md).",
+  "vscode": "Prettier format on save, eslint fixAll, recommended extensions Volar/ESLint/Prettier/EditorConfig.",
+  "tests": "Vitest co-located *.test.ts; no CSS/visual tests."
+ },
+ "documentation": {
+  "files": ["README.md (154 lines)","docs/SPEC.md (140)","docs/DEPLOY.md (184)","docs/adr/0001-0005 (stack, native TS, deployment, user accounts, user profiles)"],
+  "header_navigation": "No doc describes the header, masthead or navigation. ADRs and README are silent. SPEC tree lists views as CrateView, AlbumView, AddAlbumView (outdated vs actual).",
+  "visual_style": "SPEC.md section 5 line ~102: '90s feel: paper/cardboard textures, price-tag stickers (rating), marker-style labels, a light grain overlay, a pixel or typewriter display font.' SPEC line 36 lists styles/ as 'tokens.css, textures, 90s fonts' but actual file is base.css only; no textures/grain/fonts present.",
+  "accessibility": "SPEC line ~104: full keyboard navigation, prefers-reduced-motion respected, real buttons behind 3D effects.",
+  "adr_on_ui": "None."
+ }
+}

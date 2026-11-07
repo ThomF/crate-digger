@@ -21,3 +21,9 @@
 - Deaths: none. Blockers: none
 - Known limits: 6-link cap app-enforced; no avatar cleanup on user delete; owner_id FK still lacks ON DELETE SET NULL
 - Merged and pushed to main at the owner's request
+
+## 2026-11-07T08-36-17: header account menu
+- Verdict: shipped (14/14 criteria, real-Chrome checks at 1280/390/320), 1 cycle, 0 fix rounds, 2 tasks
+- Wall clock: 13m 35s; slowest stage: build (6m)
+- Deaths: none. Blockers: none
+- Merged and pushed to main at the owner's request

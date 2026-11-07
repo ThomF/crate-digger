@@ -1,0 +1,33 @@
+{
+  "concerns": ["structure", "tests"],
+  "structure": {
+    "root": {"name": "frisson", "type": "module", "workspaces": ["packages/*", "apps/*"], "node": ">=22.18", "workspaceDirs": ["apps/api", "apps/web", "packages/shared"]},
+    "web": {
+      "package": "@frisson/web",
+      "stack": "Vue 3.5, vue-router 4, pinia 3, vite 6, vitest 3, happy-dom, @vue/test-utils, vue-tsc",
+      "src": {
+        "entry": ["main.ts", "App.vue", "router.ts", "env.d.ts", "viewTransitions.ts"],
+        "dirs": {
+          "components": "subfolders album/, forms/, profile/, crate/ plus top-level LibraryToolbar.vue",
+          "views": "CrateView, CratesView, LibraryView, AlbumView, AlbumEditorView, LoginView, SignupView, ProfileView, EditProfileView, NotFoundView",
+          "stores": "session.ts, library.ts",
+          "api": "client, auth, albums, crates, profiles",
+          "composables": "useAlbumSearch, useCrateFlip",
+          "utils": "crateLayout, redirect, tracks, color, permissions",
+          "forms": "albumForm.ts",
+          "styles": "base.css (114 lines, only file)"
+        }
+      },
+      "router": "exports `router` (createWebHistory); lazy views for most routes; meta.requiresAuth augmented via declare module; guard uses session store"
+    }
+  },
+  "tests": {
+    "framework": "vitest run, environment happy-dom (configured in apps/web/vite.config.ts test block)",
+    "location": "colocated *.test.ts next to source",
+    "rootCommands": {"test": "npm run test (workspaces --if-present)", "typecheck": "npm run typecheck", "lint": "npm run lint (eslint .)", "format:check": "npm run format:check", "build": "npm run build"},
+    "webOnly": "npm run test -w apps/web",
+    "appVueMount": "App.test.ts: createPinia()+setActivePinia, createRouter with createMemoryHistory and Blank stub routes, await router.push('/') and isReady, mount(App, {global:{plugins:[pinia, router]}}), flushPromises; fetch stubbed with vi.stubGlobal",
+    "routerTest": "router.test.ts: imports real `router`, setActivePinia(createPinia()) per test, vi.mock('./api/auth.ts'), asserts router.currentRoute after router.push"
+  },
+  "absent": ["web vitest setup file", "separate vitest config"]
+}

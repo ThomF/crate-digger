@@ -1,0 +1,64 @@
+{
+  "runId": "2026-11-07T08-36-17",
+  "target": "/home/claude/crate-digger",
+  "request": "Header user menu: avatar on the right of the header; click opens View profile, Edit profile, Log out. Push to main.",
+  "branch": "shipyard/header-user-menu-2026-11-07T08-36-17",
+  "stage": "done",
+  "cycle": 1,
+  "maxCycles": 3,
+  "fixRound": 0,
+  "maxFixRounds": 3,
+  "criteria": {
+    "AC1": "pass",
+    "AC2": "pass",
+    "AC3": "pass",
+    "AC4": "pass",
+    "AC5": "pass",
+    "AC6": "pass",
+    "AC7": "pass",
+    "AC8": "pass",
+    "AC9": "pass",
+    "AC10": "pass",
+    "AC11": "pass",
+    "AC12": "pass",
+    "AC13": "pass",
+    "AC14": "pass"
+  },
+  "tasks": {
+    "T1": "done",
+    "T2": "done"
+  },
+  "deaths": [],
+  "verdict": "shipped",
+  "baseCommit": "1278ddfd8222ad32ef9c604eb62d1b303292d95c",
+  "startedAt": "2026-11-07T08:36:17Z",
+  "endedAt": "2026-11-07T08:49:52Z",
+  "stageTimes": {
+    "intake": {
+      "start": "2026-11-07T08:36:17Z",
+      "end": "2026-11-07T08:37:45Z"
+    },
+    "survey": {
+      "start": "2026-11-07T08:36:17Z",
+      "end": "2026-11-07T08:37:45Z"
+    },
+    "plan": {
+      "start": "2026-11-07T08:37:45Z",
+      "end": "2026-11-07T08:39:02Z"
+    },
+    "build": {
+      "start": "2026-11-07T08:39:02Z",
+      "end": "2026-11-07T08:45:03Z"
+    },
+    "test": {
+      "start": "2026-11-07T08:45:03Z",
+      "end": "2026-11-07T08:49:17Z"
+    },
+    "report": {
+      "start": "2026-11-07T08:49:17Z",
+      "end": "2026-11-07T08:49:52Z"
+    }
+  },
+  "active": [],
+  "fastPaths": []
+}

@@ -1,0 +1,50 @@
+{
+  "goal": "Move the account UI in the Frisson header to the right: a round avatar button (initials fallback) that toggles an accessible right-aligned dropdown with a name/@username/verified header, View profile, Edit profile and Log out; signed-out Log in / Sign up also sit on the right. Pure web change in apps/web.",
+  "constraints": [
+    "Only apps/web changes (App.vue, optionally a new component under apps/web/src/components, tests, styles); no changes to API, packages/shared or migrations",
+    "No new dependencies (package.json and lockfile unchanged)",
+    "No v-html anywhere in changed files",
+    "Frisson sign and tagline stay as they are; style with existing base.css tokens (no new hard-coded palette)",
+    "Trigger is a <button> with aria-haspopup=menu, aria-expanded, accessible name containing the user's name; menu role=menu, items role=menuitem",
+    "Escape closes and refocuses trigger; outside click closes; choosing an item or any route change closes",
+    "Log out reuses the existing logOut logic: redirect to library off requiresAuth routes, and role=alert error message on failure",
+    "Initials logic identical to ProfileView (two letters of first two words, else first two chars, uppercased; falls back to username)",
+    "Signed-out Log in / Sign up hidden on their own pages as today",
+    "No dashes as filler in prose/comments/UI copy beyond what existing copy already uses"
+  ],
+  "assumptions": [
+    "Existing nav.user-menu tests in App.test.ts are obsolete and will be rewritten to the new structure",
+    "The dropdown wrapper keeps a nav/aria-label Account landmark and class user-menu (tests may query it); trigger gets class avatar-btn",
+    "Menu items for View profile and Edit profile are RouterLinks (role=menuitem) and Log out is a button (role=menuitem)",
+    "Menu is closed by default and only renders its items when open (v-if)",
+    "Narrow screens: header becomes position relative with the account control absolutely positioned top right, and the sign gets side padding so it cannot be overlapped; verified by CSS review, not pixel test",
+    "No arrow-key roving focus is required; Tab order is sufficient; focus moving to first item on open is optional",
+    "Avatar image uses session.user.avatarUrl as-is with alt empty or the name, same as ProfileView",
+    "Tests use existing happy-dom/vue-test-utils setup; document-level listeners are removed on unmount"
+  ],
+  "risks": [
+    "happy-dom focus and document click behavior may need attachTo: document.body in tests",
+    "Outside-click listener leaks or fires on the trigger click itself (double toggle) if not handled",
+    "Absolute positioning may overlap the centered sign on very narrow widths; padding must be reserved",
+    "Menu stays open after navigation if the route watcher is missing",
+    "Long display names overflow the dropdown; needs max-width and wrapping/ellipsis",
+    "Old tests and any selectors using nav.user-menu a.who break and must be updated"
+  ],
+  "acceptanceCriteria": [
+    {"id": "AC1", "text": "Signed-in header renders a button.avatar-btn with aria-haspopup=menu, aria-expanded=false initially, and an accessible name containing the display name; test 'renders an avatar trigger with menu semantics' passes", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'renders an avatar trigger with menu semantics'"},
+    {"id": "AC2", "text": "Initials fallback: with avatarUrl null the trigger shows 'AC' for 'Alice Cooper', and falls back to username initials ('AL') when displayName is empty; with avatarUrl set it renders an img with that src; tests 'shows initials when there is no avatar' and 'shows the avatar image when avatarUrl is set' pass", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'shows initials when there is no avatar' && npx vitest run src/App.test.ts -t 'shows the avatar image when avatarUrl is set'"},
+    {"id": "AC3", "text": "Clicking the trigger opens a [role=menu] and sets aria-expanded=true; the menu has a header with display name, @username, and the Verified badge only for verified users; the menu items are exactly View profile (href /u/alice), Edit profile (href /profile/edit), Log out, each role=menuitem; test 'opens a menu with header and three items' passes", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'opens a menu with header and three items'"},
+    {"id": "AC4", "text": "Menu is not in the DOM before click and a second click on the trigger closes it; test 'toggles the menu from the trigger' passes", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'toggles the menu from the trigger'"},
+    {"id": "AC5", "text": "Escape closes the menu and document.activeElement is the trigger; test 'closes on Escape and refocuses the trigger' passes", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'closes on Escape and refocuses the trigger'"},
+    {"id": "AC6", "text": "A click outside the header menu closes it; a click inside the menu header does not; test 'closes on outside click' passes", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'closes on outside click'"},
+    {"id": "AC7", "text": "Choosing View profile or Edit profile navigates to the route and closes the menu; a router navigation from elsewhere also closes it; tests 'closes after choosing a link' and 'closes on route change' pass", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'closes after choosing a link' && npx vitest run src/App.test.ts -t 'closes on route change'"},
+    {"id": "AC8", "text": "Log out calls the session logout (POST /api/auth/logout via fetch), closes the menu, shows the header menu as signed-out, and redirects to library from a requiresAuth route; on failure it shows a role=alert message; tests 'log out signs out and closes the menu', 'log out on an auth-required page redirects to the library' and 'log out failure shows an alert' pass", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'log out signs out and closes the menu' && npx vitest run src/App.test.ts -t 'log out on an auth-required page redirects to the library' && npx vitest run src/App.test.ts -t 'log out failure shows an alert'"},
+    {"id": "AC9", "text": "Signed out: Log in and Sign up links render inside the header account area (no avatar button, no menu); each is hidden on its own page; tests 'shows log in and sign up when signed out' and 'hides the link for the current auth page' pass", "check": "cd apps/web && npx vitest run src/App.test.ts -t 'shows log in and sign up when signed out' && npx vitest run src/App.test.ts -t 'hides the link for the current auth page'"},
+    {"id": "AC10", "text": "Layout CSS: the account control is pinned right of the header (position absolute with right set, inside a position: relative masthead) and the sign has horizontal padding reserved so it cannot overlap at narrow widths; the old centered text user-menu styles (justify-content: center, margin-top on .user-menu) are removed", "check": "cd apps/web && grep -rEq 'position:\\s*absolute' src/App.vue src/components/AccountMenu.vue 2>/dev/null; grep -E 'position:\\s*relative' src/App.vue && grep -E 'right:' src/App.vue src/components/*.vue | grep -q . && ! grep -n 'justify-content: center' src/App.vue | grep -q user-menu"},
+    {"id": "AC11", "text": "Frisson sign and tagline unchanged: App.vue still has RouterLink class sign with text Frisson and the tagline text 'Used &amp; new vinyl · est. 1994'", "check": "cd apps/web && grep -q 'class=\"sign\">Frisson' src/App.vue && grep -q 'Used &amp; new vinyl · est. 1994' src/App.vue"},
+    {"id": "AC12", "text": "No v-html in web source and no dependency changes", "check": "cd apps/web && ! grep -rn 'v-html' src && git diff --quiet -- package.json ../../package.json ../../package-lock.json 2>/dev/null || test -z \"$(cd ../.. && git status --porcelain package.json package-lock.json apps/web/package.json)\""},
+    {"id": "AC13", "text": "Only apps/web files changed: nothing under apps/api, packages/shared or any migrations directory is modified", "check": "cd /home/claude/crate-digger && test -z \"$(git status --porcelain | grep -Ev ' apps/web/| \\.shipyard/' )\""},
+    {"id": "AC14", "text": "Whole web workspace stays green: typecheck, full test suite and build exit 0", "check": "cd /home/claude/crate-digger/apps/web && npm run typecheck && npm test && npm run build"}
+  ],
+  "notes": "See agents/intake-1.md"
+}

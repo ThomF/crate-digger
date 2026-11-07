@@ -1,0 +1,28 @@
+{
+  "cycle": 1,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Header account menu on the right with shared avatar and initials helper",
+      "description": "Add apps/web/src/utils/initials.ts exporting initials(displayName, username): use displayName.trim() or username; if two or more words take the first letter of the first two words, else the first two characters; uppercase. Cover it in utils/initials.test.ts ('Alice Cooper' -> 'AC', empty displayName with username 'alice' -> 'AL', single word, extra whitespace). Add components/profile/UserAvatar.vue (props avatarUrl: string|null, displayName, username, optional size class): renders img with src=avatarUrl when set, otherwise a span with the initials (aria-hidden, since the trigger carries the accessible name). Add components/AccountMenu.vue: a nav.user-menu aria-label=Account wrapper containing button.avatar-btn (type=button, aria-haspopup=menu, aria-expanded bound, aria-controls to the menu id, aria-label 'Account menu for <displayName or username>') with UserAvatar inside; when open (v-if) a right-aligned [role=menu] panel with a header (display name, @username, VerifiedBadge only if verified) and exactly three role=menuitem items: RouterLink View profile to /u/{encodeURIComponent(username)}, RouterLink Edit profile to /profile/edit, button Log out. Close on: second trigger click, Escape (then focus the trigger via template ref), document click outside the wrapper (use a contains check on the wrapper ref so trigger and menu header clicks do not close; register on mount, remove on unmount), choosing any item, and a watch on route.fullPath. Log out reuses the App.vue logic moved into this component or emitted to App: await session.logOut(), close the menu, push {name:'library'} if currentRoute.meta.requiresAuth, on throw show span role=alert with errorMessage(e). In App.vue keep RouterLink.sign 'Frisson' and the tagline text exactly; make .masthead position: relative; render an account area (v-if session.loaded) positioned absolute with top and right set; signed-in shows AccountMenu, signed-out shows Log in / Sign up links in that same area hidden on their own route names as today; reserve horizontal padding on .sign/.masthead (e.g. padding-inline on the sign block at narrow widths) so the right control cannot overlap the sign; delete the old centered .user-menu styles (justify-content center, margin-top). Dropdown styling with base.css tokens only (paper bg, 2px ink border, 4px 4px 0 var(--cardboard-dark) shadow, z-index above page, max-width with overflow-wrap for long names, text-align left). Rewrite App.test.ts with the brief's exact test titles (see spec) and drop the obsolete tests; mount with attachTo: document.body for focus/outside-click tests and unmount after each. No v-html, no new deps, no hard-coded hex colours.",
+      "criteria": ["AC1", "AC2", "AC3", "AC4", "AC5", "AC6", "AC7", "AC8", "AC9", "AC10", "AC11", "AC12", "AC13", "AC14"],
+      "files": [
+        "apps/web/src/utils/initials.ts",
+        "apps/web/src/utils/initials.test.ts",
+        "apps/web/src/components/profile/UserAvatar.vue",
+        "apps/web/src/components/AccountMenu.vue",
+        "apps/web/src/App.vue",
+        "apps/web/src/App.test.ts"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "T2",
+      "title": "ProfileView uses the shared initials helper",
+      "description": "Replace the local initials computation in apps/web/src/views/ProfileView.vue with the initials() helper from utils/initials.ts so header and profile share one implementation. Keep ProfileView's existing markup, classes (.avatar, .placeholder), alt text and styles unchanged so ProfileView.test.ts passes untouched. Using UserAvatar here is optional and only if the rendered DOM and classes stay identical. Run the full web gate afterwards.",
+      "criteria": ["AC2", "AC12", "AC13", "AC14"],
+      "files": ["apps/web/src/views/ProfileView.vue"],
+      "dependsOn": ["T1"]
+    }
+  ]
+}

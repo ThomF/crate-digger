@@ -1,0 +1,44 @@
+{
+  "criteria": {
+    "AC1": {"verdict": "pass", "evidence": "vitest -t 'renders an avatar trigger with menu semantics': Tests 1 passed | 13 skipped (14), exit 0. Asserts BUTTON tag, type=button, aria-haspopup=menu, aria-expanded=false, aria-label contains 'Alice Cooper', no menu. Browser: aria-label 'Account menu for Ada Lovelace', haspopup=menu, expanded=false."},
+    "AC2": {"verdict": "pass", "evidence": "Both named tests: 1 passed | 13 skipped each, exit 0. Asserts text 'AC', 'AL' for empty displayName, img src '/uploads/avatars/alice.png'. initials.ts body matches baseline ProfileView logic line for line. Browser shows 'AL' for 'Ada Lovelace' with avatarUrl null."},
+    "AC3": {"verdict": "pass", "evidence": "vitest -t 'opens a menu with header and three items': 1 passed, exit 0. Asserts aria-expanded=true, aria-controls matches menu id, head has name and @alice, Verified badge absent then present for verified user, items exactly [View profile, Edit profile, Log out] with hrefs /u/alice, /profile/edit and BUTTON. Browser: items [View profile /u/admin, Edit profile /profile/edit, Log out], expanded=true."},
+    "AC4": {"verdict": "pass", "evidence": "vitest -t 'toggles the menu from the trigger': 1 passed, exit 0. Asserts menu absent, present after click, absent after second click, aria-expanded=false."},
+    "AC5": {"verdict": "pass", "evidence": "vitest -t 'closes on Escape and refocuses the trigger': 1 passed, exit 0. Asserts menu gone and document.activeElement is trigger. Real Chrome: escape_closed=true, escape_focus_is_trigger=true (desktop and 390px)."},
+    "AC6": {"verdict": "pass", "evidence": "vitest -t 'closes on outside click': 1 passed, exit 0. Asserts click on .menu-head keeps it open, click on .tagline and on document.body closes. Real Chrome: click on tagline closed menu (outside_click_closed=true)."},
+    "AC7": {"verdict": "pass", "evidence": "'closes after choosing a link' and 'closes on route change': 1 passed each, exit 0. Real Chrome: View profile -> http://localhost:3917/u/admin (h1 'Ada Lovelace'), Edit profile -> /profile/edit, menu closed after each."},
+    "AC8": {"verdict": "pass", "evidence": "Three named tests: 1 passed each, exit 0. Asserts POST to /auth/logout, menu closed, avatar gone, Log in/Sign up shown, redirect from requiresAuth /private to library, failure shows role=alert 'Could not log out' and stays on /private. Real Chrome: Log out from /profile/edit -> URL '/', avatar gone, links [Log in, Sign up], GET /api/auth/me -> 401. Minor note: the first test starts on '/', so its library assertion is trivially true; the redirect is covered by the second test."},
+    "AC9": {"verdict": "pass", "evidence": "'shows log in and sign up when signed out' and 'hides the link for the current auth page': 1 passed each, exit 0. Real Chrome: '/' shows [Log in, Sign up] at top right; '/login' shows [Sign up] only."},
+    "AC10": {"verdict": "pass", "evidence": "check exit 0. App.vue: .masthead position: relative; padding 2rem 4.75rem (10rem inline at >=40rem); .account position: absolute; top 0.75rem; right 0.75rem. AccountMenu .menu position: absolute; right: 0. No justify-content: center on user-menu. Browser: avatar box x=1216..1256 at 1280 wide; x=338..378 at 390 wide, sign x=122..268, no overlap; at 320 wide avatar x=268, sign ends 233, no overlap."},
+    "AC11": {"verdict": "pass", "evidence": "check exit 0: class=\"sign\">Frisson and 'Used &amp; new vinyl · est. 1994' present in App.vue."},
+    "AC12": {"verdict": "pass", "evidence": "check exit 0; grep -rn v-html src finds nothing; git diff --stat 1278ddf HEAD on package.json files empty."},
+    "AC13": {"verdict": "pass", "evidence": "check exit 0 (worktree only has untracked .shipyard run dir). git diff --name-only 1278ddf HEAD lists only apps/web files: App.test.ts, App.vue, components/AccountMenu.vue, components/profile/UserAvatar.vue, utils/initials.ts, utils/initials.test.ts, views/ProfileView.vue."},
+    "AC14": {"verdict": "pass", "evidence": "Full command 'npm run format:check && npm run typecheck && npm run lint && npm test && npm run build' exit 0: Test Files 16 passed (16) Tests 222 passed (222); Test Files 24 passed (24) Tests 180 passed (180); vite build '242 modules transformed', 'built in 2.51s'."}
+  },
+  "visual": {
+    "screenshots": [
+      "/home/claude/shots/header-signed-out-desktop.png",
+      "/home/claude/shots/header-signed-in-desktop.png",
+      "/home/claude/shots/header-menu-open-desktop.png",
+      "/home/claude/shots/header-menu-open-mobile.png"
+    ],
+    "avatarOnRight": "yes: top right corner at 1280, 390 and 320 widths; signed out links also top right",
+    "overlapAt390": "none with menu closed (avatar 338..378, sign 122..268, tagline 76..314, scrollWidth 390). When open, the dropdown overlays the right half of the sign and tagline, which is normal popover behaviour, not a layout defect",
+    "escapeCloses": "yes, and focus returns to the avatar button",
+    "itemsWork": "View profile, Edit profile navigate and close; Log out ends session (me 401) and redirects off the auth page",
+    "defects": [],
+    "observations": [
+      "At 320 wide the avatar focus ring sits close to the final 'n' of Frisson but bounding boxes do not intersect",
+      "Signed in desktop menu panel is 192px wide, right aligned under the avatar, paper style using base.css tokens"
+    ]
+  },
+  "commandsRun": [
+    "npm run format:check && npm run typecheck && npm run lint && npm test && npm run build",
+    "cd apps/web && npx vitest run src/App.test.ts -t <each named test for AC1..AC9>",
+    "AC10..AC13 check commands from brief.json",
+    "git diff --stat 1278ddf HEAD; git diff --name-only 1278ddf HEAD",
+    "WEB_DIR=apps/web/dist NODE_ENV=production DATA_DIR=/tmp/cd-tester/data PORT=3917 ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=*** node apps/api/src/server.ts",
+    "python3 -I /tmp/cd-tester/scripts/shots.py (playwright with /usr/bin/google-chrome)"
+  ],
+  "summary": "All 14 criteria pass. Full suite green (222 + 180 tests, build ok). Real Chrome confirms avatar on the right, no header overlap with the menu closed at 390 or 320 wide, Escape closes and refocuses, outside click closes, all three items work. No defects."
+}
