@@ -135,4 +135,6 @@ Data flows end to end first (M1–M4), visuals second, so every PR leaves a work
 One container serves the API and the built Vue files, behind Caddy. A `./data` volume holds
 `crate.db` and `covers/` — back up that folder and you've backed up everything. Host on a
 ~$5/month VPS (Hetzner, DigitalOcean) or at home behind a Cloudflare Tunnel. For showing
-off: a read-only public mode plus a simple admin login for editing.
+off: anyone can browse; editing needs an account. Signed-in users create crates and edit only
+their own; admins edit everything. The first admin is created from `ADMIN_EMAIL` +
+`ADMIN_PASSWORD` on first start (see [ADR 0004](adr/0004-user-accounts.md)).

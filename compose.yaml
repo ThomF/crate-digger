@@ -10,9 +10,10 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      # Compose stops with this message if ADMIN_PASSWORD is missing from .env.
+      # The first admin account, created on first start. Compose stops with these messages
+      # if either is missing from .env.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env (the first admin account's email)}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
-      SESSION_SECRET: ${SESSION_SECRET:-}
       # Requests only reach the app through Caddy, so its X-Forwarded-For can be trusted.
       TRUST_PROXY: 'true'
     volumes:

@@ -36,17 +36,31 @@ The web dev server proxies `/api/*` to the API, so the browser only ever talks t
 | `npm run format`    | Prettier — format everything      |
 | `npm run build`     | Production build of the web app   |
 
-## Who can edit
+## Accounts
 
-| `ADMIN_PASSWORD` | `NODE_ENV`       | Result                                                   |
-| ---------------- | ---------------- | -------------------------------------------------------- |
-| set              | any              | Anyone can browse; editing needs "Staff log in" (footer) |
-| not set          | development/test | Open: anyone can edit (what `npm run dev` gives you)     |
-| not set          | production       | Read-only for everyone (safe default)                    |
+- Anyone can browse, signed in or not.
+- Signed-in users can create crates and edit only their own crates and the albums in them.
+- Admins can edit everything, including crates from before accounts existed.
+- Sign up at `/signup`. Sessions last 30 days. Log in and sign up are rate limited to 10 tries per
+  15 minutes per IP.
 
-Try it locally with `ADMIN_PASSWORD=pick-something npm run dev`. Logins last 30 days, are
-rate-limited (10 tries per 15 minutes), and changing the password logs everyone out. Set
-`SESSION_SECRET` to keep sessions independent of the password.
+The first admin comes from `ADMIN_EMAIL` + `ADMIN_PASSWORD`: on a start with no admin yet, the API
+creates one. Changing them later does not change an existing admin. Try it locally with
+`ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=pick-something npm run dev`, or leave them out and
+just sign up.
+
+### Environment variables
+
+| Variable                       | What it does                                                     |
+| ------------------------------ | ---------------------------------------------------------------- |
+| `ADMIN_EMAIL`                  | Email of the first admin account (created on first start)        |
+| `ADMIN_PASSWORD`               | Password of that admin, at least 8 characters                    |
+| `TRUST_PROXY`                  | `true` behind a proxy you control, so rate limits are per IP     |
+| `DATA_DIR`                     | Where the database and covers live (default `data/`)             |
+| `DATABASE_PATH` / `COVERS_DIR` | Override the database file or covers folder individually         |
+| `DOMAIN`                       | Compose only: the domain Caddy serves and gets a certificate for |
+
+`SESSION_SECRET` is no longer used.
 
 ## Database
 
@@ -70,9 +84,10 @@ Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH` and
 | Method & path                    | Does                                       |
 | -------------------------------- | ------------------------------------------ |
 | `GET /api/health`                | API + database check                       |
-| `GET /api/session`               | `{ canEdit, canLogIn }` for this visitor   |
-| `POST /api/session`              | Log in: `{ password }` (sets a cookie)     |
-| `DELETE /api/session`            | Log out                                    |
+| `POST /api/auth/signup`          | `{ email, username, password }`, logs in   |
+| `POST /api/auth/login`           | `{ email, password }` (sets a cookie)      |
+| `POST /api/auth/logout`          | Log out                                    |
+| `GET /api/auth/me`               | The signed-in user (401 if signed out)     |
 | `GET /api/crates`                | Crates with album counts                   |
 | `POST /api/crates`               | New crate (at the end of the shelf)        |
 | `PATCH /api/crates/:id`          | Rename, recolor, change how it sorts       |
@@ -89,7 +104,8 @@ Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH` and
 | `PUT /api/albums/:id/tracks`     | Replace the whole tracklist                |
 | `DELETE /api/albums/:id`         | Delete (its tracks go too)                 |
 
-Errors always look like `{ statusCode, error, message, issues? }`.
+Creating needs a signed-in user; changing a crate or its albums needs its owner or an admin
+(401 signed out, 403 not allowed). Errors always look like `{ statusCode, error, message, issues? }`.
 
 ## Layout
 
@@ -115,7 +131,7 @@ docs/      Spec + architecture decision records
 ## Deploying
 
 ```bash
-cp .env.example .env   # set ADMIN_PASSWORD (and DOMAIN on a server)
+cp .env.example .env   # set ADMIN_EMAIL, ADMIN_PASSWORD (and DOMAIN on a server)
 docker compose up -d --build
 ```
 

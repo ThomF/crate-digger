@@ -41,7 +41,9 @@ jobs:
 
       - name: Smoke test the image
         run: |
-          docker run -d --name app -p 3000:3000 -e ADMIN_PASSWORD=ci-only frisson:ci
+          # The bootstrap admin needs a password of at least 8 characters, or the app exits.
+          docker run -d --name app -p 3000:3000 \
+            -e ADMIN_EMAIL=ci@example.invalid -e ADMIN_PASSWORD=ci-only-password frisson:ci
           for _ in $(seq 1 30); do
             if curl -sf localhost:3000/api/health; then
               curl -sf localhost:3000/ | grep -q '<div id="app">' && echo " web app served"

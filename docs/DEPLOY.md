@@ -20,13 +20,14 @@ Needs Docker Desktop running.
 cp .env.example .env
 ```
 
-Put any password after `ADMIN_PASSWORD=` in `.env` and leave `DOMAIN=http://localhost`. Then:
+Put your email after `ADMIN_EMAIL=` and a password of at least 8 characters after
+`ADMIN_PASSWORD=` in `.env`, and leave `DOMAIN=http://localhost`. Then:
 
 ```bash
 docker compose up -d --build
 ```
 
-Open http://localhost, use **Staff log in** at the bottom, and make your first crate.
+Open http://localhost, log in with that email and password, and make your first crate.
 `docker compose down` stops it; your data stays in the volume for next time.
 
 ## 2. Get a server and a domain
@@ -65,8 +66,10 @@ nano .env
 
 In `.env`:
 
-- `ADMIN_PASSWORD`: long and random. `openssl rand -base64 24` makes a good one. Compose refuses
-  to start without it.
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD`: the first admin account. On the first start with no admin
+  yet, the app creates an admin with this email and password. Make the password long and random
+  (`openssl rand -base64 24` makes a good one; at least 8 characters, or the app will not start).
+  Compose refuses to start without either one.
 - `DOMAIN`: your domain **without** `http://`, e.g. `crates.yourname.com`. That tells Caddy to
   fetch a real certificate.
 
@@ -87,6 +90,36 @@ docker compose up -d --build
 ```
 
 Database migrations run automatically when the new app container starts.
+
+### Upgrading to user accounts
+
+This version replaces the single shared "Staff log in" password with user accounts. Your
+database, covers and backups stay where they are (`crate.db` in the `crate-data` volume, mounted
+at `/data`); nothing to move. Before `docker compose up -d --build`:
+
+1. **Add `ADMIN_EMAIL` to `.env`**, next to your existing `ADMIN_PASSWORD`. Compose now refuses to
+   start without it. On the next start the app creates an admin account with that email and your
+   current `ADMIN_PASSWORD`, and makes it the owner of every existing crate. If you start the app
+   without `ADMIN_EMAIL` some other way (e.g. plain `docker run`), there is no admin and your
+   existing crates stay locked: nobody can edit them until an admin exists.
+2. **Check `ADMIN_PASSWORD` is at least 8 characters.** A shorter one stops the app from starting
+   while it has no admin yet.
+3. `SESSION_SECRET` is no longer used. You can leave it in `.env` or delete it.
+
+**Everyone is signed out once** by the upgrade: old logins are not carried over. Log in again with
+`ADMIN_EMAIL` and `ADMIN_PASSWORD`. Other people can now make their own accounts at `/signup`.
+
+## Accounts
+
+- Anyone can browse. Signed-in users can create crates and edit only their own crates and the
+  albums in them. Admins can edit everything.
+- Sign up at `/signup`. Logins last 30 days.
+- Log in and sign up are rate limited to 10 tries per 15 minutes per IP address. The app reads the
+  visitor's IP from Caddy's `X-Forwarded-For`, which needs `TRUST_PROXY=true` (already set in
+  `compose.yaml`). Without it, every visitor shares Caddy's IP and one limit. Only set it when the
+  app is reachable solely through a proxy you control.
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD` are only used to create the first admin when none exists.
+  Changing them later does not change or add an admin. There is no in-app password change yet.
 
 ## Backups
 
@@ -122,13 +155,12 @@ The restore script checks the backup's integrity before touching anything.
 
 ## Day to day
 
-| Task                         | Command                                                      |
-| ---------------------------- | ------------------------------------------------------------ |
-| See what's running           | `docker compose ps`                                          |
-| Follow the logs              | `docker compose logs -f app`                                 |
-| Restart after editing `.env` | `docker compose up -d`                                       |
-| Stop everything              | `docker compose down`                                        |
-| Change the admin password    | Edit `.env`, then `docker compose up -d` (logs everyone out) |
+| Task                         | Command                      |
+| ---------------------------- | ---------------------------- |
+| See what's running           | `docker compose ps`          |
+| Follow the logs              | `docker compose logs -f app` |
+| Restart after editing `.env` | `docker compose up -d`       |
+| Stop everything              | `docker compose down`        |
 
 ## Hosting at home instead
 
