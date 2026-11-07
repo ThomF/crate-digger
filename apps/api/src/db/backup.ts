@@ -28,4 +28,6 @@ copy.pragma('journal_mode = DELETE')
 copy.close()
 
 console.log(`Backed up the database to ${target}`)
-console.log('Cover images are plain files in the covers folder; copy that folder too.')
+console.log(
+  'Cover images and avatars are plain files in the covers and avatars folders; copy those folders too.',
+)

@@ -27,4 +27,4 @@ const albums = backup.prepare('SELECT count(*) AS n FROM albums').get() as { n: 
 backup.close()
 
 console.log(`Restored ${albums.n} albums from ${source} into ${DEFAULT_DB_PATH}`)
-console.log('Restore the covers folder too if you backed it up, then start the app.')
+console.log('Restore the covers and avatars folders too if you backed them up, then start the app.')

@@ -4,7 +4,7 @@ One server, Docker Compose, two containers:
 
 ```
 internet ──▶ caddy (ports 80/443, HTTPS) ──▶ app (port 3000, private) ──▶ /data volume
-                                              API + built web app       crate.db, covers/, backups/
+                                              API + built web app       crate.db, covers/, avatars/, backups/
 ```
 
 - **app** is built from the repo's `Dockerfile`. It serves the API and the Vue app, and stores
@@ -91,6 +91,13 @@ docker compose up -d --build
 
 Database migrations run automatically when the new app container starts.
 
+### Upgrading to user profiles
+
+Nothing to do by hand. Migration 0004 adds the profile fields (bio, location, avatar, verified
+badge) and the social links table when the app starts, and every existing user gets an empty
+profile automatically. Uploaded avatars go in a new `avatars` folder next to `covers` in the same
+`/data` volume (`DATA_DIR/avatars`, or `AVATARS_DIR` if you set it).
+
 ### Upgrading to user accounts
 
 This version replaces the single shared "Staff log in" password with user accounts. Your
@@ -131,15 +138,17 @@ docker compose exec app node apps/api/src/db/backup.ts
 docker compose cp app:/data ./crate-backup
 ```
 
-`crate-backup/backups/` holds dated `.db` files, `crate-backup/covers/` the cover images. Copy
-`crate-backup` somewhere that isn't this server (your laptop, cloud storage).
+`crate-backup/backups/` holds dated `.db` files, `crate-backup/covers/` the cover images and
+`crate-backup/avatars/` the profile pictures. Copy `crate-backup` somewhere that isn't this server
+(your laptop, cloud storage). If you set `COVERS_DIR` or `AVATARS_DIR` to a path outside `/data`,
+copy those folders too.
 
 > Don't treat `crate-backup/crate.db` itself as the backup: it may be missing recent changes that
 > were still in `crate.db-wal`. Use the files in `backups/`.
 
 ## Restoring
 
-Stop the app, restore a backup through SQLite, put the covers back, and start it again. Replace
+Stop the app, restore a backup through SQLite, put the covers and avatars back, and start it again. Replace
 the file name with the backup you want:
 
 ```bash
@@ -148,10 +157,13 @@ docker compose run --rm --no-deps -v "$PWD/crate-backup:/restore:ro" app \
   node apps/api/src/db/restore.ts /restore/backups/crate-2026-10-12T21-32-14.db
 docker compose run --rm --no-deps -v "$PWD/crate-backup:/restore:ro" app \
   cp -R /restore/covers/. /data/covers/
+docker compose run --rm --no-deps -v "$PWD/crate-backup:/restore:ro" app \
+  sh -c 'mkdir -p /data/avatars && cp -R /restore/avatars/. /data/avatars/'
 docker compose start app
 ```
 
-The restore script checks the backup's integrity before touching anything.
+The restore script checks the backup's integrity before touching anything. Backups made before
+profiles existed have no `avatars` folder; skip that step for them.
 
 ## Day to day
 
