@@ -62,6 +62,19 @@ export const router = createRouter({
       meta: { requiresAuth: true },
       props: (route) => ({ id: Number(route.params.id) }),
     },
+    {
+      path: '/u/:username',
+      name: 'profile',
+      // Public: anyone can look at a profile.
+      component: () => import('./views/ProfileView.vue'),
+      props: (route) => ({ username: String(route.params.username) }),
+    },
+    {
+      path: '/profile/edit',
+      name: 'profile-edit',
+      component: () => import('./views/EditProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
   scrollBehavior: () => ({ top: 0 }),

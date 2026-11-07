@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { PublicUser, SignupInput } from '@frisson/shared'
+import type { PublicUser, SignupInput, UpdateProfileRequest } from '@frisson/shared'
 import * as api from '../api/auth.ts'
+import * as profiles from '../api/profiles.ts'
 
 // Data classification: CONFIDENTIAL (PII). Holds the signed-in user's email and name.
 // Who is signed in. The API is the real gatekeeper (it checks every change); this store
@@ -51,5 +52,45 @@ export const useSessionStore = defineStore('session', () => {
     loading = Promise.resolve()
   }
 
-  return { user, loaded, signedIn, isAdmin, load, logIn, signUp, logOut }
+  /** Asks the API again (after a change) and replaces the user, e.g. a new avatar. */
+  async function refresh() {
+    const result = await api.me()
+    user.value = result
+    loaded.value = true
+    loading = Promise.resolve()
+  }
+
+  // Profile changes go through here so the header (avatar, display name) stays current.
+  async function saveProfile(input: UpdateProfileRequest) {
+    const profile = await profiles.updateProfile(input)
+    await refresh()
+    return profile
+  }
+
+  async function saveAvatar(file: File) {
+    const profile = await profiles.uploadAvatar(file)
+    await refresh()
+    return profile
+  }
+
+  async function deleteAvatar() {
+    const profile = await profiles.removeAvatar()
+    await refresh()
+    return profile
+  }
+
+  return {
+    user,
+    loaded,
+    signedIn,
+    isAdmin,
+    load,
+    refresh,
+    logIn,
+    signUp,
+    logOut,
+    saveProfile,
+    saveAvatar,
+    deleteAvatar,
+  }
 })
