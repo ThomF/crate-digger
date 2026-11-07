@@ -1,34 +1,38 @@
 <script setup lang="ts">
 import { onMounted, ref, useTemplateRef } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { errorMessage } from '../api/client.ts'
 import { useSessionStore } from '../stores/session.ts'
 import { safeRedirect } from '../utils/redirect.ts'
 
+// Data classification: CONFIDENTIAL (credentials). The password only lives in this
+// component's state until it is sent.
 const props = defineProps<{ next?: string }>()
 const session = useSessionStore()
 const router = useRouter()
 
+const email = ref('')
 const password = ref('')
 const error = ref<string | null>(null)
 const busy = ref(false)
-const input = useTemplateRef<HTMLInputElement>('input')
+const emailInput = useTemplateRef<HTMLInputElement>('email-input')
+const passwordInput = useTemplateRef<HTMLInputElement>('password-input')
 
 onMounted(() => {
   document.title = 'Log in · Frisson'
-  input.value?.focus()
+  emailInput.value?.focus()
 })
 
 async function submit() {
   busy.value = true
   error.value = null
   try {
-    await session.logIn(password.value)
+    await session.logIn(email.value, password.value)
     await router.replace(safeRedirect(props.next))
   } catch (err) {
     error.value = errorMessage(err)
     password.value = ''
-    input.value?.focus()
+    passwordInput.value?.focus()
   } finally {
     busy.value = false
   }
@@ -37,13 +41,25 @@ async function submit() {
 
 <template>
   <form class="card" @submit.prevent="submit">
-    <h1>Staff only</h1>
-    <p>Log in to add, edit and rearrange records. Everyone else can browse.</p>
+    <h1>Log in</h1>
+    <p>Log in to add, edit and rearrange your crates. Everyone can browse.</p>
+
+    <label for="email">Email</label>
+    <input
+      id="email"
+      ref="email-input"
+      v-model="email"
+      type="email"
+      autocomplete="email"
+      required
+      :aria-invalid="!!error"
+      :aria-describedby="error ? 'login-error' : undefined"
+    />
 
     <label for="password">Password</label>
     <input
       id="password"
-      ref="input"
+      ref="password-input"
       v-model="password"
       type="password"
       autocomplete="current-password"
@@ -53,9 +69,16 @@ async function submit() {
     />
     <p v-if="error" id="login-error" class="error" role="alert">{{ error }}</p>
 
-    <button type="submit" class="btn" :disabled="busy || !password">
+    <button type="submit" class="btn" :disabled="busy || !email || !password">
       {{ busy ? 'Checking…' : 'Log in' }}
     </button>
+
+    <p class="switch">
+      New here?
+      <RouterLink :to="{ name: 'signup', query: props.next ? { next: props.next } : {} }">
+        Sign up
+      </RouterLink>
+    </p>
   </form>
 </template>
 
@@ -100,5 +123,14 @@ label {
 
 .btn:disabled {
   opacity: 0.6;
+}
+
+.switch {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.switch a {
+  color: var(--marker-red);
 }
 </style>

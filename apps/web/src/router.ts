@@ -6,8 +6,8 @@ import NotFoundView from './views/NotFoundView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
-    /** Only for visitors allowed to change the collection. */
-    requiresEdit?: boolean
+    /** Only for signed-in visitors. */
+    requiresAuth?: boolean
   }
 }
 
@@ -20,12 +20,20 @@ export const router = createRouter({
       path: '/crates',
       name: 'crates',
       component: () => import('./views/CratesView.vue'),
-      meta: { requiresEdit: true },
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',
       name: 'login',
       component: () => import('./views/LoginView.vue'),
+      props: (route) => ({
+        next: typeof route.query.next === 'string' ? route.query.next : undefined,
+      }),
+    },
+    {
+      path: '/signup',
+      name: 'signup',
+      component: () => import('./views/SignupView.vue'),
       props: (route) => ({
         next: typeof route.query.next === 'string' ? route.query.next : undefined,
       }),
@@ -43,7 +51,7 @@ export const router = createRouter({
       path: '/albums/new',
       name: 'album-new',
       component: () => import('./views/AlbumEditorView.vue'),
-      meta: { requiresEdit: true },
+      meta: { requiresAuth: true },
       // /albums/new?crateId=3 pre-selects a crate.
       props: (route) => ({ crateId: Number(route.query.crateId) || null }),
     },
@@ -51,7 +59,7 @@ export const router = createRouter({
       path: '/albums/:id(\\d+)/edit',
       name: 'album-edit',
       component: () => import('./views/AlbumEditorView.vue'),
-      meta: { requiresEdit: true },
+      meta: { requiresAuth: true },
       props: (route) => ({ id: Number(route.params.id) }),
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
@@ -59,12 +67,11 @@ export const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
-// Pages that change things send visitors to log in first (or home, if the app is read-only).
+// Pages that change things send signed-out visitors to log in first, then back here.
 // The API enforces this anyway; the guard just avoids showing forms that can't be saved.
 router.beforeEach(async (to) => {
-  if (!to.meta.requiresEdit) return
   const session = useSessionStore()
   await session.load()
-  if (session.canEdit) return
-  return session.canLogIn ? { name: 'login', query: { next: to.fullPath } } : { name: 'library' }
+  if (!to.meta.requiresAuth || session.signedIn) return
+  return { name: 'login', query: { next: to.fullPath } }
 })

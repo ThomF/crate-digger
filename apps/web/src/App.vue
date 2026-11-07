@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { errorMessage } from './api/client.ts'
 import { useSessionStore } from './stores/session.ts'
 
 const session = useSessionStore()
 const router = useRouter()
 onMounted(() => session.load())
 
+const logOutError = ref<string | null>(null)
+
 async function logOut() {
-  await session.logOut()
-  if (router.currentRoute.value.meta.requiresEdit) router.push({ name: 'library' })
+  logOutError.value = null
+  try {
+    await session.logOut()
+  } catch (err) {
+    logOutError.value = errorMessage(err)
+    return
+  }
+  if (router.currentRoute.value.meta.requiresAuth) await router.push({ name: 'library' })
 }
 </script>
 
@@ -17,16 +26,25 @@ async function logOut() {
   <header class="masthead">
     <RouterLink to="/" class="sign">Frisson</RouterLink>
     <p class="tagline">Used &amp; new vinyl · est. 1994</p>
+
+    <nav v-if="session.loaded" class="user-menu" aria-label="Account">
+      <template v-if="session.user">
+        <span class="who" :title="`@${session.user.username}`">
+          {{ session.user.displayName || session.user.username }}
+        </span>
+        <button type="button" @click="logOut">Log out</button>
+      </template>
+      <template v-else>
+        <RouterLink v-if="$route.name !== 'login'" :to="{ name: 'login' }">Log in</RouterLink>
+        <RouterLink v-if="$route.name !== 'signup'" :to="{ name: 'signup' }">Sign up</RouterLink>
+      </template>
+      <span v-if="logOutError" class="menu-error" role="alert">{{ logOutError }}</span>
+    </nav>
   </header>
 
   <main class="page">
     <RouterView />
   </main>
-
-  <footer v-if="session.canLogIn && $route.name !== 'login'" class="staff">
-    <button v-if="session.canEdit" type="button" @click="logOut">Log out</button>
-    <RouterLink v-else :to="{ name: 'login' }">Staff log in</RouterLink>
-  </footer>
 </template>
 
 <style scoped>
@@ -52,22 +70,38 @@ async function logOut() {
   margin: 0.25rem 0 0;
 }
 
-.staff {
-  text-align: center;
-  padding: 0 1rem 2rem;
+.user-menu {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
   font-family: var(--font-display);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
-.staff button {
+.who {
+  color: var(--ink);
+  font-weight: bold;
+}
+
+.user-menu button {
   background: none;
   border: none;
+  padding: 0;
+  font: inherit;
   text-decoration: underline;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.user-menu a {
   color: var(--ink-soft);
 }
 
-.staff a {
-  color: var(--ink-soft);
+.menu-error {
+  color: var(--marker-red);
 }
 
 .page {

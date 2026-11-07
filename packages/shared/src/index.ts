@@ -197,19 +197,6 @@ export const credentialsInput = z.object({
   password: z.string().min(1, 'Required').max(200),
 })
 
-// ── Session (admin login) ───────────────────────────────────────────────
-
-export const sessionInfo = z.object({
-  /** May this visitor change the collection right now? */
-  canEdit: z.boolean(),
-  /** Is there a password to log in with? (false when the app is open or read-only) */
-  canLogIn: z.boolean(),
-})
-
-export const loginInput = z.object({
-  password: z.string().min(1, 'Required').max(200),
-})
-
 // ── Errors ──────────────────────────────────────────────────────────────
 
 export const apiError = z.object({
@@ -239,7 +226,6 @@ export type UpdateCrateInput = z.infer<typeof updateCrateInput>
 export type AlbumQuery = z.input<typeof albumQuery>
 export type MoveAlbumInput = z.infer<typeof moveAlbumInput>
 export type ApiError = z.infer<typeof apiError>
-export type SessionInfo = z.infer<typeof sessionInfo>
 export type UserRole = (typeof USER_ROLES)[number]
 export type PublicUser = z.infer<typeof publicUser>
 export type SignupInput = z.infer<typeof signupInput>
