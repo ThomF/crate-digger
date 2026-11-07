@@ -1,7 +1,7 @@
 // How records are ordered and filed, shared by the API and the web app so they always agree.
 //
 // This file deliberately imports nothing at runtime (only types), so the web app can use it
-// via '@crate-digger/shared/sorting' without pulling Zod into the main bundle.
+// via '@frisson/shared/sorting' without pulling Zod into the main bundle.
 import type { AlbumSummary } from './index.ts'
 
 /** How a crate keeps its records. 'manual' = the order you arranged them in. */

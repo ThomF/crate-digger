@@ -1,5 +1,5 @@
 {
-  "name": "@crate-digger/api",
+  "name": "@frisson/api",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
     "db:restore": "node src/db/restore.ts"
   },
   "dependencies": {
-    "@crate-digger/shared": "*",
+    "@frisson/shared": "*",
     "@fastify/cookie": "^11.1.3",
     "@fastify/multipart": "^10.1.3",
     "@fastify/rate-limit": "^11.2.1",

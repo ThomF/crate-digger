@@ -1,5 +1,5 @@
 {
-  "name": "@crate-digger/shared",
+  "name": "@frisson/shared",
   "private": true,
   "type": "module",
   "exports": {
