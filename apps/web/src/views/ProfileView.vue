@@ -6,6 +6,7 @@ import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { getProfile } from '../api/profiles.ts'
 import { useSessionStore } from '../stores/session.ts'
 import VerifiedBadge from '../components/profile/VerifiedBadge.vue'
+import { initials as initialsFor } from '../utils/initials.ts'
 
 // Data classification: PUBLIC. A profile is shown to anyone. Every piece of it is user
 // typed text, so it is rendered with {{ }} only (escaped by Vue), never as HTML.
@@ -33,13 +34,10 @@ const PLATFORM_LABELS: Record<ProfileLink['platform'], string> = {
   website: 'Website',
 }
 
-/** Up to two letters for the avatar placeholder, e.g. "Mary Jane" -> "MJ". */
-const initials = computed(() => {
-  const name = profile.value?.displayName.trim() || profile.value?.username || ''
-  const words = name.split(/\s+/).filter(Boolean)
-  const letters = words.length > 1 ? words[0]![0]! + words[1]![0]! : name.slice(0, 2)
-  return letters.toUpperCase()
-})
+/** Avatar placeholder letters, shared with the header avatar via utils/initials.ts. */
+const initials = computed(() =>
+  profile.value ? initialsFor(profile.value.displayName, profile.value.username) : '',
+)
 
 const albumCount = (n: number) => (n === 1 ? '1 record' : `${n} records`)
 
