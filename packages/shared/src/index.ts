@@ -123,6 +123,10 @@ export const crate = z.object({
   sortBy: z.enum(CRATE_SORTS),
   sortOrder: z.number().int(),
   albumCount: z.number().int(),
+  /** Who may edit this crate (besides admins). null = legacy crate, admins only. */
+  ownerId: z.number().int().nullable(),
+  ownerUsername: z.string().nullable(),
+  ownerDisplayName: z.string().nullable(),
 })
 
 const crateFields = z.object({
@@ -146,6 +150,51 @@ export const crateOrderInput = z.object({
   ids: z
     .array(z.number().int().positive())
     .refine((ids) => new Set(ids).size === ids.length, 'Each crate may appear only once'),
+})
+
+// ── Accounts ────────────────────────────────────────────────────────────
+
+export const USER_ROLES = ['user', 'admin'] as const
+
+/** A user as the API shows them. Never carries a password or hash. */
+export const publicUser = z.object({
+  id: z.number().int(),
+  email: z.string(),
+  username: z.string(),
+  displayName: z.string(),
+  role: z.enum(USER_ROLES),
+})
+
+const emailField = z.string().trim().toLowerCase().pipe(z.email('Enter a valid email').max(254))
+
+// z.object strips unknown keys, so a client cannot sign itself up with `role: 'admin'`.
+export const signupInput = z.object({
+  email: emailField,
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(
+      z
+        .string()
+        .min(3, 'At least 3 characters')
+        .max(32, 'Keep it under 32 characters')
+        .regex(/^[a-z0-9_-]+$/, 'Use letters, numbers, _ or -'),
+    ),
+  /** Defaults to the username on the server when left out. */
+  displayName: z
+    .string()
+    .trim()
+    .min(1, 'Required')
+    .max(60, 'Keep it under 60 characters')
+    .optional(),
+  password: z.string().min(8, 'At least 8 characters').max(200, 'Keep it under 200 characters'),
+})
+
+/** Email + password, for logging in. */
+export const credentialsInput = z.object({
+  email: emailField,
+  password: z.string().min(1, 'Required').max(200),
 })
 
 // ── Session (admin login) ───────────────────────────────────────────────
@@ -191,3 +240,7 @@ export type AlbumQuery = z.input<typeof albumQuery>
 export type MoveAlbumInput = z.infer<typeof moveAlbumInput>
 export type ApiError = z.infer<typeof apiError>
 export type SessionInfo = z.infer<typeof sessionInfo>
+export type UserRole = (typeof USER_ROLES)[number]
+export type PublicUser = z.infer<typeof publicUser>
+export type SignupInput = z.infer<typeof signupInput>
+export type CredentialsInput = z.infer<typeof credentialsInput>

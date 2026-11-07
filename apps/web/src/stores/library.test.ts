@@ -12,6 +12,9 @@ const crates: Crate[] = [
     sortBy: 'manual',
     sortOrder: 0,
     albumCount: 1,
+    ownerId: null,
+    ownerUsername: null,
+    ownerDisplayName: null,
   },
   {
     id: 2,
@@ -21,6 +24,9 @@ const crates: Crate[] = [
     sortBy: 'manual',
     sortOrder: 1,
     albumCount: 0,
+    ownerId: null,
+    ownerUsername: null,
+    ownerDisplayName: null,
   },
 ]
 const albums = [

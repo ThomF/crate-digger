@@ -11,6 +11,9 @@ const crate: Crate = {
   sortBy: 'manual',
   sortOrder: 0,
   albumCount: 3,
+  ownerId: null,
+  ownerUsername: null,
+  ownerDisplayName: null,
 }
 
 const albums = ['Nevermind', 'OK Computer', 'Odelay'].map((title, i): AlbumSummary => ({

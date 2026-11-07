@@ -1,7 +1,7 @@
 import { asc, count, eq, max } from 'drizzle-orm'
 import type { Crate, CreateCrateInput, UpdateCrateInput } from '@frisson/shared'
 import type { Db } from '../db/client.ts'
-import { albums, crates } from '../db/schema.ts'
+import { albums, crates, users } from '../db/schema.ts'
 import { HttpError, badRequest, notFound } from '../errors.ts'
 
 const crateColumns = {
@@ -12,14 +12,19 @@ const crateColumns = {
   sortBy: crates.sortBy,
   sortOrder: crates.sortOrder,
   albumCount: count(albums.id),
+  // Data classification: PUBLIC. Only the owner's id, username and display name; never email.
+  ownerId: crates.ownerId,
+  ownerUsername: users.username,
+  ownerDisplayName: users.displayName,
 }
 
 export function listCrates(db: Db): Crate[] {
-  // LEFT JOIN so empty crates still show up (with albumCount 0).
+  // LEFT JOINs so empty crates still show up (with albumCount 0), as do ownerless ones.
   return db
     .select(crateColumns)
     .from(crates)
     .leftJoin(albums, eq(albums.crateId, crates.id))
+    .leftJoin(users, eq(users.id, crates.ownerId))
     .groupBy(crates.id)
     .orderBy(asc(crates.sortOrder), asc(crates.id))
     .all()
@@ -30,6 +35,7 @@ export function getCrate(db: Db, id: number): Crate {
     .select(crateColumns)
     .from(crates)
     .leftJoin(albums, eq(albums.crateId, crates.id))
+    .leftJoin(users, eq(users.id, crates.ownerId))
     .where(eq(crates.id, id))
     .groupBy(crates.id)
     .get()

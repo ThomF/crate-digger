@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm'
 import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { CRATE_SORTS } from '@frisson/shared/sorting'
+import { USER_ROLES } from '@frisson/shared'
 
 // Every table here becomes a real SQLite table. After changing this file, run
 // `npm run db:generate -w apps/api` to write a new SQL migration into apps/api/drizzle/.
@@ -15,6 +16,33 @@ const timestamps = {
     .$onUpdate(() => new Date()),
 }
 
+// Data classification: CONFIDENTIAL (PII + credentials). email is personal data;
+// password_hash is a scrypt hash and must never leave the API (see publicUser).
+export const users = sqliteTable('users', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  email: text('email').notNull().unique(), // stored lower-cased
+  username: text('username').notNull().unique(), // stored lower-cased
+  displayName: text('display_name').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  role: text('role', { enum: USER_ROLES }).notNull().default('user'),
+  createdAt: timestamps.createdAt,
+})
+
+// Data classification: CONFIDENTIAL (credentials). id is the sha256 hex of the opaque
+// session token; the token itself is only ever in the user's cookie.
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamps.createdAt,
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  },
+  (t) => [index('sessions_user_id_idx').on(t.userId)],
+)
+
 export const crates = sqliteTable('crates', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
@@ -23,6 +51,9 @@ export const crates = sqliteTable('crates', {
   // How records in this crate are ordered. Added in migration 0001: existing crates get 'manual'.
   sortBy: text('sort_by', { enum: CRATE_SORTS }).notNull().default('manual'),
   sortOrder: integer('sort_order').notNull().default(0),
+  // Who may edit this crate. NULL = legacy crate from before accounts: only admins may edit.
+  // 'set null' = deleting a user leaves their crates behind for admins.
+  ownerId: integer('owner_id').references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
 })
 
@@ -75,7 +106,17 @@ export const tracks = sqliteTable(
 
 // Relations don't change the database. They teach Drizzle's query API how tables
 // connect, so you can write db.query.albums.findFirst({ with: { tracks: true } }).
-export const cratesRelations = relations(crates, ({ many }) => ({
+export const usersRelations = relations(users, ({ many }) => ({
+  crates: many(crates),
+  sessions: many(sessions),
+}))
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
+}))
+
+export const cratesRelations = relations(crates, ({ one, many }) => ({
+  owner: one(users, { fields: [crates.ownerId], references: [users.id] }),
   albums: many(albums),
 }))
 
@@ -88,6 +129,10 @@ export const tracksRelations = relations(tracks, ({ one }) => ({
   album: one(albums, { fields: [tracks.albumId], references: [albums.id] }),
 }))
 
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
+export type Session = typeof sessions.$inferSelect
+export type NewSession = typeof sessions.$inferInsert
 export type Crate = typeof crates.$inferSelect
 export type NewCrate = typeof crates.$inferInsert
 export type Album = typeof albums.$inferSelect
