@@ -1,15 +1,15 @@
 import Fastify from 'fastify'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
-import { authPlugin, type AuthOptions } from './plugins/auth.ts'
+import { authPlugin } from './plugins/auth.ts'
 import { coversPlugin } from './plugins/covers.ts'
 import { dbPlugin } from './plugins/db.ts'
 import { errorHandlerPlugin } from './plugins/error-handler.ts'
 import { webPlugin } from './plugins/web.ts'
 import { albumRoutes } from './routes/albums.ts'
+import { authRoutes } from './routes/auth.ts'
 import { coverRoutes } from './routes/covers.ts'
 import { crateRoutes } from './routes/crates.ts'
 import { healthRoutes } from './routes/health.ts'
-import { sessionRoutes } from './routes/session.ts'
 import { DEFAULT_COVERS_DIR } from './paths.ts'
 
 export type AppOptions = {
@@ -17,8 +17,12 @@ export type AppOptions = {
   dbPath?: string
   /** Where cover images are stored. Defaults to COVERS_DIR or data/covers. */
   coversDir?: string
-  /** Who may edit. Defaults to ADMIN_PASSWORD / SESSION_SECRET / NODE_ENV. */
-  auth?: AuthOptions
+  /** Session cookies and login limits. `production` (Secure cookies) defaults from NODE_ENV;
+   *  rateLimit defaults to 10 signup/login attempts per IP per 15 minutes. */
+  auth?: {
+    production?: boolean
+    rateLimit?: { max: number; timeWindow: number }
+  }
   /** The built web app to serve (production). Defaults to WEB_DIR; unset in development. */
   webDir?: string
 }
@@ -40,17 +44,15 @@ export async function buildApp(opts: AppOptions = {}) {
 
   // Plugins first (things routes depend on), then routes.
   await app.register(errorHandlerPlugin)
-  await app.register(authPlugin, {
-    adminPassword: process.env.ADMIN_PASSWORD,
-    sessionSecret: process.env.SESSION_SECRET,
-    production: process.env.NODE_ENV === 'production',
-    ...opts.auth,
-  })
   await app.register(dbPlugin, { path: opts.dbPath })
+  // After dbPlugin: it looks up each request's session in app.db.
+  await app.register(authPlugin, {
+    production: opts.auth?.production ?? process.env.NODE_ENV === 'production',
+  })
   await app.register(coversPlugin, { dir: opts.coversDir ?? DEFAULT_COVERS_DIR })
 
   await app.register(healthRoutes, { prefix: '/api' })
-  await app.register(sessionRoutes, { prefix: '/api' })
+  await app.register(authRoutes, { prefix: '/api', rateLimit: opts.auth?.rateLimit })
   await app.register(crateRoutes, { prefix: '/api' })
   await app.register(albumRoutes, { prefix: '/api' })
   await app.register(coverRoutes, { prefix: '/api' })
