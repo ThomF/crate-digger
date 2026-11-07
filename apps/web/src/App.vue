@@ -1,26 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
-import { errorMessage } from './api/client.ts'
+import { onMounted } from 'vue'
+import { RouterLink, RouterView } from 'vue-router'
 import { useSessionStore } from './stores/session.ts'
-import VerifiedBadge from './components/profile/VerifiedBadge.vue'
+import AccountMenu from './components/AccountMenu.vue'
 
 const session = useSessionStore()
-const router = useRouter()
 onMounted(() => session.load())
-
-const logOutError = ref<string | null>(null)
-
-async function logOut() {
-  logOutError.value = null
-  try {
-    await session.logOut()
-  } catch (err) {
-    logOutError.value = errorMessage(err)
-    return
-  }
-  if (router.currentRoute.value.meta.requiresAuth) await router.push({ name: 'library' })
-}
 </script>
 
 <template>
@@ -28,25 +13,13 @@ async function logOut() {
     <RouterLink to="/" class="sign">Frisson</RouterLink>
     <p class="tagline">Used &amp; new vinyl · est. 1994</p>
 
-    <nav v-if="session.loaded" class="user-menu" aria-label="Account">
-      <template v-if="session.user">
-        <RouterLink
-          class="who"
-          :to="`/u/${encodeURIComponent(session.user.username)}`"
-          :title="`@${session.user.username}`"
-        >
-          {{ session.user.displayName || session.user.username }}
-          <VerifiedBadge v-if="session.user.verified" />
-        </RouterLink>
-        <RouterLink :to="{ name: 'profile-edit' }">Edit profile</RouterLink>
-        <button type="button" @click="logOut">Log out</button>
-      </template>
-      <template v-else>
+    <div v-if="session.loaded" class="account">
+      <AccountMenu v-if="session.user" :user="session.user" />
+      <nav v-else class="auth-links" aria-label="Account">
         <RouterLink v-if="$route.name !== 'login'" :to="{ name: 'login' }">Log in</RouterLink>
         <RouterLink v-if="$route.name !== 'signup'" :to="{ name: 'signup' }">Sign up</RouterLink>
-      </template>
-      <span v-if="logOutError" class="menu-error" role="alert">{{ logOutError }}</span>
-    </nav>
+      </nav>
+    </div>
   </header>
 
   <main class="page">
@@ -56,8 +29,10 @@ async function logOut() {
 
 <style scoped>
 .masthead {
+  position: relative;
   text-align: center;
-  padding: 2rem 1rem 1rem;
+  /* Side padding keeps the centered sign clear of the account control on the right. */
+  padding: 2rem 4.75rem 1rem;
   border-bottom: 3px double var(--cardboard-dark);
 }
 
@@ -77,43 +52,45 @@ async function logOut() {
   margin: 0.25rem 0 0;
 }
 
-.user-menu {
+.account {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+}
+
+.auth-links {
   display: flex;
-  justify-content: center;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
   font-family: var(--font-display);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
 }
 
-.user-menu .who {
-  color: var(--ink);
-  font-weight: bold;
-  text-decoration: none;
-}
-
-.user-menu .who:hover {
-  text-decoration: underline;
-}
-
-.user-menu button {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  text-decoration: underline;
-  color: var(--ink-soft);
-  cursor: pointer;
-}
-
-.user-menu a {
+.auth-links a {
   color: var(--ink-soft);
 }
 
-.menu-error {
+.auth-links a:hover {
   color: var(--marker-red);
+}
+
+@media (min-width: 40rem) {
+  .masthead {
+    padding-inline: 10rem;
+  }
+
+  .account {
+    top: 1.25rem;
+    right: 1.5rem;
+  }
+
+  .auth-links {
+    flex-direction: row;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+  }
 }
 
 .page {
