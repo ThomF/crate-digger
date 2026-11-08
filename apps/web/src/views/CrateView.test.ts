@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import type { AlbumSummary, Crate } from '@frisson/shared'
 import { useLibraryStore } from '../stores/library.ts'
@@ -108,6 +108,84 @@ describe('crate browser', () => {
   it('a deep link into an empty library shows Crate not found too', async () => {
     const { wrapper } = await visit('/crates/1', { crateList: [] })
     expect(wrapper.get('.status-note').text()).toContain('Crate not found')
+  })
+
+  describe('a crate the loaded store does not know', () => {
+    const crateFetches = () =>
+      vi.mocked(fetch).mock.calls.filter(([url]) => url === '/api/crates').length
+
+    it('reloads once and then shows the crate', async () => {
+      const options = { crateList: crates }
+      const { wrapper, router } = await visit('/crates/1', options)
+      expect(crateFetches()).toBe(1)
+
+      options.crateList = [...crates, crate(9, 'Brand New')]
+      await router.push('/crates/9')
+      await flushPromises()
+
+      expect(crateFetches()).toBe(2)
+      expect(wrapper.text()).not.toContain('Crate not found')
+      expect(pressedTab(wrapper)).toBe('Brand New')
+    })
+
+    it('shows the loading note, not Crate not found, during the reload', async () => {
+      const { wrapper, router } = await visit('/crates/1')
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => new Promise(() => {})),
+      )
+      await router.push('/crates/9')
+      await nextTick()
+      expect(wrapper.text()).not.toContain('Crate not found')
+      expect(wrapper.get('.status-note').text()).toContain('Flipping through the crates')
+    })
+
+    it('ends at Crate not found after exactly one reload, with no loop', async () => {
+      const { wrapper, router } = await visit('/crates/1')
+      await router.push('/crates/999999')
+      await flushPromises()
+      await flushPromises()
+      expect(crateFetches()).toBe(2)
+      expect(wrapper.get('.status-note').text()).toContain('Crate not found')
+    })
+
+    it('does not reload on a first load, which is already fresh', async () => {
+      const { wrapper } = await visit('/crates/999999')
+      await flushPromises()
+      expect(crateFetches()).toBe(1)
+      expect(wrapper.get('.status-note').text()).toContain('Crate not found')
+    })
+
+    it('gives a missing crate another reload on each new visit', async () => {
+      const { router } = await visit('/crates/1')
+      await router.push('/crates/999999')
+      await flushPromises()
+      await router.push('/crates/1')
+      await flushPromises()
+      expect(crateFetches()).toBe(2)
+      await router.push('/crates/999999')
+      await flushPromises()
+      expect(crateFetches()).toBe(3)
+    })
+
+    it('does not reload for a crate it already knows', async () => {
+      const { router } = await visit('/crates/1')
+      await router.push('/crates/2')
+      await router.push('/shelf')
+      await flushPromises()
+      expect(crateFetches()).toBe(1)
+    })
+
+    it('shows the error with Try again when the reload fails, without looping', async () => {
+      const { wrapper, router } = await visit('/crates/1')
+      const failing = vi.fn(async () => new Response('{}', { status: 500 }))
+      vi.stubGlobal('fetch', failing)
+      await router.push('/crates/9')
+      await flushPromises()
+      expect(wrapper.get('[role="alert"]').text()).toContain('Try again')
+      expect(wrapper.text()).not.toContain('Crate not found')
+      expect(failing).toHaveBeenCalledTimes(2) // one reload: crates and albums
+    })
   })
 
   it('/shelf shows the first crate and every tab', async () => {

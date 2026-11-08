@@ -13,6 +13,7 @@ import {
   unfollow,
 } from '../api/follows.ts'
 import FollowingView from './FollowingView.vue'
+import source from './FollowingView.vue?raw'
 
 vi.mock('../api/follows.ts', () => ({
   follow: vi.fn(),
@@ -151,6 +152,47 @@ describe('FollowingView', () => {
     expect(rows[0]!.text()).toContain('@demo-a')
     expect(rows[0]!.text()).toContain('1 record')
     expect(rows[1]!.text()).toContain('5 records')
+  })
+
+  it('feed cards show the label and the crate name, both inside the one link', async () => {
+    const labelled = { ...card(7, 'demo-a'), name: 'Overpass Breakbeats', label: 'BREAKS' }
+    fakeServer([collector('demo-a')], [labelled, card(8, 'demo-a')], ['demo-a'])
+    const wrapper = await mountView()
+
+    const [first, second] = section(wrapper, 'feed').findAll('li')
+    expect(first!.findAll('a')).toHaveLength(1)
+    expect(first!.findAll('button')).toHaveLength(0)
+    expect(first!.get('a .crate-label').text()).toBe('BREAKS')
+    expect(first!.get('a .crate-name').text()).toBe('Overpass Breakbeats')
+    expect(first!.get('a').attributes('aria-label')).toBe('BREAKS: Overpass Breakbeats')
+    expect(second!.get('a').attributes('aria-label')).toBe('Crate 8')
+    expect(second!.find('.crate-label').exists()).toBe(false)
+    expect(second!.get('a .crate-name').text()).toBe('Crate 8')
+  })
+
+  it('a click on the crate name in a feed card opens the crate', async () => {
+    fakeServer([collector('demo-a')], [card(7, 'demo-a')], ['demo-a'])
+    const wrapper = await mountView()
+    const router = wrapper.vm.$router
+
+    await section(wrapper, 'feed').get('.crate-name').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/crates/7')
+  })
+
+  it('stretches the feed link over the card, with a pointer cursor and a focus ring', () => {
+    expect(source).toMatch(/\.crate-card \{\s*position: relative;\s*cursor: pointer;/)
+    expect(source).toMatch(
+      /\.crate-link::after \{\s*content: '';\s*position: absolute;\s*inset: 0;/,
+    )
+    expect(source).toMatch(/\.crate-link:focus-visible::after \{\s*outline: 3px solid/)
+  })
+
+  it('collector rows are not stretched, so their Follow buttons stay reachable', async () => {
+    fakeServer([collector('demo-a')], [], [])
+    const wrapper = await mountView()
+    expect(section(wrapper, 'suggested').get('li').classes()).not.toContain('crate-card')
   })
 
   it('hides Suggested collectors once its list is empty', async () => {

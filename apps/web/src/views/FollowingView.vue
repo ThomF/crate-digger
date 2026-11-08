@@ -16,6 +16,10 @@ const following = reactive(useAsyncSection(listFollowing))
 const feed = reactive(useAsyncSection(getFeed))
 const suggested = reactive(useAsyncSection(listSuggestedCollectors))
 
+/** The link's accessible name: its two lines of text, spelled out so they read as two. */
+const crateLinkName = (crate: { name: string; label: string | null }) =>
+  crate.label ? `${crate.label}: ${crate.name}` : crate.name
+
 const recordCount = (n: number) => (n === 1 ? '1 record' : `${n} records`)
 
 /** A follow or unfollow can change all three lists; each is re-requested without a page load. */
@@ -70,11 +74,16 @@ onMounted(() => {
         <button type="button" class="btn" @click="feed.load()">Try again</button>
       </p>
       <ul v-else-if="feed.data?.length" class="crates">
-        <li v-for="crate in feed.data" :key="crate.id" class="row">
+        <li v-for="crate in feed.data" :key="crate.id" class="row crate-card">
           <span class="swatch" :style="{ background: crate.color }" aria-hidden="true"></span>
           <span class="who">
-            <RouterLink :to="{ name: 'crate', params: { id: crate.id } }">
-              {{ crate.label ?? crate.name }}
+            <RouterLink
+              :to="{ name: 'crate', params: { id: crate.id } }"
+              class="crate-link"
+              :aria-label="crateLinkName(crate)"
+            >
+              <span v-if="crate.label" class="crate-label">{{ crate.label }}</span>
+              <span class="crate-name">{{ crate.name }}</span>
             </RouterLink>
             <span class="handle"> {{ crate.ownerDisplayName }} @{{ crate.ownerUsername }} </span>
           </span>
@@ -146,6 +155,53 @@ ul {
   padding: 0.4rem 0.6rem;
   background: var(--paper-dark);
   border: 1px solid var(--cardboard-dark);
+}
+
+/* A stretched link: the ::after covers the whole card, so a click anywhere opens the crate and
+   there is still only one link, with nothing interactive nested in it. */
+.crate-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.crate-card:hover {
+  background: var(--paper);
+}
+
+.crate-link {
+  display: block;
+  text-decoration: none;
+}
+
+.crate-card:hover .crate-link {
+  text-decoration: underline;
+}
+
+.crate-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* The focus ring goes around the card the link covers, not just its text. */
+.crate-link:focus-visible {
+  outline: none;
+}
+
+.crate-link:focus-visible::after {
+  outline: 3px solid var(--marker-red);
+  outline-offset: 2px;
+}
+
+.crate-label,
+.crate-name {
+  display: block;
+}
+
+/* Under a tape label the name is the second line; without one it is the card's title. */
+.crate-label + .crate-name {
+  font-weight: normal;
+  color: var(--ink-soft);
 }
 
 .who {

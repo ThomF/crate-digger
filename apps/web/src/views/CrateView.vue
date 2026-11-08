@@ -12,6 +12,8 @@ import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 import RatingStars from '../components/album/RatingStars.vue'
 
+// Data classification: PUBLIC. Crates and albums are shown to anyone.
+
 // Set on /crates/:id. Without it (/shelf) the view shows whichever crate is selected.
 const props = defineProps<{ crateId?: number }>()
 
@@ -34,6 +36,25 @@ watch(
   () => props.crateId,
   (id) => {
     if (id !== undefined) library.selectCrate(id)
+  },
+  { immediate: true },
+)
+
+// The store loads once, so it can miss a crate made since, in another tab or by someone else.
+// An unknown id gets one reload before it counts as not found. A load already under way when we
+// arrive counts as that reload, and the marker is what stops a missing id from looping.
+let reloadedFor: number | null = null
+watch(
+  [() => props.crateId, () => library.status],
+  ([id, status]) => {
+    if (id === undefined || library.crateById(id)) {
+      reloadedFor = null
+    } else if (status !== 'ready') {
+      reloadedFor = id
+    } else if (reloadedFor !== id) {
+      reloadedFor = id
+      void library.load({ force: true })
+    }
   },
   { immediate: true },
 )

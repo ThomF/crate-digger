@@ -9,6 +9,7 @@ import { follow, unfollow } from '../api/follows.ts'
 import { getProfile } from '../api/profiles.ts'
 import { useSessionStore } from '../stores/session.ts'
 import ProfileView from './ProfileView.vue'
+import source from './ProfileView.vue?raw'
 
 vi.mock('../api/profiles.ts', () => ({ getProfile: vi.fn() }))
 vi.mock('../api/follows.ts', () => ({ follow: vi.fn(), unfollow: vi.fn() }))
@@ -62,6 +63,7 @@ async function mountProfile(username = 'alice', user: PublicUser | null = null) 
       { path: '/', component: Blank },
       { path: '/profile/edit', name: 'profile-edit', component: Blank },
       { path: '/login', name: 'login', component: Blank },
+      { path: '/crates/:id(\\d+)', name: 'crate', component: Blank },
     ],
   })
   await router.push('/')
@@ -156,6 +158,37 @@ describe('ProfileView', () => {
     expect(crates[1]!.get('.count').text()).toBe('1 record')
   })
 
+  it('links each crate to its page, naming the crate, with nothing nested in the link', async () => {
+    getProfileMock.mockResolvedValue(base)
+    const wrapper = await mountProfile()
+    const crates = wrapper.findAll('li.crate')
+    expect(crates.map((c) => c.findAll('a').length)).toEqual([1, 1])
+    expect(crates[0]!.get('a').attributes('href')).toBe('/crates/1')
+    expect(crates[0]!.get('a').text()).toContain('Shoegaze')
+    expect(crates[0]!.get('a').attributes('aria-label')).toBe('SHOE: Shoegaze')
+    expect(crates[1]!.get('a').attributes('aria-label')).toBe('Jazz')
+    expect(crates[1]!.get('a').attributes('href')).toBe('/crates/2')
+    expect(crates[1]!.get('a').text()).toContain('Jazz')
+    expect(wrapper.find('li.crate button').exists()).toBe(false)
+  })
+
+  it('a click on a crate name opens that crate', async () => {
+    getProfileMock.mockResolvedValue(base)
+    const wrapper = await mountProfile()
+    const router = wrapper.vm.$router
+    await wrapper.findAll('li.crate')[1]!.get('.name').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/crates/2')
+  })
+
+  it('stretches the crate link over the row, with a pointer cursor and a focus ring', () => {
+    expect(source).toMatch(/\.crate \{\s*position: relative;\s*cursor: pointer;/)
+    expect(source).toMatch(
+      /\.crate-link::after \{\s*content: '';\s*position: absolute;\s*inset: 0;/,
+    )
+    expect(source).toMatch(/\.crate-link:focus-visible::after \{\s*outline: 3px solid/)
+  })
+
   it('has no verified badge when verified is false', async () => {
     getProfileMock.mockResolvedValue({ ...base, verified: false })
     const wrapper = await mountProfile()
@@ -220,6 +253,34 @@ describe('ProfileView', () => {
         const wrapper = await mountProfile('alice', viewer)
         expect(wrapper.get('.counts').text()).toMatch(/^5 followers\s+2 following$/)
       }
+    })
+
+    it.each([
+      [0, '0 followers'],
+      [1, '1 follower'],
+      [2, '2 followers'],
+    ])('a count of %i reads "%s"', async (followerCount, text) => {
+      getProfileMock.mockResolvedValue({ ...base, followerCount, followingCount: 1 })
+      const wrapper = await mountProfile()
+      expect(wrapper.findAll('.count-item')[0]!.text().replace(/\s+/g, ' ')).toBe(text)
+      expect(wrapper.get('.follower-count').text()).toBe(String(followerCount))
+      expect(wrapper.findAll('.count-item')[1]!.text().replace(/\s+/g, ' ')).toBe('1 following')
+    })
+
+    it('the wording follows the count when a follow takes it from 0 to 1 and back', async () => {
+      getProfileMock.mockResolvedValue({ ...base, followerCount: 0 })
+      followMock.mockResolvedValue(undefined)
+      unfollowMock.mockResolvedValue(undefined)
+      const wrapper = await mountProfile('alice', bob)
+      const label = () => wrapper.findAll('.count-item')[0]!.text().replace(/\s+/g, ' ')
+
+      await wrapper.get('.follow-control button').trigger('click')
+      await flushPromises()
+      expect(label()).toBe('1 follower')
+
+      await wrapper.get('.follow-control button').trigger('click')
+      await flushPromises()
+      expect(label()).toBe('0 followers')
     })
 
     it('signed-in visitor: the button matches viewerFollows', async () => {

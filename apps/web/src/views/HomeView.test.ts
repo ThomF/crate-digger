@@ -117,8 +117,8 @@ describe('HomeView', () => {
 
     const [labelled, unlabelled] = [cards[0]!, cards[1]!]
     expect(labelled.get('a').attributes('href')).toBe('/crates/7')
-    expect(labelled.get('a').text()).toBe('DUB / AFTER DARK')
-    expect(labelled.text()).toContain('Lamplit Dub Hours')
+    expect(labelled.get('a .crate-label').text()).toBe('DUB / AFTER DARK')
+    expect(labelled.get('a .crate-name').text()).toBe('Lamplit Dub Hours')
     expect(labelled.text()).toContain('5 records')
     expect(labelled.text()).toContain('Odessa Quillfern')
     expect(labelled.text()).toContain('@demo-odessa')
@@ -127,6 +127,37 @@ describe('HomeView', () => {
     expect(unlabelled.get('a').text()).toBe('Porch Folk')
     expect(unlabelled.text()).toContain('1 record')
     expect(unlabelled.text()).not.toContain('1 records')
+  })
+
+  it('has one link per card, named after the crate, with nothing nested in it', async () => {
+    const wrapper = await mountHome()
+    await flushPromises()
+    for (const [card, name] of [
+      [recommendedSection(wrapper).findAll('.crate-card')[0]!, 'Lamplit Dub Hours'],
+      [recommendedSection(wrapper).findAll('.crate-card')[1]!, 'Porch Folk'],
+    ] as const) {
+      expect(card.findAll('a')).toHaveLength(1)
+      expect(card.findAll('button')).toHaveLength(0)
+      expect(card.get('a').text()).toContain(name)
+      expect(card.get('a').attributes('aria-label')).toContain(name)
+    }
+  })
+
+  it('opens the crate on a click on its name', async () => {
+    const wrapper = await mountHome()
+    await flushPromises()
+    const router = wrapper.vm.$router
+    await recommendedSection(wrapper).get('.crate-name').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/crates/7')
+  })
+
+  it('stretches the link over the card, with a pointer cursor and a focus ring', () => {
+    expect(source).toMatch(/\.crate-card \{\s*position: relative;\s*cursor: pointer;/)
+    expect(source).toMatch(
+      /\.crate-link::after \{\s*content: '';\s*position: absolute;\s*inset: 0;/,
+    )
+    expect(source).toMatch(/\.crate-link:focus-visible::after \{\s*outline: 3px solid/)
   })
 
   it('has the exact note, the only AI in the section', async () => {

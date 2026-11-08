@@ -21,6 +21,10 @@ const dateFormat = new Intl.DateTimeFormat('en-US', {
 })
 const formatDate = (iso: string) => dateFormat.format(new Date(iso))
 
+/** The link's accessible name: its two lines of text, spelled out so they read as two. */
+const crateLinkName = (crate: { name: string; label: string | null }) =>
+  crate.label ? `${crate.label}: ${crate.name}` : crate.name
+
 const recordCount = (n: number) => (n === 1 ? '1 record' : `${n} records`)
 
 onMounted(() => {
@@ -81,10 +85,14 @@ onMounted(() => {
         <li v-for="crate in recommended.data.value" :key="crate.id" class="crate-card">
           <span class="swatch" :style="{ background: crate.color }" aria-hidden="true"></span>
           <div class="details">
-            <RouterLink :to="{ name: 'crate', params: { id: crate.id } }" class="crate-link">
-              {{ crate.label ?? crate.name }}
+            <RouterLink
+              :to="{ name: 'crate', params: { id: crate.id } }"
+              class="crate-link"
+              :aria-label="crateLinkName(crate)"
+            >
+              <span v-if="crate.label" class="crate-label">{{ crate.label }}</span>
+              <span class="crate-name">{{ crate.name }}</span>
             </RouterLink>
-            <p v-if="crate.label" class="crate-name">{{ crate.name }}</p>
             <p class="count">{{ recordCount(crate.albumCount) }}</p>
             <p class="owner">
               {{ crate.ownerDisplayName }}
@@ -182,6 +190,43 @@ h3 {
   border: 1px solid var(--cardboard-dark);
 }
 
+/* A stretched link: the ::after covers the whole card, so a click anywhere opens the crate and
+   there is still only one link, with nothing interactive nested in it. */
+.crate-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.crate-card:hover {
+  background: var(--paper);
+}
+
+.crate-link {
+  display: block;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.crate-card:hover .crate-link {
+  text-decoration: underline;
+}
+
+.crate-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* The focus ring goes around the card the link covers, not just its text. */
+.crate-link:focus-visible {
+  outline: none;
+}
+
+.crate-link:focus-visible::after {
+  outline: 3px solid var(--marker-red);
+  outline-offset: 2px;
+}
+
 .swatch {
   width: 1rem;
   height: 1rem;
@@ -198,11 +243,17 @@ h3 {
   margin: 0;
 }
 
-.crate-link {
-  font-weight: bold;
+.crate-label,
+.crate-name {
+  display: block;
 }
 
-.crate-name,
+/* Under a tape label the name is the second line; without one it is the card's title. */
+.crate-label + .crate-name {
+  font-weight: normal;
+  color: var(--ink-soft);
+}
+
 .handle {
   color: var(--ink-soft);
 }

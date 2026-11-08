@@ -50,6 +50,7 @@ async function mountView(user: PublicUser | null) {
       { path: '/profile', name: 'my-profile', component: Blank },
       { path: '/profile/edit', name: 'profile-edit', component: Blank },
       { path: '/login', name: 'login', component: Blank },
+      { path: '/crates/:id(\\d+)', name: 'crate', component: Blank },
     ],
   })
   await router.push('/profile')
@@ -77,6 +78,13 @@ describe('MyProfileView', () => {
     const edit = wrapper.findAll('a').find((a) => a.text() === 'Edit profile')
     expect(edit?.attributes('href')).toBe('/profile/edit')
     expect(router.currentRoute.value.fullPath).toBe('/profile')
+  })
+
+  it('links your crates and words a count of 1 in the singular', async () => {
+    getProfileMock.mockResolvedValue({ ...profile, followerCount: 1 })
+    const { wrapper } = await mountView(alice)
+    expect(wrapper.get('li.crate a').attributes('href')).toBe('/crates/1')
+    expect(wrapper.get('.counts').text().replace(/\s+/g, ' ')).toBe('1 follower 4 following')
   })
 
   it('offers no follow control on your own profile', async () => {

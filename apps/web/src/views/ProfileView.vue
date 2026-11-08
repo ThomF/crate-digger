@@ -49,6 +49,10 @@ const initials = computed(() =>
   profile.value ? initialsFor(profile.value.displayName, profile.value.username) : '',
 )
 
+/** The link's accessible name: its two lines of text, spelled out so they read as two. */
+const crateLinkName = (crate: { name: string; label: string | null }) =>
+  crate.label ? `${crate.label}: ${crate.name}` : crate.name
+
 const albumCount = (n: number) => (n === 1 ? '1 record' : `${n} records`)
 
 async function load(username: string) {
@@ -103,8 +107,10 @@ watch(() => props.username, load, { immediate: true })
         <p v-if="profile.location" class="location">{{ profile.location }}</p>
         <p class="counts">
           <span class="count-item">
-            <strong class="follower-count">{{ profile.followerCount }}</strong> followers
+            <strong class="follower-count">{{ profile.followerCount }}</strong>
+            {{ profile.followerCount === 1 ? 'follower' : 'followers' }}
           </span>
+          {{ ' ' }}
           <span class="count-item">
             <strong class="following-count">{{ profile.followingCount }}</strong> following
           </span>
@@ -148,8 +154,14 @@ watch(() => props.username, load, { immediate: true })
       <ul v-if="profile.crates.length">
         <li v-for="crate in profile.crates" :key="crate.id" class="crate">
           <span class="swatch" :style="{ background: crate.color }" aria-hidden="true"></span>
-          <span class="name">{{ crate.label ?? crate.name }}</span>
-          <span v-if="crate.label" class="sub">{{ crate.name }}</span>
+          <RouterLink
+            :to="{ name: 'crate', params: { id: crate.id } }"
+            class="crate-link"
+            :aria-label="crateLinkName(crate)"
+          >
+            <span class="name">{{ crate.label ?? crate.name }}</span>
+            <span v-if="crate.label" class="sub">{{ crate.name }}</span>
+          </RouterLink>
           <span class="count">{{ albumCount(crate.albumCount) }}</span>
         </li>
       </ul>
@@ -282,6 +294,46 @@ ul {
   padding: 0.4rem 0.6rem;
   background: var(--paper-dark);
   border: 1px solid var(--cardboard-dark);
+}
+
+/* A stretched link: the ::after covers the whole card, so a click anywhere opens the crate and
+   there is still only one link, with nothing interactive nested in it. */
+.crate {
+  position: relative;
+  cursor: pointer;
+}
+
+.crate:hover {
+  background: var(--paper);
+}
+
+.crate-link {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: baseline;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.crate:hover .crate-link {
+  text-decoration: underline;
+}
+
+.crate-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* The focus ring goes around the card the link covers, not just its text. */
+.crate-link:focus-visible {
+  outline: none;
+}
+
+.crate-link:focus-visible::after {
+  outline: 3px solid var(--marker-red);
+  outline-offset: 2px;
 }
 
 .swatch {
