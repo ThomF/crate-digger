@@ -1,8 +1,13 @@
-import type { Crate, CreateCrateRequest, UpdateCrateInput } from '@frisson/shared'
+import type { Crate, CrateCard, CreateCrateRequest, UpdateCrateInput } from '@frisson/shared'
 import { request } from './client.ts'
 
 export function listCrates() {
   return request<Crate[]>('/crates')
+}
+
+/** The curated picks shown on Home. Data classification: PUBLIC (no owner id or email). */
+export function listRecommendedCrates() {
+  return request<CrateCard[]>('/crates/recommended')
 }
 
 export function createCrate(body: CreateCrateRequest) {
