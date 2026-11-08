@@ -36,15 +36,21 @@ describe('serving the web app (production)', () => {
     expect(res.headers['cache-control']).toBe('no-cache')
   })
 
-  it.each(['/albums/7', '/list?q=nirvana', '/crates'])(
-    'answers the app URL %s with index.html, for Vue Router',
-    async (url) => {
-      const res = await app.inject({ url })
+  it.each([
+    '/albums/7',
+    '/list?q=nirvana',
+    '/crates',
+    '/following',
+    '/profile',
+    '/about',
+    '/shelf',
+    '/crates/5',
+  ])('answers the app URL %s with index.html, for Vue Router', async (url) => {
+    const res = await app.inject({ url })
 
-      expect(res.statusCode).toBe(200)
-      expect(res.body).toContain('<div id="app">')
-    },
-  )
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toContain('<div id="app">')
+  })
 
   it('caches hashed assets for a year', async () => {
     const res = await app.inject({ url: '/assets/index-a1b2c3.js' })

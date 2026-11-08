@@ -1,5 +1,11 @@
-import { and, asc, count, eq, inArray, isNull, max, ne, or } from 'drizzle-orm'
-import type { Crate, CreateCrateInput, PublicUser, UpdateCrateInput } from '@frisson/shared'
+import { and, asc, count, eq, inArray, isNotNull, isNull, max, ne, or } from 'drizzle-orm'
+import type {
+  Crate,
+  CrateCard,
+  CreateCrateInput,
+  PublicUser,
+  UpdateCrateInput,
+} from '@frisson/shared'
 import type { Db } from '../db/client.ts'
 import { albums, crates, users } from '../db/schema.ts'
 import { HttpError, badRequest, notFound } from '../errors.ts'
@@ -32,6 +38,34 @@ export function listCrates(db: Db): Crate[] {
     .groupBy(crates.id)
     .orderBy(asc(crates.sortOrder), asc(crates.id))
     .all()
+}
+
+/**
+ * The crates Home recommends: those given a rank, lowest rank first. Ownerless crates are left
+ * out, since a card has to name its owner.
+ * Data classification: PUBLIC. Owner username and display name only; no owner id, no demo key.
+ */
+export function listRecommendedCrates(db: Db): CrateCard[] {
+  const rows = db
+    .select({
+      id: crates.id,
+      name: crates.name,
+      color: crates.color,
+      label: crates.label,
+      // LEFT JOIN so a ranked crate that has been emptied still shows up with albumCount 0.
+      albumCount: count(albums.id),
+      createdAt: crates.createdAt,
+      ownerUsername: users.username,
+      ownerDisplayName: users.displayName,
+    })
+    .from(crates)
+    .innerJoin(users, eq(users.id, crates.ownerId))
+    .leftJoin(albums, eq(albums.crateId, crates.id))
+    .where(isNotNull(crates.recommendedRank))
+    .groupBy(crates.id)
+    .orderBy(asc(crates.recommendedRank), asc(crates.id))
+    .all()
+  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }))
 }
 
 export function getCrate(db: Db, id: number): Crate {
