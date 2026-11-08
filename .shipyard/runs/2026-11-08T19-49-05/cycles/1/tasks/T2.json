@@ -1,0 +1,23 @@
+{
+  "id": "T2",
+  "title": "Shared zod contracts and the extended public profile",
+  "description": "In packages/shared/src/index.ts add response schemas with inferred types, each with a 'Data classification: PUBLIC' comment:\n- `newsItem` / NewsItem: { id: int, title, summary, source, publishedAt: ISO 8601 string }.\n- `collectorSummary` / CollectorSummary: { username, displayName, avatarUrl: string|null, verified: boolean, isDemo: boolean }.\n- `crateCard` / CrateCard: { id, name, color, label: string|null, albumCount, createdAt: ISO string, ownerUsername: string, ownerDisplayName: string }. Do NOT reuse `crate`, because it carries numeric ownerId, which the feed and recommended list must not expose.\n\nExtend `publicProfile` with required followerCount: int, followingCount: int, viewerFollows: boolean, isDemo: boolean.\n\nIn apps/api/src/services/profiles.ts, change to `toPublicProfile(db, user, viewerId: number | null = null)` and `getPublicProfile(db, username, viewer: PublicUser | null = null)`. followerCount counts follows where followee_id = user, followingCount where follower_id = user, viewerFollows is true only when viewerId has a follows row for the user, isDemo = user.demoSeedKey !== null. Keep the explicit field list and never emit demoSeedKey, id, email or role. updateOwnProfile and setVerified pass the acting user's id. services/avatars.ts keeps its two-argument call via the default. In routes/profiles.ts pass req.user in GET /users/:username.\n\nUpdate fixtures and key assertions that the required fields break: PUBLIC_KEYS in test/profiles.test.ts, the parsed key list and input in test/shared-profile.test.ts, and the typed PublicProfile fixtures in apps/web/src/views/ProfileView.test.ts, EditProfileView.test.ts and stores/session.test.ts (fixture fields only). Add tests that a fresh user has zero counts and viewerFollows false, that a nested-key walk finds no email/role/id at user level, and that crateCard and collectorSummary strip unknown keys.\n\nTests use in-memory databases only; never touch data/.",
+  "criteria": [
+    "AC13",
+    "AC23"
+  ],
+  "files": [
+    "packages/shared/src/index.ts",
+    "apps/api/src/services/profiles.ts",
+    "apps/api/src/routes/profiles.ts",
+    "apps/api/test/profiles.test.ts",
+    "apps/api/test/shared-profile.test.ts",
+    "apps/web/src/views/ProfileView.test.ts",
+    "apps/web/src/views/EditProfileView.test.ts",
+    "apps/web/src/stores/session.test.ts"
+  ],
+  "depends_on": [
+    "T1"
+  ],
+  "status": "todo"
+}

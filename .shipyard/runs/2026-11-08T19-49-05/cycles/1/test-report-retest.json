@@ -1,0 +1,88 @@
+{
+  "verdict": "pass",
+  "scope": "Scoped re-test after fix commit 3769352. Built web app (apps/web/dist) served by Fastify through WEB_DIR on 127.0.0.1:3111, against a temp copy of the database. NODE_ENV was unset so demo content applied and session cookies worked over plain http; this means the built assets were tested, not NODE_ENV=production behaviour.",
+  "commands": {
+    "npm test": { "exit": 0, "tail": "api: Test Files 21 passed (21), Tests 360 passed (360). web: Test Files 31 passed (31), Tests 316 passed (316), Duration 2.98s." },
+    "npm run typecheck": { "exit": 0, "tail": "> typecheck\n> vue-tsc --noEmit" },
+    "npm run lint": { "exit": 0, "tail": "> lint\n> eslint ." },
+    "npm run format:check": { "exit": 0, "tail": "Checking formatting...\nAll matched files use Prettier code style!" },
+    "npm run build": { "exit": 0, "tail": "dist/assets/index-tNLuAC_g.js 92.59 kB | dist/assets/index-BMbPvSU4.js 130.69 kB\nbuilt in 767ms" }
+  },
+  "criteria": {
+    "AC10": {
+      "status": "pass",
+      "evidence": "Trusted clicks at 1280x800, hit-tested with a capture listener (target crate-link). Name on card 1 -> /crates/26, tab DUB / AFTER DARK pressed. Count on card 2 -> /crates/27, card 4 -> /crates/29, card 5 -> /crates/30. Owner name on card 3 -> /crates/28. Owner handle on card 6 -> /crates/31, 'by Emeka Vossgrove'. Reload of /crates/31 (navigation type 'navigate'): same tab pressed, same owner, albums shown. Tab click JAZZ / SMALL ROOMS from /crates/27 -> URL /crates/28, 'by Junia Marrowby'. Direct /crates/999999: 'Crate not found', 0 tabs, none pressed; after 5s and again after 10s the API entries were exactly [/api/auth/me, /api/crates, /api/albums]. SPA push to /crates/999999 then /crates/999998: 'Crate not found' each time, exactly one /api/crates and one /api/albums per id, no further requests after 6s and 3s. One count click on card 2 did not navigate on its first attempt; see observations."
+    },
+    "AC4": {
+      "status": "pass",
+      "evidence": "Signed in, following one collector so the feed card rendered. scrollWidth/innerWidth on /, /following, /profile: 320/320, 390/390, 1280/1280. Nav link left-right boxes, the same on all three pages at each width. 320: Home 17-67, Following 71-162, Profile 166-241, About 245-303. 390: Home 52-102, Following 106-197, Profile 201-276, About 280-338. 1280: Home 464-518, Following 534-637, Profile 653-736, About 752-816. All four inside the viewport with width > 0, confirmed in screenshots at 320. /about and /shelf not re-measured: outside this re-test's scope."
+    },
+    "AC9": {
+      "status": "pass",
+      "evidence": "section.recommended: innerText contains 'Curated demo picks. No AI model is involved yet.'; case-sensitive 'AI' count is 1 in innerText and 1 in textContent, 0 across all aria-labels (e.g. 'DUB / AFTER DARK: Lamplit Dub Hours'), and no attribute anywhere in the section contains 'AI'. Computed text-transform is 'none' on every element in the section, so no CSS upper-casing can add one."
+    },
+    "AC17": {
+      "status": "pass",
+      "evidence": "Fresh user on /following. Real click Follow on Emeka Vossgrove: Following list and feed gained him and Overpass Breakbeats, URL stayed /following, window marker survived (no full page load), API /api/me/following = [demo-emeka-vossgrove], /api/me/feed = [Overpass Breakbeats]. Survived reload. Real click Unfollow: both lists emptied, API both [], survived reload, he returned to Suggested collectors. Failure path was not exercised in the browser; the brief assigns it to component tests: FollowingView.test.ts:234 and :251 assert the alert and unchanged state, and pass."
+    },
+    "AC18": {
+      "status": "pass",
+      "evidence": "/u/demo-emeka-vossgrove signed in: Follow -> Unfollow with '0 followers' -> '1 follower'; reload kept it, API followerCount 1, viewerFollows true. With a second throwaway follower: '2 followers', Unfollow -> '1 follower', Follow -> '2 followers'. Across all of these the URL stayed on /u/demo-emeka-vossgrove and the window marker survived, so the buttons do not trigger a stretched link. Signed out: 'Log in to follow' -> /login?next=/u/demo-emeka-vossgrove and no buttons. Own profile at /u/retest2user signed in: no buttons, 'Edit profile' link only."
+    },
+    "AC19": {
+      "status": "pass",
+      "evidence": "/profile signed in: URL stayed /profile, nav aria-current on Profile only, 'Retest Two', '@retest2user', crate 'Retest Outside Store', '0 followers', '1 following', link 'Edit profile' -> /profile/edit. Real edit of the display name to 'Retest Renamed', saved at /profile/edit; after a reload /profile showed 'Retest Renamed' and the document title followed."
+    }
+  },
+  "f1_items": [
+    {
+      "item": "Feed card shows the crate name and the whole card opens the crate",
+      "status": "pass",
+      "evidence": "Feed card reads 'BREAKS / UNDERPASS', 'Overpass Breakbeats', 'Emeka Vossgrove @demo-emeka-vossgrove', '4 records'. Real clicks on owner text and on the count (far right of the card) both -> /crates/31 with that tab pressed."
+    },
+    {
+      "item": "Crates on /profile and /u/<user> open /crates/<id>",
+      "status": "pass",
+      "evidence": "/u/demo-emeka-vossgrove: real click on '4 records' -> /crates/31, no page reload (window marker survived). /profile: real click on '0 records' -> /crates/35, tab 'Retest Outside Store' pressed."
+    },
+    {
+      "item": "'1 follower' at a count of 1, '0 followers' / '2 followers' otherwise",
+      "status": "pass",
+      "evidence": "Read from .counts in the browser on one profile as the count changed: '0 followers', '1 follower', '2 followers', back to '1 follower' after an unfollow."
+    },
+    {
+      "item": "Crate created outside the loaded store renders on SPA navigation without a reload",
+      "status": "pass",
+      "evidence": "On /shelf with 11 tabs: fetch POST /api/crates created id 35, then router.push('/crates/35'). 12 tabs, 'Retest Outside Store' pressed, 'by Retest Two', not 'Crate not found', window marker survived. The script's await did not return before the 45s tool timeout in the hidden pane, and state was read in a follow-up call after a screenshot; see observations."
+    },
+    {
+      "item": "A link's accessible name contains the crate name",
+      "status": "pass",
+      "evidence": "Accessibility tree. Home: link 'DUB / AFTER DARK: Lamplit Dub Hours' href /crates/26. Feed and /u/demo-emeka-vossgrove: link 'BREAKS / UNDERPASS: Overpass Breakbeats' href /crates/31. /profile with no label: link 'Retest Outside Store' href /crates/35."
+    },
+    {
+      "item": "Keyboard focus visibly marks the card on Home and Following",
+      "status": "pass",
+      "evidence": "Real Tab key from the preceding focusable element. Both pages: activeElement a.crate-link, :focus-visible true, ::after outline solid 3px rgb(192, 57, 43), position absolute. Screenshots show the red ring around the entire card, not just the text. Enter on the focused Home card -> /crates/26."
+    }
+  ],
+  "observations": [
+    {
+      "severity": "low",
+      "text": "One real click on the count of recommended card 2 stayed on / (first click after the first 1280x800 emulation, no click listener attached, so it is unknown whether the event reached the page). Not reproduced: the same coordinates and flow navigated on all 3 later attempts, including one after repeating the resize sequence; hit-testing returned a.crate-link for that point. Overall 1 miss in 9 recommended-card clicks. Likely harness, but the cause was not established."
+    },
+    {
+      "severity": "info",
+      "text": "An awaited router.push in the hidden pane did not resolve within the 45s tool timeout, though navigation completed once a screenshot forced a frame. Consistent with the known view-transition stall in a hidden pane, and not treated as a defect."
+    },
+    {
+      "severity": "cosmetic",
+      "text": "On the owner's profile the 'Edit profile' button sits a few pixels right of the counts and name above it, and tight under the counts line, at both 1280 and 320."
+    },
+    {
+      "severity": "info",
+      "text": "Console errors were 401s only in the signed-out and page-load checks read during this run; a filter for Vue errors returned none. A full console audit is AC27 and was not in this re-test's scope."
+    }
+  ],
+  "data_checksums_unchanged": true
+}

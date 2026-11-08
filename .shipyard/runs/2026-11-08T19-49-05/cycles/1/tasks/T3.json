@@ -1,0 +1,24 @@
+{
+  "id": "T3",
+  "title": "Fictional demo content and idempotent start-up seeding",
+  "description": "Create apps/api/src/db/demo-content.ts, data only, with a header comment stating the module is fictional demo data. Contents: at least 6 demo users; at least 8 demo crates, each with at least 4 albums and short track lists, of which at least 6 have a recommendedRank; at least 8 news items with fixed published dates in the past, all distinct. Every row has a stable seedKey (for example 'user:vera-lindqvist-demo' style keys, 'crate:...', 'album:...', 'news:...').\n\nContent rules: usernames start 'demo-'; emails are '<username>@frisson.invalid'; no links; no avatars. Every person, artist, label, venue, publication, album and crate name is invented; check each for a clash with a known real person, band, label or company and replace on doubt. Crate createdAt values are fixed and distinct, so feed order is meaningful. Crate names, crate labels, and demo usernames and display names must not contain the letters 'ai' in any case (for example not RAIN, TRAIN, Blair), because AC9 forbids any other 'AI' in the Recommended section, and tape labels are upper case. Use #rrggbb colours for crates and sleeves. No cover files.\n\nCreate apps/api/src/services/demo-seed.ts exporting:\n- `DEMO_PASSWORD_HASH`, a non-scrypt sentinel such as 'demo-account-no-login', which verifyPassword rejects.\n- `shouldSeedDemo(env)`: SEED_DEMO_DATA='true' always yes; SEED_DEMO_DATA='false' always no; otherwise yes unless NODE_ENV='production'. Empty string counts as unset, since Compose passes ''.\n- `seedDemoContent(db, log?)`: synchronous, one transaction, returns inserted counts. Inserts missing rows only and never updates existing rows. Users are matched by demo_seed_key. If no key match exists and the username or email is already held by a row with a NULL key, skip that user and every crate and album of theirs, and log a warning, never touching the account. Crates are matched by demo_seed_key; new ones get sort_order after the current maximum so existing shelf order is unchanged, plus owner_id and recommended_rank. Albums are matched by demo_seed_key and inserted only when their crate exists; tracks are inserted only together with a newly inserted album. News is matched by seed_key. role 'user', verified false, no user_links, no follow rows.\n- `seedDemoFromEnv(db, env, log)`.\n\nIn apps/api/src/server.ts call seedDemoFromEnv after bootstrapFromEnv and before listen. A seeding failure is logged and does not stop the server. Do NOT call it from buildApp, so buildTestApp stays empty.\n\nCreate test/demo-seed.test.ts covering: minimum counts; every field rule in AC23; running three times adds no rows; a renamed demo crate keeps its name with no duplicate; deleting all crates/albums/tracks the way seed.ts does and re-running restores them; a deleted demo album returns; the pre-existing username collision leaves that account, its crates and its role unchanged; login with a demo email returns 401 through app.inject; shouldSeedDemo truth table; buildTestApp starts with zero demo rows; no owner's existing row changes; no name matches /ai/i. seed.ts itself is unchanged.\n\nTests use in-memory or mkdtemp databases. Any manual run must set DATA_DIR to a temp dir. Never write data/.",
+  "criteria": [
+    "AC6",
+    "AC7",
+    "AC8",
+    "AC21",
+    "AC22",
+    "AC23",
+    "AC24"
+  ],
+  "files": [
+    "apps/api/src/db/demo-content.ts",
+    "apps/api/src/services/demo-seed.ts",
+    "apps/api/src/server.ts",
+    "apps/api/test/demo-seed.test.ts"
+  ],
+  "depends_on": [
+    "T1"
+  ],
+  "status": "todo"
+}

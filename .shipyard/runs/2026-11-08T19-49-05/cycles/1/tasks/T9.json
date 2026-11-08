@@ -1,0 +1,36 @@
+{
+  "id": "T9",
+  "title": "Router, masthead nav and moving the crate browser to /shelf",
+  "description": "router.ts routes:\n- '/' name 'home' HomeView.\n- '/shelf' name 'library' CrateView (keeping the name 'library' means existing { name: 'library' } links in CratesView, AlbumEditorView and LibraryToolbar follow the move).\n- '/crates/:id(\\\\d+)' name 'crate' CrateView, public, props { crateId: Number(id) }; '/crates' stays requiresAuth and is a separate record.\n- '/following' name 'following' FollowingView, requiresAuth.\n- '/profile' name 'my-profile' MyProfileView, requiresAuth; '/profile/edit' unchanged.\n- '/about' name 'about' AboutView.\nLazy-load all except HomeView. Do not change /list, /u/:username, /albums/*, /login or /signup. In scrollBehavior, keep position when moving between 'library' and 'crate' so tab clicks do not jump.\n\nApp.vue: add `<nav class=\"main-nav\" aria-label=\"Main\">` with exactly four RouterLinks in order: Home (/), Following (/following), Profile (/profile), About (/about), for all visitors on every route. RouterLink's own aria-current=\"page\" on exact match provides AC2. The nav must be a full-width row in the masthead, outside the side padding that clears the account control: 25 characters of Courier do not fit in the 168px left at 320px with 4.75rem padding. Keep it single-line, no wrapping menu, no horizontal scroll; size font and gaps so all four fit in 320px. Render the 'Frisson' sign link with RouterLink `custom` plus a plain <a> so it does not carry a second aria-current on /. Keep existing selectors .account, .tagline, nav.user-menu. Active link style from base.css tokens.\n\nAccountMenu.vue: logOut pushes { name: 'home' } when the route requiresAuth. Keep 'View profile' at /u/<username>.\n\nCrateView.vue: optional prop crateId. With crateId, crate = library.crateById(crateId), no fallback to crates[0]; a loaded store with no such crate shows status-note 'Crate not found' and a link to { name: 'library' }; a watch selects that crate in the store. A tab click calls selectCrate synchronously and router.replace({ name: 'crate', params: { id } }) on both /shelf and /crates/:id. document.title 'Crates · Frisson'. Tabs must wrap within 320px with long labels (overflow-wrap, max-width 100%).\n\nLibraryToolbar.vue: Crates link stays { name: 'library' }; mark it active on both 'library' and 'crate' routes via a computed class instead of exact-active-class.\n\nAlbumView.vue and NotFoundView.vue: 'Back to the crates' links to { name: 'library' }.\n\nTests: App.test.ts: fixture routes gain home ('/') and library ('/shelf'); assert the nav's four links, order and hrefs signed in and out, aria-current at each URL and none on /shelf, /list, /u/x; logout expectations move to 'home'. router.test.ts: guards for /following and /profile redirect to login?next, public /, /about, /shelf, /crates/5, /crates still guarded, /crates/abc is not-found. editControls.test.ts: fixture uses '/shelf' with 'library' and adds 'crate'; visits use /shelf; flush after tab clicks. New CrateView.test.ts: deep link selects the crate, missing id shows 'Crate not found', tab click updates the URL.\n\nSafety: if you run the app, build and start with DATA_DIR set to a mkdtemp copy; never against data/. Verify scrollWidth at 320 in a real browser if available; the tester repeats this.",
+  "criteria": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC4",
+    "AC5",
+    "AC10",
+    "AC11",
+    "AC15",
+    "AC19",
+    "AC27"
+  ],
+  "files": [
+    "apps/web/src/router.ts",
+    "apps/web/src/router.test.ts",
+    "apps/web/src/App.vue",
+    "apps/web/src/App.test.ts",
+    "apps/web/src/components/AccountMenu.vue",
+    "apps/web/src/components/LibraryToolbar.vue",
+    "apps/web/src/views/CrateView.vue",
+    "apps/web/src/views/CrateView.test.ts",
+    "apps/web/src/views/AlbumView.vue",
+    "apps/web/src/views/NotFoundView.vue",
+    "apps/web/src/views/editControls.test.ts",
+    "apps/web/src/styles/base.css"
+  ],
+  "depends_on": [
+    "T7",
+    "T8"
+  ],
+  "status": "todo"
+}

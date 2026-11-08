@@ -1,0 +1,162 @@
+{
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Additive schema and generated migration 0005",
+      "description": "Extend apps/api/src/db/schema.ts, then generate the migration with `npm run db:generate -w apps/api -- --name follows_news_demo` (produces drizzle/0005_follows_news_demo.sql, meta/0005_snapshot.json and a journal entry). This task is the only owner of the migration and snapshot files. Do not hand-edit them or edit 0000-0004.\n\nAdd:\n- Table `follows` (Drizzle export `follows`): id integer PK autoincrement; follower_id and followee_id, integer not null, FK users.id ON DELETE CASCADE; created_at timestamp default unixepoch. uniqueIndex `follows_follower_followee_unique` on (follower_id, followee_id); index `follows_followee_idx` on followee_id; check `follows_no_self` follower_id <> followee_id. Data-classification header comment.\n- Table `news_items` (export `newsItems`): id integer PK autoincrement; seed_key text not null unique; title, summary, source text not null; published_at integer timestamp not null; created_at default unixepoch.\n- Nullable columns: users.demo_seed_key text unique (`demoSeedKey`, non-null means demo user); crates.demo_seed_key text unique; crates.recommended_rank integer (`recommendedRank`, null means not recommended, lower ranks first); albums.demo_seed_key text unique.\n- Relations for follows and $inferSelect/$inferInsert types (Follow, NewsItem, NewNewsItem).\n\nThe generated SQL must only contain CREATE TABLE, ALTER TABLE ADD COLUMN and CREATE INDEX statements. If drizzle produces a table rebuild (`__new_` tables), restructure so it does not. Extend test/migration.test.ts with a 'migration 0005' case modelled on the 0004 one (database at 0000-0004 with users, sessions, links, crates, albums, tracks; opening through createDb keeps every row with new columns NULL). Extend test/schema.test.ts with the unique constraint, cascade on user delete and self-follow check.\n\nSafety: tests use ':memory:' or mkdtemp databases only. Never open or write the real data/ folder. Do not run db:seed, db:studio, or the server without DATA_DIR pointing at a temp dir.",
+      "criteria": ["AC12", "AC21", "AC23"],
+      "files": [
+        "apps/api/src/db/schema.ts",
+        "apps/api/drizzle/0005_follows_news_demo.sql",
+        "apps/api/drizzle/meta/0005_snapshot.json",
+        "apps/api/drizzle/meta/_journal.json",
+        "apps/api/test/migration.test.ts",
+        "apps/api/test/schema.test.ts"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "T2",
+      "title": "Shared zod contracts and the extended public profile",
+      "description": "In packages/shared/src/index.ts add response schemas with inferred types, each with a 'Data classification: PUBLIC' comment:\n- `newsItem` / NewsItem: { id: int, title, summary, source, publishedAt: ISO 8601 string }.\n- `collectorSummary` / CollectorSummary: { username, displayName, avatarUrl: string|null, verified: boolean, isDemo: boolean }.\n- `crateCard` / CrateCard: { id, name, color, label: string|null, albumCount, createdAt: ISO string, ownerUsername: string, ownerDisplayName: string }. Do NOT reuse `crate`, because it carries numeric ownerId, which the feed and recommended list must not expose.\n\nExtend `publicProfile` with required followerCount: int, followingCount: int, viewerFollows: boolean, isDemo: boolean.\n\nIn apps/api/src/services/profiles.ts, change to `toPublicProfile(db, user, viewerId: number | null = null)` and `getPublicProfile(db, username, viewer: PublicUser | null = null)`. followerCount counts follows where followee_id = user, followingCount where follower_id = user, viewerFollows is true only when viewerId has a follows row for the user, isDemo = user.demoSeedKey !== null. Keep the explicit field list and never emit demoSeedKey, id, email or role. updateOwnProfile and setVerified pass the acting user's id. services/avatars.ts keeps its two-argument call via the default. In routes/profiles.ts pass req.user in GET /users/:username.\n\nUpdate fixtures and key assertions that the required fields break: PUBLIC_KEYS in test/profiles.test.ts, the parsed key list and input in test/shared-profile.test.ts, and the typed PublicProfile fixtures in apps/web/src/views/ProfileView.test.ts, EditProfileView.test.ts and stores/session.test.ts (fixture fields only). Add tests that a fresh user has zero counts and viewerFollows false, that a nested-key walk finds no email/role/id at user level, and that crateCard and collectorSummary strip unknown keys.\n\nTests use in-memory databases only; never touch data/.",
+      "criteria": ["AC13", "AC23"],
+      "files": [
+        "packages/shared/src/index.ts",
+        "apps/api/src/services/profiles.ts",
+        "apps/api/src/routes/profiles.ts",
+        "apps/api/test/profiles.test.ts",
+        "apps/api/test/shared-profile.test.ts",
+        "apps/web/src/views/ProfileView.test.ts",
+        "apps/web/src/views/EditProfileView.test.ts",
+        "apps/web/src/stores/session.test.ts"
+      ],
+      "depends_on": ["T1"]
+    },
+    {
+      "id": "T3",
+      "title": "Fictional demo content and idempotent start-up seeding",
+      "description": "Create apps/api/src/db/demo-content.ts, data only, with a header comment stating the module is fictional demo data. Contents: at least 6 demo users; at least 8 demo crates, each with at least 4 albums and short track lists, of which at least 6 have a recommendedRank; at least 8 news items with fixed published dates in the past, all distinct. Every row has a stable seedKey (for example 'user:vera-lindqvist-demo' style keys, 'crate:...', 'album:...', 'news:...').\n\nContent rules: usernames start 'demo-'; emails are '<username>@frisson.invalid'; no links; no avatars. Every person, artist, label, venue, publication, album and crate name is invented; check each for a clash with a known real person, band, label or company and replace on doubt. Crate createdAt values are fixed and distinct, so feed order is meaningful. Crate names, crate labels, and demo usernames and display names must not contain the letters 'ai' in any case (for example not RAIN, TRAIN, Blair), because AC9 forbids any other 'AI' in the Recommended section, and tape labels are upper case. Use #rrggbb colours for crates and sleeves. No cover files.\n\nCreate apps/api/src/services/demo-seed.ts exporting:\n- `DEMO_PASSWORD_HASH`, a non-scrypt sentinel such as 'demo-account-no-login', which verifyPassword rejects.\n- `shouldSeedDemo(env)`: SEED_DEMO_DATA='true' always yes; SEED_DEMO_DATA='false' always no; otherwise yes unless NODE_ENV='production'. Empty string counts as unset, since Compose passes ''.\n- `seedDemoContent(db, log?)`: synchronous, one transaction, returns inserted counts. Inserts missing rows only and never updates existing rows. Users are matched by demo_seed_key. If no key match exists and the username or email is already held by a row with a NULL key, skip that user and every crate and album of theirs, and log a warning, never touching the account. Crates are matched by demo_seed_key; new ones get sort_order after the current maximum so existing shelf order is unchanged, plus owner_id and recommended_rank. Albums are matched by demo_seed_key and inserted only when their crate exists; tracks are inserted only together with a newly inserted album. News is matched by seed_key. role 'user', verified false, no user_links, no follow rows.\n- `seedDemoFromEnv(db, env, log)`.\n\nIn apps/api/src/server.ts call seedDemoFromEnv after bootstrapFromEnv and before listen. A seeding failure is logged and does not stop the server. Do NOT call it from buildApp, so buildTestApp stays empty.\n\nCreate test/demo-seed.test.ts covering: minimum counts; every field rule in AC23; running three times adds no rows; a renamed demo crate keeps its name with no duplicate; deleting all crates/albums/tracks the way seed.ts does and re-running restores them; a deleted demo album returns; the pre-existing username collision leaves that account, its crates and its role unchanged; login with a demo email returns 401 through app.inject; shouldSeedDemo truth table; buildTestApp starts with zero demo rows; no owner's existing row changes; no name matches /ai/i. seed.ts itself is unchanged.\n\nTests use in-memory or mkdtemp databases. Any manual run must set DATA_DIR to a temp dir. Never write data/.",
+      "criteria": ["AC6", "AC7", "AC8", "AC21", "AC22", "AC23", "AC24"],
+      "files": [
+        "apps/api/src/db/demo-content.ts",
+        "apps/api/src/services/demo-seed.ts",
+        "apps/api/src/server.ts",
+        "apps/api/test/demo-seed.test.ts"
+      ],
+      "depends_on": ["T1"]
+    },
+    {
+      "id": "T4",
+      "title": "Follow, following, feed and suggestions API",
+      "description": "Create apps/api/src/services/follows.ts and routes/follows.ts (FastifyPluginAsyncZod with data-classification comment) and register `followRoutes` under /api in app.ts, before webPlugin.\n\nRoutes, all with preValidation requireUser so signed-out callers get 401 first:\n- PUT /users/:username/follow: 204. Unknown username 404. Self 400 (badRequest). Repeat is 204 with no new row (onConflictDoNothing).\n- DELETE /users/:username/follow: 204, repeat 204. Unknown username 404. Self is a no-op 204.\n- GET /me/following: collectorSummary[], most recently followed first (created_at desc, id desc).\n- GET /me/feed: crateCard[] for crates owned by followed users, crates.created_at desc then id desc, limit 50, albumCount via left join, createdAt ISO.\n- GET /me/suggested-collectors: collectorSummary[] of users with demo_seed_key not null that the viewer does not follow and is not, ordered by username. Empty list when no demo data exists.\n\nUse the shared schemas as response schemas. Build summaries from explicit field lists; never select email, role, id or demo keys into a response.\n\nTests: test/follows.test.ts covers every status in AC12, row counts, cascade on user delete by direct db access, and AC13 counts changing by exactly 1 after follow and unfollow, including viewerFollows true/false/signed-out. test/feed.test.ts uses three users and crates with set created_at values and asserts inclusion, exclusion, order, the limit of 50 and a recursive absence of email/role/id/ownerId at user level; also covers suggested-collectors by inserting rows with a demo_seed_key directly.\n\nUse buildTestApp (in-memory). Never touch data/.",
+      "criteria": ["AC12", "AC13", "AC14", "AC16"],
+      "files": [
+        "apps/api/src/services/follows.ts",
+        "apps/api/src/routes/follows.ts",
+        "apps/api/src/app.ts",
+        "apps/api/test/follows.test.ts",
+        "apps/api/test/feed.test.ts"
+      ],
+      "depends_on": ["T2"]
+    },
+    {
+      "id": "T5",
+      "title": "News and recommended crates API",
+      "description": "Create services/news.ts and routes/news.ts: public GET /api/news returns newsItem[], published_at desc then id desc, publishedAt as ISO via toISOString; the seed_key is not exposed. Register `newsRoutes` under /api in app.ts.\n\nAdd `listRecommendedCrates(db)` to services/crates.ts: crates with recommended_rank not null, inner join owner, left join albums for albumCount, order by rank then id, mapped to crateCard (no ownerId, no demo key). Add public GET /crates/recommended to routes/crates.ts, response crateCard.array(); it must resolve ahead of /crates/:id. Existing /crates shapes do not change.\n\nTests: test/news.test.ts and test/recommended.test.ts use buildTestApp, assert empty arrays before seeding, then call seedDemoContent(app.db) from services/demo-seed.ts and assert: 200 without a cookie, news length >= 6 with fields and newest-first sort; recommended length >= 6, every crate albumCount >= 4 with owner username and display name, none named Guitars or Beats & Bass even when those exist, no key ownerId/email/role. Extend the it.each in test/web.test.ts with /following, /profile, /about, /shelf and /crates/5, and keep the /api 404 JSON check.\n\nIn-memory databases only; never touch data/.",
+      "criteria": ["AC3", "AC6", "AC8"],
+      "files": [
+        "apps/api/src/services/news.ts",
+        "apps/api/src/routes/news.ts",
+        "apps/api/src/services/crates.ts",
+        "apps/api/src/routes/crates.ts",
+        "apps/api/src/app.ts",
+        "apps/api/test/news.test.ts",
+        "apps/api/test/recommended.test.ts",
+        "apps/api/test/web.test.ts"
+      ],
+      "depends_on": ["T2", "T3", "T4"]
+    },
+    {
+      "id": "T6",
+      "title": "Web API clients and shared follow and section pieces",
+      "description": "Add typed clients over request():\n- api/news.ts: listNews().\n- api/crates.ts: add listRecommendedCrates() -> CrateCard[] from /crates/recommended.\n- api/follows.ts: follow(username) PUT, unfollow(username) DELETE, listFollowing(), getFeed() from /me/feed, listSuggestedCollectors() from /me/suggested-collectors.\n\nAdd components/DemoTag.vue: a small inline stamp with the exact text 'Demo', styled with base.css tokens.\n\nAdd components/profile/FollowButton.vue: props username, following (boolean). Renders a button.btn labelled 'Follow' or 'Unfollow', aria-busy and disabled while in flight, not optimistic: it waits for the request, then emits `changed` with the new boolean. On failure it shows errorMessage in a role=\"alert\" element and keeps the label matching the prop.\n\nAdd composables/useAsyncSection.ts: `useAsyncSection<T>(loader)` returning { data, status: 'loading'|'ready'|'error', error, load(), refresh() }. load() shows the loading status; refresh() re-requests silently and keeps old data until new data arrives, moving to error if it fails. Home and Following use one instance per section, so one failure never affects another.\n\nColocated tests: FollowButton.test.ts (both labels, emit on success, alert and unchanged label on rejection) and useAsyncSection.test.ts. Tests stub fetch or mock the API modules; no real server.",
+      "criteria": ["AC17", "AC18", "AC25"],
+      "files": [
+        "apps/web/src/api/news.ts",
+        "apps/web/src/api/crates.ts",
+        "apps/web/src/api/follows.ts",
+        "apps/web/src/components/DemoTag.vue",
+        "apps/web/src/components/profile/FollowButton.vue",
+        "apps/web/src/components/profile/FollowButton.test.ts",
+        "apps/web/src/composables/useAsyncSection.ts",
+        "apps/web/src/composables/useAsyncSection.test.ts"
+      ],
+      "depends_on": ["T2"]
+    },
+    {
+      "id": "T7",
+      "title": "Home and About views",
+      "description": "Create views/HomeView.vue, document.title 'Home · Frisson', public, with no CrateBox and no library store (it must not load every album). Two independent sections via useAsyncSection:\n- h2 'Music news': one article per item with title, summary, source, formatted date in a <time datetime> element, and DemoTag. Full text in place, no links.\n- h2 'Recommended crates': the exact sentence 'Curated demo picks. No AI model is involved yet.' always present, then one card per crate with RouterLink to { name: 'crate', params: { id } }, showing label or name, record count ('1 record'/'n records'), owner display name and @username.\nEach section has a status-note while loading, role=\"alert\" with a 'Try again' button on failure, and an empty-state message when the list is empty (production without demo data). Nothing else in the Recommended section may contain 'AI': do not apply text-transform: uppercase to its copy or the 'Try again' button, and word empty-state text to avoid 'ai' in any case. A RouterLink with text 'Browse all crates' to { name: 'library' } sits on the page outside the news section.\n\nCreate views/AboutView.vue, document.title 'About · Frisson', public, h1 'About Frisson', covering crates, following and the self-hosted nature of the app (use the words 'crates', 'following', 'self-hosted', 'demo'), and stating news, recommendations and demo collectors are demo data. It may state recommendations are curated by hand and no AI model is involved.\n\nAll text through {{ }}, no v-html, base.css tokens, usable at 320px with no overflow (long names wrap with overflow-wrap).\n\nTests: HomeView.test.ts covers headings, title, Demo label, card count and link, exact note text with a single /AI/ occurrence in the section, one section rejected while the other renders, Try again re-requesting, loading status, empty states. AboutView.test.ts covers heading, title and words. Tests use a local memory router defining 'home', 'crate' and 'library' routes with blank components. The real routes arrive in T9, so do not edit router.ts.",
+      "criteria": ["AC4", "AC5", "AC6", "AC8", "AC9", "AC11", "AC20", "AC24", "AC25"],
+      "files": [
+        "apps/web/src/views/HomeView.vue",
+        "apps/web/src/views/HomeView.test.ts",
+        "apps/web/src/views/AboutView.vue",
+        "apps/web/src/views/AboutView.test.ts"
+      ],
+      "depends_on": ["T6"]
+    },
+    {
+      "id": "T8",
+      "title": "Following view, own profile view, and follow controls on profiles",
+      "description": "Create views/FollowingView.vue, document.title 'Following · Frisson'. Three independent useAsyncSection sections:\n- h2 'Following': followed collectors, each linking to /u/<username>, with DemoTag when isDemo and a FollowButton (following=true). Empty-state message when empty.\n- h2 'Crates from people you follow': crateCards linking to { name: 'crate', params: { id } } with owner and record count. Empty-state message when empty.\n- h2 'Suggested collectors': listSuggestedCollectors with FollowButton (following=false) and DemoTag. Rendered whenever the list is non-empty.\nOn a FollowButton `changed`, refresh() all three sections without a page load. Each section has a loading status and role=\"alert\" with 'Try again' on failure, and others keep rendering.\n\nUpdate views/ProfileView.vue:\n- Show follower and following counts with the labels 'followers' and 'following' for everyone.\n- Show DemoTag beside the name when profile.isDemo.\n- Other user + signed in: FollowButton matching viewerFollows; on `changed` update viewerFollows and adjust followerCount by exactly 1.\n- Other user + signed out: RouterLink text 'Log in to follow' to { name: 'login', query: { next: `/u/${username}` } }.\n- Own profile: no follow control. Keep the existing Edit profile link.\nDecide the signed-in state from session.user, so a logout during the visit shows the right control.\n\nCreate views/MyProfileView.vue: thin wrapper `<ProfileView v-if=\"session.user\" :username=\"session.user.username\" />`, so the URL stays /profile and logout does not crash.\n\nTests: FollowingView.test.ts (empty state with suggestions and Follow buttons; follow moves a user into Following and their crates into the feed; rejected follow shows alert and keeps button state; one section rejected while others render; Try again). Extend ProfileView.test.ts for the three viewer states, count change, Demo label; add a 'login' route to its local router. MyProfileView.test.ts (signed-in username passed through, shows profile-edit link, renders nothing when signed out). Tests mock API modules. No real server or data/ access. Do not edit router.ts.",
+      "criteria": ["AC4", "AC16", "AC17", "AC18", "AC19", "AC23", "AC25"],
+      "files": [
+        "apps/web/src/views/FollowingView.vue",
+        "apps/web/src/views/FollowingView.test.ts",
+        "apps/web/src/views/ProfileView.vue",
+        "apps/web/src/views/ProfileView.test.ts",
+        "apps/web/src/views/MyProfileView.vue",
+        "apps/web/src/views/MyProfileView.test.ts"
+      ],
+      "depends_on": ["T6"]
+    },
+    {
+      "id": "T9",
+      "title": "Router, masthead nav and moving the crate browser to /shelf",
+      "description": "router.ts routes:\n- '/' name 'home' HomeView.\n- '/shelf' name 'library' CrateView (keeping the name 'library' means existing { name: 'library' } links in CratesView, AlbumEditorView and LibraryToolbar follow the move).\n- '/crates/:id(\\\\d+)' name 'crate' CrateView, public, props { crateId: Number(id) }; '/crates' stays requiresAuth and is a separate record.\n- '/following' name 'following' FollowingView, requiresAuth.\n- '/profile' name 'my-profile' MyProfileView, requiresAuth; '/profile/edit' unchanged.\n- '/about' name 'about' AboutView.\nLazy-load all except HomeView. Do not change /list, /u/:username, /albums/*, /login or /signup. In scrollBehavior, keep position when moving between 'library' and 'crate' so tab clicks do not jump.\n\nApp.vue: add `<nav class=\"main-nav\" aria-label=\"Main\">` with exactly four RouterLinks in order: Home (/), Following (/following), Profile (/profile), About (/about), for all visitors on every route. RouterLink's own aria-current=\"page\" on exact match provides AC2. The nav must be a full-width row in the masthead, outside the side padding that clears the account control: 25 characters of Courier do not fit in the 168px left at 320px with 4.75rem padding. Keep it single-line, no wrapping menu, no horizontal scroll; size font and gaps so all four fit in 320px. Render the 'Frisson' sign link with RouterLink `custom` plus a plain <a> so it does not carry a second aria-current on /. Keep existing selectors .account, .tagline, nav.user-menu. Active link style from base.css tokens.\n\nAccountMenu.vue: logOut pushes { name: 'home' } when the route requiresAuth. Keep 'View profile' at /u/<username>.\n\nCrateView.vue: optional prop crateId. With crateId, crate = library.crateById(crateId), no fallback to crates[0]; a loaded store with no such crate shows status-note 'Crate not found' and a link to { name: 'library' }; a watch selects that crate in the store. A tab click calls selectCrate synchronously and router.replace({ name: 'crate', params: { id } }) on both /shelf and /crates/:id. document.title 'Crates · Frisson'. Tabs must wrap within 320px with long labels (overflow-wrap, max-width 100%).\n\nLibraryToolbar.vue: Crates link stays { name: 'library' }; mark it active on both 'library' and 'crate' routes via a computed class instead of exact-active-class.\n\nAlbumView.vue and NotFoundView.vue: 'Back to the crates' links to { name: 'library' }.\n\nTests: App.test.ts: fixture routes gain home ('/') and library ('/shelf'); assert the nav's four links, order and hrefs signed in and out, aria-current at each URL and none on /shelf, /list, /u/x; logout expectations move to 'home'. router.test.ts: guards for /following and /profile redirect to login?next, public /, /about, /shelf, /crates/5, /crates still guarded, /crates/abc is not-found. editControls.test.ts: fixture uses '/shelf' with 'library' and adds 'crate'; visits use /shelf; flush after tab clicks. New CrateView.test.ts: deep link selects the crate, missing id shows 'Crate not found', tab click updates the URL.\n\nSafety: if you run the app, build and start with DATA_DIR set to a mkdtemp copy; never against data/. Verify scrollWidth at 320 in a real browser if available; the tester repeats this.",
+      "criteria": ["AC1", "AC2", "AC3", "AC4", "AC5", "AC10", "AC11", "AC15", "AC19", "AC27"],
+      "files": [
+        "apps/web/src/router.ts",
+        "apps/web/src/router.test.ts",
+        "apps/web/src/App.vue",
+        "apps/web/src/App.test.ts",
+        "apps/web/src/components/AccountMenu.vue",
+        "apps/web/src/components/LibraryToolbar.vue",
+        "apps/web/src/views/CrateView.vue",
+        "apps/web/src/views/CrateView.test.ts",
+        "apps/web/src/views/AlbumView.vue",
+        "apps/web/src/views/NotFoundView.vue",
+        "apps/web/src/views/editControls.test.ts",
+        "apps/web/src/styles/base.css"
+      ],
+      "depends_on": ["T7", "T8"]
+    },
+    {
+      "id": "T10",
+      "title": "ADR 0006, spec, README, deployment docs and config",
+      "description": "Create docs/adr/0006-following-home-and-demo-content.md in the existing ADR format (Status, Date 2026-11-08, Builds on ADR 0005, Context, Decision, Consequences, Alternatives considered). Record: the four-page structure and crate browser move to /shelf; follows table and public-count rule; recommendations as an editorial rank with no AI model; news stored locally with no network calls; demo delivery at start from server.ts with stable seed keys, insert-if-missing, restored after deletion; why db:seed cannot deliver it; production default off plus SEED_DEMO_DATA; demo users inert through sentinel hash and .invalid emails; the known consequence that fake collectors are visible on an instance until removed, with no removal command in scope; tracks not individually keyed.\n\nAdd a one-line pointer in docs/adr/0005-user-profiles.md's out-of-scope bullet saying follows and the feed are now covered by ADR 0006; leave the rest of that ADR as written.\n\ndocs/SPEC.md: add Follow and NewsItem and the new columns to the data model, new endpoints to the API section, the pages to UI / UX, and a line that the crate view lives at /shelf.\n\nREADME.md: page routes (/, /following, /profile, /about, /shelf, /crates/:id alongside /list and /crates); nothing may imply / is the crate browser; API table gains PUT/DELETE /api/users/:username/follow, GET /api/me/following, /api/me/feed, /api/me/suggested-collectors, /api/news, /api/crates/recommended and notes the new profile fields; Database section explains the demo step, follows and news tables, that `db:seed` wipes crates but the next start restores demo crates; env table gains SEED_DEMO_DATA.\n\n.env.example: commented SEED_DEMO_DATA entry (empty by default, 'true' adds fictional demo users, news and crates in production). compose.yaml: pass `SEED_DEMO_DATA: ${SEED_DEMO_DATA:-}` to the app service. docs/DEPLOY.md: short note in the environment section.\n\nThen run format:check, lint, typecheck, test and build and report any failure; write nothing to data/.",
+      "criteria": ["AC24", "AC26"],
+      "files": [
+        "docs/adr/0006-following-home-and-demo-content.md",
+        "docs/adr/0005-user-profiles.md",
+        "docs/SPEC.md",
+        "docs/DEPLOY.md",
+        "README.md",
+        ".env.example",
+        "compose.yaml"
+      ],
+      "depends_on": ["T5", "T9"]
+    }
+  ]
+}

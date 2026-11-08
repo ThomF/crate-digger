@@ -1,0 +1,26 @@
+{
+  "id": "T8",
+  "title": "Following view, own profile view, and follow controls on profiles",
+  "description": "Create views/FollowingView.vue, document.title 'Following · Frisson'. Three independent useAsyncSection sections:\n- h2 'Following': followed collectors, each linking to /u/<username>, with DemoTag when isDemo and a FollowButton (following=true). Empty-state message when empty.\n- h2 'Crates from people you follow': crateCards linking to { name: 'crate', params: { id } } with owner and record count. Empty-state message when empty.\n- h2 'Suggested collectors': listSuggestedCollectors with FollowButton (following=false) and DemoTag. Rendered whenever the list is non-empty.\nOn a FollowButton `changed`, refresh() all three sections without a page load. Each section has a loading status and role=\"alert\" with 'Try again' on failure, and others keep rendering.\n\nUpdate views/ProfileView.vue:\n- Show follower and following counts with the labels 'followers' and 'following' for everyone.\n- Show DemoTag beside the name when profile.isDemo.\n- Other user + signed in: FollowButton matching viewerFollows; on `changed` update viewerFollows and adjust followerCount by exactly 1.\n- Other user + signed out: RouterLink text 'Log in to follow' to { name: 'login', query: { next: `/u/${username}` } }.\n- Own profile: no follow control. Keep the existing Edit profile link.\nDecide the signed-in state from session.user, so a logout during the visit shows the right control.\n\nCreate views/MyProfileView.vue: thin wrapper `<ProfileView v-if=\"session.user\" :username=\"session.user.username\" />`, so the URL stays /profile and logout does not crash.\n\nTests: FollowingView.test.ts (empty state with suggestions and Follow buttons; follow moves a user into Following and their crates into the feed; rejected follow shows alert and keeps button state; one section rejected while others render; Try again). Extend ProfileView.test.ts for the three viewer states, count change, Demo label; add a 'login' route to its local router. MyProfileView.test.ts (signed-in username passed through, shows profile-edit link, renders nothing when signed out). Tests mock API modules. No real server or data/ access. Do not edit router.ts.",
+  "criteria": [
+    "AC4",
+    "AC16",
+    "AC17",
+    "AC18",
+    "AC19",
+    "AC23",
+    "AC25"
+  ],
+  "files": [
+    "apps/web/src/views/FollowingView.vue",
+    "apps/web/src/views/FollowingView.test.ts",
+    "apps/web/src/views/ProfileView.vue",
+    "apps/web/src/views/ProfileView.test.ts",
+    "apps/web/src/views/MyProfileView.vue",
+    "apps/web/src/views/MyProfileView.test.ts"
+  ],
+  "depends_on": [
+    "T6"
+  ],
+  "status": "todo"
+}

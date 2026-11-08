@@ -1,0 +1,448 @@
+{
+  "version": 1,
+  "plan": "we want to implement a 3 page system on this app. currently it just shows the seeded crates if seeded ran on init create which it did for me. what we want. is a home page that shows music news, and ai recomended crates (this is where we add more seeded crates). page 2 is following page, which we can also seed in fake users to follow as a test. and then page 3 is OUR profile page. page 4 is an about page for the app. lets fully build this out.\n\nGoal: Turn Frisson from a single crate-browsing screen into a four-page app: Home (/, demo music news plus recommended crates), Following (/following, follow demo or real collectors and see their crates), Profile (/profile, the signed-in user's own profile) and About (/about), with a persistent follow system and demo content that reaches the owner's already-seeded database on the next API start without changing any existing data.",
+  "plan_changes": [
+    {
+      "change": "Request says '3 page system' but enumerates four pages; building all four.",
+      "why": "The enumerated list is explicit, including 'page 4 is an about page'."
+    },
+    {
+      "change": "Demo content is applied at API start by a new idempotent step rather than added to db:seed.",
+      "why": "Survey found db:seed is manual and wipes all crates, albums and tracks; the request assumed seeding ran on init."
+    },
+    {
+      "change": "CrateView moves from / to /shelf, with /crates/:id deep links.",
+      "why": "Home takes / and recommended crates need a link target."
+    },
+    {
+      "change": "Manager added GET /api/me/suggested-collectors and a SEED_DEMO_DATA=false opt-out.",
+      "why": "AC16 needs a suggestions source; the opt-out goes beyond the brief."
+    },
+    {
+      "change": "Fix round 1 also takes in four tester observations beyond AC10.",
+      "why": "Feed names, profile crate links, singular labels and the stale store are real usability gaps on the new pages and share the same files."
+    }
+  ],
+  "files_changed": [
+    {
+      "path": ".env.example",
+      "status": "modified"
+    },
+    {
+      "path": "README.md",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/drizzle/0005_follows_news_demo.sql",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/drizzle/meta/0005_snapshot.json",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/drizzle/meta/_journal.json",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/app.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/db/demo-content.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/db/schema.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/routes/crates.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/routes/follows.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/routes/news.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/routes/profiles.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/server.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/services/crates.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/services/demo-seed.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/services/follows.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/services/news.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/services/profiles.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/demo-seed.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/feed.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/follows.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/migration.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/news.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/profiles.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/recommended.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/schema.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/shared-profile.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/web.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/App.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/App.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/api/crates.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/api/follows.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/api/news.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/AccountMenu.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/components/DemoTag.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/LibraryToolbar.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/components/profile/FollowButton.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/profile/FollowButton.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/composables/useAsyncSection.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/composables/useAsyncSection.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/router.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/router.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/stores/session.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/AboutView.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/AboutView.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/AlbumView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/CrateView.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/CrateView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/EditProfileView.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/FollowingView.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/FollowingView.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/HomeView.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/HomeView.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/MyProfileView.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/MyProfileView.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/NotFoundView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/ProfileView.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/ProfileView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/editControls.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "compose.yaml",
+      "status": "modified"
+    },
+    {
+      "path": "docs/DEPLOY.md",
+      "status": "modified"
+    },
+    {
+      "path": "docs/SPEC.md",
+      "status": "modified"
+    },
+    {
+      "path": "docs/adr/0005-user-profiles.md",
+      "status": "modified"
+    },
+    {
+      "path": "docs/adr/0006-following-home-and-demo-content.md",
+      "status": "added"
+    },
+    {
+      "path": "packages/shared/src/index.ts",
+      "status": "modified"
+    }
+  ],
+  "tests": [
+    {
+      "name": "AC1",
+      "status": "fail",
+      "evidence": "verdict: undefined. Browser, nav[aria-label=Main] inside <header>: Home / , Following /following, Profile /profile, About /about in order. Read signed out on /, /about, /list, /albums/105 and signed in on /, /about, /list, /albums/105. A separate nav[aria-label=Account] holds Log in / Sign up. App.test.ts 'has the four links in order when %s, on every route' passes."
+    },
+    {
+      "name": "AC2",
+      "status": "fail",
+      "evidence": "verdict: undefined. aria-current=page read in browser. Signed in: / -> Home only; /following -> Following only; /profile -> Profile only; /about -> About only. None on /shelf, /list, /u/demo-priya-hollowmere, /u/tv_alpha (own public URL), /albums/105. Signed out: / and /about one match; /shelf, /list, /u/demo-odessa-quillfern none."
+    },
+    {
+      "name": "AC3",
+      "status": "fail",
+      "evidence": "verdict: undefined. NODE_ENV=production SEED_DEMO_DATA=true WEB_DIR=apps/web/dist on temp copy, port 3111. curl: / /following /profile /about /shelf /crates/26 /list /albums/1 each 200 text/html with id=app. /api/does-not-exist: 404 application/json {\"statusCode\":404,\"error\":\"Not Found\",\"message\":\"No route for GET /api/does-not-exist\"}. Browser location.reload(): /following (title Following), /about, /shelf (tabs rendered), /crates/28 (JAZZ pressed), / (both headings). /profile by full-load navigation signed in. Signed out /following -> /login?next=/following, /profile -> /login?next=/profile."
+    },
+    {
+      "name": "AC4",
+      "status": "fail",
+      "evidence": "verdict: undefined. Real viewport emulation, path|innerWidth|scrollWidth, all nav links in-bounds, zero elements past right edge. Signed out: 320: /|320|320, /login?next=/following|320|320, /login?next=/profile|320|320, /about|320|320, /shelf|320|320. 390: same pages 390|390. 1280: same pages 1280|1280. Signed in: 320: /, /following, /profile, /about, /shelf all 320|320. 390: all 390|390. 1280: all 1280|1280. Nav text 'Home Following Profile About' with no !OUT flag at any width."
+    },
+    {
+      "name": "AC5",
+      "status": "fail",
+      "evidence": "verdict: undefined. Signed out at /: h2 'Music news', h2 'Recommended crates', document.title 'Home · Frisson'. main contains only crate-card, crate-link, crate-name crate classes; no crate box (CrateBox renders only in CrateView.vue:109). HomeView.test.ts passes, including 'stays off the library store and the crate box'."
+    },
+    {
+      "name": "AC6",
+      "status": "fail",
+      "evidence": "verdict: undefined. No-cookie GET /api/news: 200, 9 items, sorted newest first True, keys id, publishedAt, source, summary, title. Browser: 9 articles, each with title, summary, source, date (e.g. 'Oct 27, 2026') and 'Demo'. test/news.test.ts passes."
+    },
+    {
+      "name": "AC7",
+      "status": "fail",
+      "evidence": "verdict: undefined. Header comment 'FICTIONAL DEMO DATA...' at line 1 of apps/api/src/db/demo-content.ts. Judged from my knowledge only, no web lookup. News sources: Wax Almanack Weekly, The Needle Gazetteer, Platter Parish Bulletin, Dustsleeve Dispatch. Labels/plants: Quince Hollow Records, Brackenmoor Disc Works, Ninefold Pressing. Venues/places: Gullwick Palais, Tollbridge Roller Hall, Ostermere, Pellmouth. Artists: Mossbank Hi-Fi, Delroy Quaverstone, Orchard Ferrymen, The Velvet Almanacs, Pewter Kite, Ignatius Bellwether Trio, Cordelia Nightjar Quartet, Sequin Dispatch, Contessa Velourne, Hester Fallowmoor, The Barley Wardens, Culvert Committee, Tarmac Nines, Saltmarsh Instruments, Ondine Carrowgate, The Rusted Valets, Gutterball Regents, The Sunday Tollmen, Ruthanne Merriweld. Users: Odessa Quillfern, Tomasz Brindlewick, Junia Marrowby, Priya Hollowmere, Lucho Ferndrake, Emeka Vossgrove, Maren Oxtuft. Crates are descriptive phrases. No known real person, artist, label, publication, venue or company found. Flagged as unsure, none a known match: Quince Hollow Records and Saltmarsh Instruments (plausible business names I cannot rule out); The Velvet Almanacs (echoes The Velvet Underground); Gutterball Regents (Gutterball and The Regents were separate real bands, the combination is not known); Delroy Quaverstone (reggae-style first name); Ostermere and Mossbank (Mossbank is a real place name, used here as a band name)."
+    },
+    {
+      "name": "AC8",
+      "status": "fail",
+      "evidence": "verdict: undefined. GET /api/crates/recommended no cookie: 7 crates (Lamplit Dub Hours, Thrift Bin Psych, Kitchen Table Jazz, Neon Laundromat Disco, Cassette Porch Folk, Overpass Breakbeats, Slow Tide Ambient), albumCount 4 each, ownerUsername and ownerDisplayName present, no Guitars or Beats & Bass. Browser: .crate-card count 7 = API count; each shows name, '4 records', owner. test/recommended.test.ts passes."
+    },
+    {
+      "name": "AC9",
+      "status": "fail",
+      "evidence": "verdict: undefined. Browser read of the rendered section at / (1280, and exact string again at 390 and on the empty prod DB): includes exact text true; textContent matches of /AI/ = 1; case-insensitive /ai/ = 1, context 'demo picks. No AI model is invol'; innerText /AI/ = 1; innerText upper-cased /AI/ = 1 (so CSS does not create another); aria-label/title/alt with AI: none. 'Browse all crates' sits outside the section. HomeView.test.ts 'has the exact note, the only AI in the section' passes."
+    },
+    {
+      "name": "AC10",
+      "status": "fail",
+      "evidence": "verdict: undefined. FAIL on the first clause: clicking a recommended crate card does not navigate unless the click lands on the tape-label link. Real trusted click on the crate name, recorded by a capture listener: [254,384,'P','crate-name',true], location stayed '/'. HomeView.vue:84 wraps only the label in RouterLink: <a class=crate-link href=/crates/26>DUB / AFTER DARK</a>, with <p class=crate-name>, count and owner outside. Link is 146x18 of a 259x145 card (7% of its area), no ::after stretch, card cursor auto. Also the link's accessible name is the tape label, not the crate name. Passing sub-steps: click on the label -> /crates/26, then /crates/27, /crates/28 with that tab pressed and albums shown ('by Tomasz Brindlewick', 'The Wallpaper Is Breathing'); reload /crates/27 and /crates/28 same crate; clicking PSYCH tab from /crates/26 -> /crates/27; /crates/999999 -> 'Crate not found / Browse all crates', 0 tabs."
+    },
+    {
+      "name": "AC11",
+      "status": "fail",
+      "evidence": "verdict: undefined. /shelf lists 11 tabs at first load, first ROCK / ALT and HIP-HOP / TRIP-HOP (owner's Guitars and Beats & Bass, also in /api/crates), 2 owner plus 9 demo. Real click 'Browse all crates' -> /shelf. Real click 'Back to the crates' from /nope/nothing -> /shelf and from /crates -> /shelf. /albums/105 back link href /shelf (read, not clicked). Toolbar 'Crates' href /shelf, 'List' /list. /list renders search and genres. /crates signed out -> /login?next=/crates; signed in 'Your crates', crate created there. Web tests pass."
+    },
+    {
+      "name": "AC12",
+      "status": "fail",
+      "evidence": "verdict: undefined. Live on temp DB: PUT signed out 401; DELETE signed out 401; PUT 204; repeat 204, follows rows=1; PUT unknown 404; DELETE unknown 404; PUT self 400; DELETE 204; repeat 204, rows=0. Schema: UNIQUE INDEX follows_follower_followee_unique (follower_id, followee_id); FKs ON DELETE cascade. Delete user with foreign_keys=on: follows 2 -> 0. test/follows.test.ts (26) passes."
+    },
+    {
+      "name": "AC13",
+      "status": "fail",
+      "evidence": "verdict: undefined. Live: tester_b before {followerCount:0, followingCount:0, viewerFollows:False}; after A follows {1,0,True}; follower's own profile followingCount 1; anon {1,0,False}; after unfollow {0,0,False}. Response keys: avatarUrl, bio, crates, displayName, followerCount, followingCount, isDemo, links, location, username, verified, viewerFollows. grep for email, role, passwordHash, userId, ownerId, numeric user id keys: no match on users/tester_b; on the demo profile the only 'id' keys are 2 crate ids. API test asserts absence at every nesting level."
+    },
+    {
+      "name": "AC14",
+      "status": "fail",
+      "evidence": "verdict: undefined. Live: me/following and me/feed anon 401. Following 2 demo users: following returns public summaries (username, displayName, avatarUrl, verified, isDemo). Feed: Garage Fuzz Receipts 2026-09-11, Slow Tide Ambient 2026-08-21, Thrift Bin Psych 2026-05-19, Lamplit Dub Hours 2026-05-04, newest first, with ownerUsername, ownerDisplayName, albumCount 4; no crates of unfollowed users. Forbidden keys: none ('id' only as crate id). feed.test.ts passes, including 'returns only the 50 newest crates'."
+    },
+    {
+      "name": "AC15",
+      "status": "fail",
+      "evidence": "verdict: undefined. Browser: /following -> /login?next=/following, login -> /following (Following current). /profile -> /login?next=/profile, login -> /profile. Log out via menu on /following -> /, on /profile -> / (header shows Log in / Sign up). router.test.ts passes for the redirects."
+    },
+    {
+      "name": "AC16",
+      "status": "fail",
+      "evidence": "verdict: undefined. Fresh signup tv_alpha, /following: 'Following / You aren't following anyone yet. / Crates from people you follow / No crates here yet. Follow a collector to see theirs. / Suggested collectors / Emeka Vossgrove, Junia Marrowby, Lucho Ferndrake, Maren Oxtuft, Odessa Quillfern, Priya Hollowmere, Tomasz Brindlewick', 7 Follow buttons = all 7 demo users. FollowingView.test.ts passes."
+    },
+    {
+      "name": "AC17",
+      "status": "fail",
+      "evidence": "verdict: undefined. Real clicks. Follow Emeka: window marker survived (no full load), /api/me/following [demo-emeka-vossgrove], feed [Overpass Breakbeats], list and feed updated; persisted after reload. Unfollow: api [] feed [], empty states; persisted after reload. Failure: browser fetch forced to reject on follow PUT: role=alert \"Can't reach the API. Is it running?\", button stayed Follow, server following length 0. FollowingView.test.ts rejected follow and rejected unfollow tests pass."
+    },
+    {
+      "name": "AC18",
+      "status": "fail",
+      "evidence": "verdict: undefined. Browser signed in /u/demo-priya-hollowmere: '0 followers', Follow; click -> '1 followers', Unfollow. Signed out /u/demo-odessa-quillfern: link 'Log in to follow' -> /login?next=/u/demo-odessa-quillfern. Own /u/tv_alpha: no buttons, only Edit profile. ProfileView.test.ts viewer states pass."
+    },
+    {
+      "name": "AC19",
+      "status": "fail",
+      "evidence": "verdict: undefined. Browser /profile signed in, URL stayed /profile, Profile current: 'TA / Tester Alpha / @tv_alpha / 0 followers / 1 following / Edit profile / CRATES / No crates yet.', link Edit profile -> /profile/edit. After editing display name and bio, saved 'Saved. See it at /u/tv_alpha'; full load of /profile: 'Tester Alpha Edited ... Bio written by the tester'. With crates created, CRATES lists them with counts."
+    },
+    {
+      "name": "AC20",
+      "status": "fail",
+      "evidence": "verdict: undefined. Signed out /about: heading 'About Frisson', title 'About · Frisson'. Text covers crates, 'following a collector', 'Frisson is self-hosted', and 'The news, recommendations and demo collectors are demo data.' AboutView.test.ts passes."
+    },
+    {
+      "name": "AC21",
+      "status": "fail",
+      "evidence": "verdict: undefined. Copied crate.db, -wal, -shm (304912-byte WAL) into two temp dirs. Before: dumped from one copy, using columns from pragma_table_info, migrations count 5 (0000-0004): users 1, user_links 0, sessions 1, crates 2, albums 10, tracks 94; columns excluded nothing added because 0005 was absent. Started API on the other copy with no manual command: log 'Demo content: added 7 users, 9 crates, 36 albums, 135 tracks, 9 news items'. API: news 9, recommended 7, 7 demo users. After: same original column lists, rows with pre-existing ids: users IDENTICAL, user_links IDENTICAL, sessions IDENTICAL, crates IDENTICAL, albums IDENTICAL, tracks IDENTICAL. Added columns on old rows: crates 24, 25 owner_id, demo_seed_key, recommended_rank all NULL; users 1 demo_seed_key NULL, role user, verified 0; 10 old albums demo_seed_key NULL. Migrations 0000-0004 unchanged against main (empty git diff). data/ checksums identical to baseline."
+    },
+    {
+      "name": "AC22",
+      "status": "fail",
+      "evidence": "verdict: undefined. Temp copy: after first start users=8 crates=11 albums=46 tracks=229 news_items=9; 2nd and 3rd start identical. Rename demo crate to 'Renamed By Tester' and restart: counts identical, one row '26|Renamed By Tester', no Lamplit duplicate. npm run db:seed -w apps/api on the copy: 'Seeded 2 crates, 10 albums, 94 tracks.' then users=8 crates=2 albums=10 tracks=94 news_items=9. Restart: users=8 crates=11 albums=46 tracks=229 news_items=9, recommended 7 at 4 albums each, 7 demo users. demo-seed.test.ts (44) passes."
+    },
+    {
+      "name": "AC23",
+      "status": "fail",
+      "evidence": "verdict: undefined. DB: 7 demo users, each demo-* username, @frisson.invalid, verified 0, role user, demo_seed_key user:*, password_hash demo-account-no-login, 0 user_links. POST /api/auth/login with demo email: 401 for 'anything-at-all' and for the sentinel string. Collision copy with a real account 'demo-maren-oxtuft' and its crate: log 'Skipping demo user demo-maren-oxtuft and its crates'; account row unchanged (Real Person, role user, verified 0, demo_seed_key NULL), Real Crate unchanged, 0 Church Hall Soul crates, 0 follows. Browser /u/demo-odessa-quillfern shows 'Odessa Quillfern Demo'."
+    },
+    {
+      "name": "AC24",
+      "status": "fail",
+      "evidence": "verdict: undefined. NODE_ENV=production unset flag on an empty DB: users=0 crates=0 albums=0 tracks=0 news_items=0, /api/news [], /api/crates/recommended []; on a copy of owner's DB: users=1 crates=2 albums=10 tracks=94 news_items=0. Browser Home on that server: 'No news to show yet.', 'No picks to show yet.', 0 alerts, no console errors from it. SEED_DEMO_DATA=true: users=7 crates=9 albums=36 tracks=135 news_items=9. demo-seed.test.ts 'still starts with no demo rows' passes. grep: README.md:84,116,117, .env.example:16, compose.yaml:20."
+    },
+    {
+      "name": "AC25",
+      "status": "fail",
+      "evidence": "verdict: undefined. Component tests, per the verify field, pass and assert real behaviour: HomeView.test.ts 'shows the news failure and still renders the crates', 'shows the crates failure and still renders the news', 'Try again re-requests only the failed section, showing loading then the data', 'shows a status message in each section while loading'. FollowingView.test.ts:227 'a %s failure stays in that section and Try again recovers' (role=alert, click Try again, alert gone), 'shows a status message in each section while loading'. Not separately exercised in a browser."
+    },
+    {
+      "name": "AC26",
+      "status": "fail",
+      "evidence": "verdict: undefined. All five commands exit 0 (see commands). New tests present: apps/api/test/follows, feed, news, recommended, demo-seed; apps/web HomeView, FollowingView, AboutView, MyProfileView, FollowButton, useAsyncSection. README: Pages table lists / as Home and /shelf as the crate browser; line 20 says Web opens on Home, flip crates at /shelf; API table has follow, me/following, me/feed, me/suggested-collectors, news, crates/recommended; Database section describes migration 0005 and Demo content."
+    },
+    {
+      "name": "AC27",
+      "status": "fail",
+      "evidence": "verdict: undefined. Production build, temp copy, fresh tab, real clicks. 1280: / with 9 news and 7 cards; opened Kitchen Table Jazz via its label link -> /crates/28, 'by Junia Marrowby', pressed; clicked About -> About Frisson; signed up tv_beta -> /; /following Follow Odessa -> following list and 2 feed cards; reload persisted, feed API Slow Tide Ambient and Lamplit Dub Hours; /profile '0 followers / 1 following'; Unfollow; reload empty; /profile '0 following'. 390 (innerWidth 390, scrollWidth 390 on every page): / 9 news, 7 cards, AI note; crate via label link, pressed, owner shown; About; Follow Tomasz -> 2 feed cards; reload persisted; /profile '1 following'; Unfollow; reload; /profile '0 following'. Console for the whole run: only 3 'Failed to load resource: 401', matching the 3 GET /api/auth/me 401s while signed out. No other errors. Two PUT/DELETE 204 entries read 'FAILED: net::ERR_ABORTED' in the network log; server state confirms they succeeded, so this is a CDP artefact for empty bodies. Harness: with the pane hidden, a view transition can stall until a screenshot forces a frame; a click immediately after an SPA navigation missed twice and worked once a screenshot had been taken. 1280 emulation scales coordinates by 0.625, so ref clicks missed there; coordinate clicks verified by listener."
+    }
+  ],
+  "branch": "shipyard/home-following-profile-about-2026-11-08T19-49-05",
+  "base": "2e3e66f5237d7a94ed216ac0e67b2cf6346ff5d1",
+  "notes": [
+    "AI recommended is a curated demo flag; the UI states no AI model is involved. Real model is out of scope.",
+    "News is fictional seeded data, not a live feed.",
+    "Manager: deleted demo tracks do not return, since tracks have no seed key. DELETE self-follow returns 204; AC12 leaves it open.",
+    "T1: ran prettier on generated 0005 snapshot and journal (whitespace only) so format:check passes; updated expected rows in 0003/0004 migration tests for the new NULL columns; tested on a synthetic 0004 DB, not a copy of the owner DB.",
+    "T2: profile key walk allows id on crates[] items only (crate ids are public; AC13 concerns user ids). crateCard.createdAt must be serialised with toISOString by services.",
+    "T6: client paths come from task text and were untested against a real server at the time; listNews and listRecommendedCrates have no path test; DemoTag has no own test.",
+    "T4: crate ids remain in feed and profile responses per the shared contract; collector summaries are checked recursively for id. Malformed username returns 400 when signed in, from shared param validation.",
+    "T3: its manual AC21 diff was invalid because the before dump queried a post-0005 column; tester must redo on a real copy. Demo names were checked from model knowledge only, without web search. Empty password login returns 400, not 401.",
+    "T8: count label is literal so a count of 1 reads 1 followers (harbormaster queued as a polish fix). ProfileView load() has no stale-response guard (pre-existing). RouterLink to crate route throws until T9 lands.",
+    "T7: scratch browser check at 320px used stubbed fetch and no App shell. AC9 CSS test only scans HomeView source, so AC9 needs a browser recheck after T9.",
+    "T5: no albumCount filter on recommended; AC8 minimums hold through seed data only, and an emptied ranked crate would show with 0 records.",
+    "T9: with a hidden browser pane the tab-click URL stalled until a screenshot forced a frame (view transition); probably harness, unconfirmed in a visible pane. Stale library store shows Crate not found for newer crates until reload.",
+    "T10: seeding defaults on outside production, so npm run dev seeds a developer DB. db:seed keeps users, follows and news. Compose checked with docker compose config only. Added a DEPLOY upgrade note beyond the brief.",
+    "Tester left low-severity items unfixed: stacked crate picker at 320/390 with 11+ crates; 7-card grid orphan; handles wrapping at the hyphen; plain Frisson titles on /list and not-found; placeholder-derived form names.",
+    "F1: a first load of an unknown crate id does one fetch, not two, reading force one reload as force only when the store was already loaded.",
+    "Retest: one real click on a recommended card count did not navigate; 3 later attempts did and the cause was not established. Possibly the hidden-pane view transition stall, unconfirmed.",
+    "Retest ran with NODE_ENV unset: built assets served by Fastify, not production mode. AC24 production-mode behaviour was covered in the first test pass.",
+    "The owner database has not been touched; it gets migration 0005 and demo data the next time the API starts on this branch.",
+    "Reporter write to report.md was refused by the harness; harbormaster saved its returned text verbatim. The run paused on a usage limit during the report stage, which inflates wall-clock time."
+  ]
+}

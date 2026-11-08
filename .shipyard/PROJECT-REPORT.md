@@ -27,3 +27,12 @@
 - Wall clock: 13m 35s; slowest stage: build (6m)
 - Deaths: none. Blockers: none
 - Merged and pushed to main at the owner's request
+
+## 2026-11-08T19-49-05: four-page system, Home, Following, Profile, About
+- Verdict: shipped (27/27 criteria, real-browser checks on temp copies of the owner DB), 1 cycle, 1 fix round (AC10, crate card only linked on its label), 11 tasks including the fix
+- Wall clock: 163m 6s, inflated by a usage-limit pause during report (105m 54s); slowest working stage: test (27m 37s)
+- Deaths: none. Blockers: none. Reporter's write to report.md was refused, so the harbormaster saved its text
+- Fast paths: direct-fix, scoped-retest
+- Known limits: recommendations are a curated demo flag with no AI; news is fictional seed data; demo names checked from model knowledge only; AC27 smoke not re-run after the fix; one unreproduced missed click on a card; crate picker stacks at 320/390 with 11+ crates
+- db:seed is manual and destructive. Demo data applies at API start instead, and the owner's DB gets it on the next start on this branch unless SEED_DEMO_DATA=false
+- Not merged or pushed

@@ -1,0 +1,26 @@
+{
+  "id": "T5",
+  "title": "News and recommended crates API",
+  "description": "Create services/news.ts and routes/news.ts: public GET /api/news returns newsItem[], published_at desc then id desc, publishedAt as ISO via toISOString; the seed_key is not exposed. Register `newsRoutes` under /api in app.ts.\n\nAdd `listRecommendedCrates(db)` to services/crates.ts: crates with recommended_rank not null, inner join owner, left join albums for albumCount, order by rank then id, mapped to crateCard (no ownerId, no demo key). Add public GET /crates/recommended to routes/crates.ts, response crateCard.array(); it must resolve ahead of /crates/:id. Existing /crates shapes do not change.\n\nTests: test/news.test.ts and test/recommended.test.ts use buildTestApp, assert empty arrays before seeding, then call seedDemoContent(app.db) from services/demo-seed.ts and assert: 200 without a cookie, news length >= 6 with fields and newest-first sort; recommended length >= 6, every crate albumCount >= 4 with owner username and display name, none named Guitars or Beats & Bass even when those exist, no key ownerId/email/role. Extend the it.each in test/web.test.ts with /following, /profile, /about, /shelf and /crates/5, and keep the /api 404 JSON check.\n\nIn-memory databases only; never touch data/.",
+  "criteria": [
+    "AC3",
+    "AC6",
+    "AC8"
+  ],
+  "files": [
+    "apps/api/src/services/news.ts",
+    "apps/api/src/routes/news.ts",
+    "apps/api/src/services/crates.ts",
+    "apps/api/src/routes/crates.ts",
+    "apps/api/src/app.ts",
+    "apps/api/test/news.test.ts",
+    "apps/api/test/recommended.test.ts",
+    "apps/api/test/web.test.ts"
+  ],
+  "depends_on": [
+    "T2",
+    "T3",
+    "T4"
+  ],
+  "status": "todo"
+}

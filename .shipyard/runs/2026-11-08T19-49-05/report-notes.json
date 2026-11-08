@@ -1,0 +1,45 @@
+{
+  "plan_changes": [
+    {
+      "change": "Request says '3 page system' but enumerates four pages; building all four.",
+      "why": "The enumerated list is explicit, including 'page 4 is an about page'."
+    },
+    {
+      "change": "Demo content is applied at API start by a new idempotent step rather than added to db:seed.",
+      "why": "Survey found db:seed is manual and wipes all crates, albums and tracks; the request assumed seeding ran on init."
+    },
+    {
+      "change": "CrateView moves from / to /shelf, with /crates/:id deep links.",
+      "why": "Home takes / and recommended crates need a link target."
+    },
+    {
+      "change": "Manager added GET /api/me/suggested-collectors and a SEED_DEMO_DATA=false opt-out.",
+      "why": "AC16 needs a suggestions source; the opt-out goes beyond the brief."
+    },
+    {
+      "change": "Fix round 1 also takes in four tester observations beyond AC10.",
+      "why": "Feed names, profile crate links, singular labels and the stale store are real usability gaps on the new pages and share the same files."
+    }
+  ],
+  "notes": [
+    "AI recommended is a curated demo flag; the UI states no AI model is involved. Real model is out of scope.",
+    "News is fictional seeded data, not a live feed.",
+    "Manager: deleted demo tracks do not return, since tracks have no seed key. DELETE self-follow returns 204; AC12 leaves it open.",
+    "T1: ran prettier on generated 0005 snapshot and journal (whitespace only) so format:check passes; updated expected rows in 0003/0004 migration tests for the new NULL columns; tested on a synthetic 0004 DB, not a copy of the owner DB.",
+    "T2: profile key walk allows id on crates[] items only (crate ids are public; AC13 concerns user ids). crateCard.createdAt must be serialised with toISOString by services.",
+    "T6: client paths come from task text and were untested against a real server at the time; listNews and listRecommendedCrates have no path test; DemoTag has no own test.",
+    "T4: crate ids remain in feed and profile responses per the shared contract; collector summaries are checked recursively for id. Malformed username returns 400 when signed in, from shared param validation.",
+    "T3: its manual AC21 diff was invalid because the before dump queried a post-0005 column; tester must redo on a real copy. Demo names were checked from model knowledge only, without web search. Empty password login returns 400, not 401.",
+    "T8: count label is literal so a count of 1 reads 1 followers (harbormaster queued as a polish fix). ProfileView load() has no stale-response guard (pre-existing). RouterLink to crate route throws until T9 lands.",
+    "T7: scratch browser check at 320px used stubbed fetch and no App shell. AC9 CSS test only scans HomeView source, so AC9 needs a browser recheck after T9.",
+    "T5: no albumCount filter on recommended; AC8 minimums hold through seed data only, and an emptied ranked crate would show with 0 records.",
+    "T9: with a hidden browser pane the tab-click URL stalled until a screenshot forced a frame (view transition); probably harness, unconfirmed in a visible pane. Stale library store shows Crate not found for newer crates until reload.",
+    "T10: seeding defaults on outside production, so npm run dev seeds a developer DB. db:seed keeps users, follows and news. Compose checked with docker compose config only. Added a DEPLOY upgrade note beyond the brief.",
+    "Tester left low-severity items unfixed: stacked crate picker at 320/390 with 11+ crates; 7-card grid orphan; handles wrapping at the hyphen; plain Frisson titles on /list and not-found; placeholder-derived form names.",
+    "F1: a first load of an unknown crate id does one fetch, not two, reading force one reload as force only when the store was already loaded.",
+    "Retest: one real click on a recommended card count did not navigate; 3 later attempts did and the cause was not established. Possibly the hidden-pane view transition stall, unconfirmed.",
+    "Retest ran with NODE_ENV unset: built assets served by Fastify, not production mode. AC24 production-mode behaviour was covered in the first test pass.",
+    "The owner database has not been touched; it gets migration 0005 and demo data the next time the API starts on this branch.",
+    "Reporter write to report.md was refused by the harness; harbormaster saved its returned text verbatim. The run paused on a usage limit during the report stage, which inflates wall-clock time."
+  ]
+}

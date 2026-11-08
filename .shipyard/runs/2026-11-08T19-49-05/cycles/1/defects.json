@@ -1,0 +1,7 @@
+{ "round": 1, "path": "direct-fix", "defects": [
+  { "criterion": "AC10", "cause": "HomeView.vue:84 links only the tape label; a real click on the crate name stays on /.", "task": "F1" },
+  { "observation": "Feed cards omit the crate name.", "severity": "medium", "task": "F1" },
+  { "observation": "Crates on /profile and /u/<user> are not links.", "severity": "medium", "task": "F1" },
+  { "observation": "'1 followers' at a count of 1.", "severity": "medium", "task": "F1" },
+  { "observation": "/crates/<id> shows Crate not found for crates unknown to the loaded store until reload.", "severity": "low", "task": "F1" }
+] }

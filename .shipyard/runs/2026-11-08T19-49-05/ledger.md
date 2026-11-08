@@ -1,0 +1,21 @@
+# Ledger 2026-11-08T19-49-05
+
+- Preflight done. No survey cache; 175 tracked files, running full 3-surveyor survey alongside intake.
+- Baseline: test exit=0 in 7s, typecheck=0, lint=0
+- Survey merged. Finding: db:seed is manual and destructive (wipes tracks/albums/crates, covers dir); no follow/news/recs; ADR 0005 lists follows/feed as out of scope. Baseline green: 180 tests.
+- Intake accepted: 27 criteria. Manager dispatched.
+- Plan validated: 10 tasks. T1 dispatched.
+- T1 done (85b4479). T2, T3 dispatched.
+- T2 done (396de6b). T4, T6 dispatched.
+- T6 done (1cf8e15). T7, T8 dispatched.
+- T4 done (88309b8). T5 waits on T3.
+- T3 done (bedafa1). T5 dispatched.
+- T8 done (0b8468e). T9 waits on T7. Queued: singular follower label.
+- T7 done (0326e4c). T9 dispatched.
+- T5 done (37ac1ee). T10 waits on T9.
+- T9 done (1776cf2). T10 dispatched. Queued: stale store on /crates/:id.
+- T10 done (28bbf18). Build complete. Tester dispatched.
+- Test 1: 26 pass, AC10 fail. Tree clean, data checksums unchanged. Fix round 1 direct-fix F1 dispatched.
+- F1 done (3769352). Scoped retest dispatched.
+- Retest passed: 27/27. Reporter dispatched.
+- Reporter text saved by harbormaster after its write was refused. Verdict: shipped, 27/27, 1 cycle, 1 fix round.

@@ -1,0 +1,26 @@
+{
+  "id": "T7",
+  "title": "Home and About views",
+  "description": "Create views/HomeView.vue, document.title 'Home · Frisson', public, with no CrateBox and no library store (it must not load every album). Two independent sections via useAsyncSection:\n- h2 'Music news': one article per item with title, summary, source, formatted date in a <time datetime> element, and DemoTag. Full text in place, no links.\n- h2 'Recommended crates': the exact sentence 'Curated demo picks. No AI model is involved yet.' always present, then one card per crate with RouterLink to { name: 'crate', params: { id } }, showing label or name, record count ('1 record'/'n records'), owner display name and @username.\nEach section has a status-note while loading, role=\"alert\" with a 'Try again' button on failure, and an empty-state message when the list is empty (production without demo data). Nothing else in the Recommended section may contain 'AI': do not apply text-transform: uppercase to its copy or the 'Try again' button, and word empty-state text to avoid 'ai' in any case. A RouterLink with text 'Browse all crates' to { name: 'library' } sits on the page outside the news section.\n\nCreate views/AboutView.vue, document.title 'About · Frisson', public, h1 'About Frisson', covering crates, following and the self-hosted nature of the app (use the words 'crates', 'following', 'self-hosted', 'demo'), and stating news, recommendations and demo collectors are demo data. It may state recommendations are curated by hand and no AI model is involved.\n\nAll text through {{ }}, no v-html, base.css tokens, usable at 320px with no overflow (long names wrap with overflow-wrap).\n\nTests: HomeView.test.ts covers headings, title, Demo label, card count and link, exact note text with a single /AI/ occurrence in the section, one section rejected while the other renders, Try again re-requesting, loading status, empty states. AboutView.test.ts covers heading, title and words. Tests use a local memory router defining 'home', 'crate' and 'library' routes with blank components. The real routes arrive in T9, so do not edit router.ts.",
+  "criteria": [
+    "AC4",
+    "AC5",
+    "AC6",
+    "AC8",
+    "AC9",
+    "AC11",
+    "AC20",
+    "AC24",
+    "AC25"
+  ],
+  "files": [
+    "apps/web/src/views/HomeView.vue",
+    "apps/web/src/views/HomeView.test.ts",
+    "apps/web/src/views/AboutView.vue",
+    "apps/web/src/views/AboutView.test.ts"
+  ],
+  "depends_on": [
+    "T6"
+  ],
+  "status": "todo"
+}

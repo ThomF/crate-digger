@@ -1,0 +1,178 @@
+{
+  "goal": "Turn Frisson from a single crate-browsing screen into a four-page app: Home (/, demo music news plus recommended crates), Following (/following, follow demo or real collectors and see their crates), Profile (/profile, the signed-in user's own profile) and About (/about), with a persistent follow system and demo content that reaches the owner's already-seeded database on the next API start without changing any existing data.",
+  "constraints": [
+    "Stack stays as it is: Vue 3, Pinia, vue-router on the web; Fastify, Drizzle, SQLite on the API; Zod contracts in packages/shared. No new external services and no network calls for news or recommendations.",
+    "Schema changes go through a new generated Drizzle migration (0005 or later) that only adds to the schema. Existing migrations 0000-0004 are not edited.",
+    "`npm run db:seed` wipes crates, albums, tracks and covers, so delivering demo content must not depend on it. Delivery runs at API start from server.ts next to bootstrapFromEnv, not in buildApp, so buildTestApp keeps starting from an empty database.",
+    "Nothing in the build or test process may write to the owner's real data/ folder. Any run against the owner's data uses a copy of data/crate.db, crate.db-wal and crate.db-shm through DATABASE_PATH or DATA_DIR.",
+    "Demo content lives in a clearly named module (for example apps/api/src/db/demo-content.ts) with a comment saying it is fictional demo data.",
+    "Demo users are invented. They must not use the name or likeness of a real person. They have no social links, are never verified and are never admins.",
+    "News items describe fictional artists, labels and venues only. They make no claims about real people or companies.",
+    "The UI must not claim that a live AI model produced the recommendations.",
+    "API responses for follows, the feed and news keep the existing public-data rule: no email, password hash, role or numeric user id.",
+    "User-typed and seeded text renders through Vue {{ }} escaping, never v-html.",
+    "Existing routes /list, /crates, /albums/*, /u/:username, /profile/edit, /login and /signup keep working. New routes use the masthead visual language in apps/web/src/styles/base.css."
+  ],
+  "assumptions": [
+    "The request's premise that seeding ran on init is not how the code works: seeding only happens through the manual, destructive `npm run db:seed`, and nothing seeds at startup. The owner's data/crate.db has 2 crates (ids 24 and 25, both with no owner), 10 albums and one non-admin user, swenkly. New content is therefore delivered by an idempotent, non-destructive step at API start.",
+    "'AI recommended' has no AI behind it: recommendations are a seeded editorial flag on crates, labelled on Home as curated demo picks with an explicit note that no AI model is involved. It is the same list for every viewer and is not personalised. A real model is a separate piece of work.",
+    "News is seeded, stored in SQLite and served by GET /api/news. Items are fictional, labelled Demo in the UI, show their full text in place, and have no outbound links or detail page.",
+    "Page 'Following' means collectors you follow and their crates. The feed lists crates only, newest first. There is no per-album activity, notifications, likes or comments.",
+    "A new or existing user is not auto-followed to anyone. Following starts empty and shows suggested demo collectors to follow.",
+    "Follows are public-count but the follower and following lists of other users are not exposed in this scope. Profiles show counts only.",
+    "Demo crates are ordinary crates owned by demo users. They therefore also appear on the shelf, in /list search and on demo profiles, and are read-only to non-admin viewers through the existing permission rules.",
+    "The current crate browser (CrateView) moves from / to /shelf and stays reachable from Home and from the existing toolbar. /crates/:id deep-links to one crate on that browser. It is not a fifth top-level nav entry.",
+    "/profile renders the owner's profile using the existing ProfileView rather than redirecting to /u/:username, so the nav item stays active. /u/:username stays the public URL.",
+    "Demo content is applied by default when NODE_ENV is not production. In production it is skipped unless SEED_DEMO_DATA=true, so a real deployment does not get fake users by default. A production deployment without the flag shows Home empty states.",
+    "Demo rows are matched by a stable seed key. They are inserted if missing and never overwritten. A demo row someone deleted comes back on the next start. This is also what makes content return after `npm run db:seed`.",
+    "Demo users cannot log in: their password_hash is a non-scrypt sentinel, which verifyPassword rejects, and their emails use the reserved .invalid domain.",
+    "The owner's ownerless crates 24 and 25 stay ownerless. This feature does not change how they get an owner, and swenkly remains a non-admin. ADMIN_EMAIL/ADMIN_PASSWORD behaviour is unchanged."
+  ],
+  "risks": [
+    "Moving CrateView off / breaks the many references that treat / as the crate browser: 'Back to the crates' links in AlbumView, NotFoundView and CratesView, LibraryToolbar's exact-active link, the logout redirect in AccountMenu, and fixtures in App.test.ts and editControls.test.ts.",
+    "/crates (manage page, requires auth) and the new /crates/:id (public crate view) share a prefix, so guards and active states must be checked separately.",
+    "The crate picker tabs were designed for 2 crates. Six or more extra demo crates could overflow at 320px, and the library store loads every album on every shelf visit.",
+    "Matching demo rows by name instead of seed key would duplicate them after a rename or clash with a real user's crate or username.",
+    "A real user may already hold a demo username, in which case seeding must skip that user and their dependent crates without taking over the account.",
+    "The owner's real data sits partly in crate.db-wal (about 300 KB), so copying crate.db alone gives a stale test database.",
+    "eslint.config.js does not ignore .shipyard, and untracked scripts such as .shipyard/render-report.mjs may affect `npm run lint` results independently of this feature.",
+    "Owner intent risk: seeding fake users into a database with real accounts means fake collectors are visible to anyone on that instance until removed. No removal command is in scope beyond the production default."
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "text": "The masthead on every route contains a nav landmark with exactly four links, in order: Home (/), Following (/following), Profile (/profile), About (/about), for both signed-in and signed-out visitors.",
+      "verify": "In a browser, signed in and signed out, on /, /about, /list and /albums/<id>, read the nav's links and hrefs. App.test.ts asserts the same."
+    },
+    {
+      "id": "AC2",
+      "text": "Exactly one nav link has aria-current=\"page\" when on /, /following, /profile or /about, and it is the link for that URL. On /u/<another-user>, /shelf and /list no nav link has aria-current=\"page\".",
+      "verify": "Component test plus browser check, reading aria-current on the nav links at each URL."
+    },
+    {
+      "id": "AC3",
+      "text": "Against the production build served by Fastify, a direct GET and a browser reload of /, /following, /profile, /about, /shelf and /crates/<id> return the app and render the right page (or the login redirect for signed-out /following and /profile). /api/does-not-exist still returns a JSON 404, not index.html.",
+      "verify": "`npm run build`, start the API, curl each path for 200 text/html, curl the API path for a 404 JSON body, and reload each page in a browser."
+    },
+    {
+      "id": "AC4",
+      "text": "At viewport widths 320, 390 and 1280, on /, /following, /profile, /about and /shelf: document.documentElement.scrollWidth is less than or equal to window.innerWidth, and all four nav links are visible without opening a menu or scrolling horizontally.",
+      "verify": "Real-browser check at each width, evaluating scrollWidth and innerWidth and checking each nav link's bounding box lies inside the viewport."
+    },
+    {
+      "id": "AC5",
+      "text": "/ renders the Home view with a heading 'Music news' and a heading 'Recommended crates'. document.title is 'Home · Frisson'. The page is viewable signed out, and the 3D crate box is no longer rendered at /.",
+      "verify": "Browser check signed out, and a HomeView component test."
+    },
+    {
+      "id": "AC6",
+      "text": "GET /api/news is public and returns at least 6 items, each with title, summary, source and an ISO publishedAt, sorted newest first. On Home each item shows its title, summary, date and a visible 'Demo' label.",
+      "verify": "API test on a database with demo content applied: status 200 without a cookie, length at least 6, sort order and fields. Browser or component test for the rendering."
+    },
+    {
+      "id": "AC7",
+      "text": "No demo news item, demo user name or demo crate name uses a real person's name. Every demo news source, artist, label and venue is invented, and the demo content module has a header comment stating the data is fictional demo data.",
+      "verify": "Read the demo content module and list every proper noun used in news items and user names. The module must also contain the header comment. Fail on any name that is a known real person, artist or company."
+    },
+    {
+      "id": "AC8",
+      "text": "GET /api/crates/recommended is public and returns at least 6 crates, none of them the owner's existing Guitars or Beats & Bass, each with at least 4 albums and its owner's username and display name. Home renders one card per crate with its name, record count and owner.",
+      "verify": "API test on a database with demo content applied, asserting count, album counts and owner fields. Browser check that the number of cards equals the number returned."
+    },
+    {
+      "id": "AC9",
+      "text": "The Recommended crates section on Home contains the exact text 'Curated demo picks. No AI model is involved yet.' and contains no other occurrence of 'AI'.",
+      "verify": "Component test on the section's text, plus a browser read of the section."
+    },
+    {
+      "id": "AC10",
+      "text": "Clicking a recommended crate card navigates to /crates/<id>, showing that crate selected with its albums in the crate browser. Reloading that URL shows the same crate. Choosing another crate's tab updates the URL to that crate's id. /crates/999999 shows 'Crate not found' rather than a different crate.",
+      "verify": "Browser check: click a card, confirm URL and owner label, reload, click a tab and read the URL, then visit the missing id."
+    },
+    {
+      "id": "AC11",
+      "text": "The previous crate browser is at /shelf and lists all crates, including the owner's Guitars and Beats & Bass. Home has a link with the text 'Browse all crates' to /shelf. Every 'Back to the crates' link and the toolbar's Crates link goes to /shelf. /list and the /crates manage page behave as before.",
+      "verify": "Browser check following each link from /, /albums/<id>, a not-found URL and /crates. Existing web tests updated and passing."
+    },
+    {
+      "id": "AC12",
+      "text": "PUT /api/users/:username/follow and DELETE /api/users/:username/follow return 204 for a signed-in user, and repeating either returns 204 with no duplicate row. Signed out returns 401, an unknown username returns 404, and following yourself returns 400. A unique constraint on (follower, followee) exists, and deleting a user removes their follow rows.",
+      "verify": "New API tests in apps/api/test/follows.test.ts covering every status listed, plus a direct database assertion for row count and cascade."
+    },
+    {
+      "id": "AC13",
+      "text": "GET /api/users/:username includes followerCount and followingCount for everyone, and viewerFollows (true or false, false when signed out). Counts change by exactly 1 after a follow and after an unfollow. The response still has no email, role or numeric id.",
+      "verify": "API test comparing values before and after, and asserting the absence of those keys at every nesting level."
+    },
+    {
+      "id": "AC14",
+      "text": "GET /api/me/following and GET /api/me/feed return 401 signed out. For a signed-in user, following returns the followed users' public summaries, and feed returns crates owned by followed users, newest created first, with owner username and album count, limited to 50. Neither includes crates from users the viewer does not follow, or any email, role or numeric user id.",
+      "verify": "API test with three users and crates at different created_at values: asserts inclusion, exclusion, order, the limit and the absence of those keys."
+    },
+    {
+      "id": "AC15",
+      "text": "Signed out, visiting /following or /profile redirects to /login?next=<that path>, and after logging in the visitor lands back on that path. Logging out while on /following or /profile lands on /.",
+      "verify": "Browser check for both paths, and router or AccountMenu tests."
+    },
+    {
+      "id": "AC16",
+      "text": "/following shows a 'Following' list and a 'Crates from people you follow' feed. A user following nobody sees an empty-state message and a 'Suggested collectors' list containing every demo user they do not follow, each with a Follow button.",
+      "verify": "Browser check with a freshly signed-up user, and a FollowingView component test."
+    },
+    {
+      "id": "AC17",
+      "text": "Clicking Follow on /following adds that user to the Following list and their crates to the feed without a full page load, and both are still there after a reload. Clicking Unfollow removes both, and that also survives a reload. A failed request shows an error message and leaves the button's state matching the server.",
+      "verify": "Browser check with reloads and a read of /api/me/following after each step. Component test with a rejected API call for the failure case."
+    },
+    {
+      "id": "AC18",
+      "text": "On /u/<other-user> a signed-in visitor sees a Follow or Unfollow button matching viewerFollows, and it changes the follower count shown. A signed-out visitor sees a 'Log in to follow' link to /login?next=/u/<other-user>. A user viewing their own profile sees no follow control.",
+      "verify": "ProfileView component tests for the three viewer states, plus a browser check of one follow and the updated count."
+    },
+    {
+      "id": "AC19",
+      "text": "/profile, signed in, shows the signed-in user's own display name, username, crates, follower count and following count, plus a link to /profile/edit, with the URL staying /profile. A profile edit saved at /profile/edit appears on /profile after a reload.",
+      "verify": "Browser check signed in as a test user, including an edit followed by a reload. Component or router test for the route."
+    },
+    {
+      "id": "AC20",
+      "text": "/about is public, has the heading 'About Frisson' and document.title 'About · Frisson', describes crates, following and the self-hosted nature of the app, and states that news, recommendations and demo collectors are demo data.",
+      "verify": "Browser check signed out, and an AboutView component test on the heading and on the words 'crates', 'following', 'self-hosted' and 'demo'."
+    },
+    {
+      "id": "AC21",
+      "text": "Starting the API against a copy of the owner's existing database (data/crate.db with -wal and -shm, migrations through 0004 only) applies the new migration and adds the demo content with no manual command: GET /api/news and /api/crates/recommended meet their minimum counts and at least 5 demo users exist. All rows previously in users, user_links, sessions, crates, albums and tracks are unchanged, apart from any columns added by the migration, which take their defaults.",
+      "verify": "Copy the three files to a temp dir, dump the old tables and their original columns with sqlite3, start the API with DATABASE_PATH pointing at the copy, query the API, then dump and diff. Also confirm data/ itself has unchanged checksums."
+    },
+    {
+      "id": "AC22",
+      "text": "Starting the API a second and third time adds no rows: counts of users, crates, albums, tracks and news are identical after each start. After renaming a demo crate directly in the database and restarting, there is no duplicate crate and the new name is kept. After `npm run db:seed` and a restart, the demo crates and recommended list are present again.",
+      "verify": "Automated API test calling the seed function repeatedly on one database, plus a manual run on a temp copy for the db:seed case, comparing counts each time."
+    },
+    {
+      "id": "AC23",
+      "text": "Demo users are identifiable and inert: each has a demo marker in the database, a username beginning 'demo-', an @*.invalid email, verified false, role 'user' and no user_links. POST /api/auth/login with a demo email and any password returns 401. If a real account already holds a demo username, seeding leaves that account and its crates unchanged and makes no follow, crate or role change to it. Demo profile pages show a visible 'Demo' label.",
+      "verify": "API tests for the field values, for the login rejection and for the pre-existing username collision, plus a browser check of one demo profile."
+    },
+    {
+      "id": "AC24",
+      "text": "With NODE_ENV=production and SEED_DEMO_DATA unset, a start adds no demo rows, and Home shows an empty-state message in both sections with no error. With SEED_DEMO_DATA=true the content is added. buildTestApp's database still starts with no demo rows. README, .env.example and compose.yaml all document or pass through SEED_DEMO_DATA.",
+      "verify": "Start against temp databases in both configurations and count rows. Grep the three files for SEED_DEMO_DATA. Existing tests that assume empty databases pass unchanged."
+    },
+    {
+      "id": "AC25",
+      "text": "When a Home or Following data request fails, that section shows a role=\"alert\" message with a 'Try again' button that re-requests the data, and the other section on the page still renders. While loading, each section shows a status message.",
+      "verify": "Component tests with one rejected API call and one resolved call, including a click on Try again."
+    },
+    {
+      "id": "AC26",
+      "text": "`npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` all exit 0, with new tests present for follows, feed, news, recommended crates, demo seeding, and the Home, Following and About views. The README's routes, API table and database section describe the new pages and endpoints and no longer imply / is the crate browser.",
+      "verify": "Run the five commands and record exit codes. List the new test files. Read the README sections."
+    },
+    {
+      "id": "AC27",
+      "text": "End-to-end smoke in a real browser against the production build, using a temp copy of the owner's database: open /, confirm news and recommended crates, open a recommended crate, go to /about, sign up a new user, follow a demo collector on /following, reload and confirm it persists, confirm that collector's crates are in the feed, open /profile and confirm following count 1, unfollow, reload and confirm the count is 0, at 1280 and again for the page checks at 390. The browser console shows no errors throughout (excluding expected 401s from /api/auth/me while signed out).",
+      "verify": "Run the sequence in Chrome, capture screenshots and console output, and record pass or fail for each step in the run's report."
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "commit": "2e3e66f5237d7a94ed216ac0e67b2cf6346ff5d1",
+  "structure": {
+    "name": "frisson (repo crate-digger)",
+    "language": "TypeScript, ESM, Node >=22.18 (.nvmrc), runs .ts directly via node (no api build step)",
+    "workspaces": {
+      "tool": "npm workspaces",
+      "dirs": [
+        "packages/shared (@frisson/shared, zod schemas, src/index.ts, sorting.ts)",
+        "apps/api (@frisson/api, Fastify 5 + drizzle-orm + better-sqlite3, sharp, fastify-type-provider-zod)",
+        "apps/web (@frisson/web, Vue 3.5 + vue-router + pinia + Vite 6)"
+      ]
+    },
+    "dev": "npm run dev (concurrently api + web). api: node --watch src/server.ts on PORT env default 3000; web: vite on 5173, proxies /api, /covers, /avatars to 127.0.0.1:3000",
+    "build": "npm run build (web vite build only; api has no build)",
+    "database": "SQLite file data/crate.db (DATABASE_PATH env); drizzle-orm schema apps/api/src/db/schema.ts; migrations SQL in apps/api/drizzle (0000..0004 + meta/_journal.json); applied automatically on startup via migrate() in apps/api/src/db/client.ts; generate with `npm run db:generate -w apps/api`; also db:seed, db:studio, db:backup, db:restore",
+    "other": "Dockerfile, compose.yaml (needs ADMIN_EMAIL/ADMIN_PASSWORD, DOMAIN in .env), GitHub CI .github/workflows/ci.yml, prettier + eslint flat config at root"
+  },
+  "tests": {
+    "runner": "vitest 3 (api: node env; web: happy-dom + @vue/test-utils configured in apps/web/vite.config.ts). shared has no tests.",
+    "commands": {
+      "all": "npm test",
+      "api": "npm test -w apps/api",
+      "web": "npm test -w apps/web",
+      "single": "npx vitest run <file> (from within apps/api or apps/web)",
+      "typecheck": "npm run typecheck (api/shared: tsc --noEmit; web: vue-tsc --noEmit)",
+      "lint": "npm run lint (eslint .)",
+      "format": "npm run format:check",
+      "ci_order": "format:check, lint, typecheck, test, build"
+    },
+    "locations": {
+      "api": "apps/api/test/*.test.ts (albums, auth-accounts, avatars, bootstrap, covers, crates, health, migration, ownership, passwords, profiles, schema, shared-auth, shared-profile, sorting, web)",
+      "web": "colocated *.test.ts next to source in apps/web/src (components, views, stores, utils, composables, router, App)"
+    },
+    "helpers": "apps/api/test/helpers.ts: buildTestApp() (in-memory sqlite, temp covers/avatars dirs, generous rate limit; call app.close()), pngBuffer(), SignedIn type and signup/login helpers using app.inject",
+    "e2e": "absent (no playwright/cypress)"
+  },
+  "conventions": {
+    "tooling": "npm workspaces (apps/api, apps/web, packages/shared @frisson/shared); Node>=22.18, API runs native TS (.ts import suffixes); Prettier no-semi, single quotes, width 100, trailing commas; ESLint flat config (vue essential + ts recommended, prettier skip-formatting); Vitest both apps, tests colocated in web (*.test.ts), apps/api/test in api",
+    "api": "routes/ thin (FastifyPluginAsyncZod, zod schema params/body/response, preValidation requireUser/requireAdmin), services/ hold logic and throw HttpError via notFound/badRequest (errors.ts), plugins/ for db/auth/uploads/static; drizzle schema in db/schema.ts, migrations via drizzle-kit (0004 latest); routes under /api, e.g. GET /users/:username, PATCH /me/profile; public output only via publicProfile/toPublicProfile (never email/role/id); header comments state 'Data classification'",
+    "shared": "packages/shared/src/index.ts holds zod schemas: input schemas vs response schemas, requiredText/optionalText helpers, friendly messages, strictObject for no self-escalation",
+    "web": "Vue3 script-setup, Pinia stores (session, library), api/ typed fetch wrappers over request() in client.ts, views/ lazy-loaded via router with props functions, meta.requiresAuth guard; components/ flat (AccountMenu, LibraryToolbar); utils/ small pure helpers with tests; views have route '/' = CrateView named 'library'; existing routes: /, /list, /crates, /login, /signup, /albums/*, /u/:username (profile), /profile/edit, catch-all not-found; no /home, /following or /about routes",
+    "styling": "plain CSS with tokens in apps/web/src/styles/base.css :root (--cardboard, --paper, --ink, --ink-soft, --marker-red, --ok-green, --star, --font-display Courier New, --font-body system-ui); shared classes .btn .status-note; focus-visible red outline; 90s record shop feel; reduced-motion respected",
+    "commits": "Conventional Commits with scope: feat(api|web|shared), fix, chore(shipyard), docs, refactor; squash per milestone; branches feat/ fix/ chore/; PR template checklist lint+typecheck+test"
+  },
+  "documentation": {
+    "files": [
+      "README.md",
+      "docs/SPEC.md",
+      "docs/DEPLOY.md",
+      "docs/adr/0001-0005",
+      "docs/adr/0005-user-profiles.md",
+      ".github/pull_request_template.md",
+      ".shipyard/PROJECT-REPORT.md"
+    ],
+    "absent": "no CONTRIBUTING, no CLAUDE.md, no docs/ roadmap file, no brand voice notes; 'Frisson 1.0' appears only in .shipyard/PROJECT-REPORT.md as Phase 1 (accounts) and Phase 2 (profiles); no mention of Home, Following, About pages anywhere in docs",
+    "constraints": "ADR 0005 lists follows, feed, favorites, likes, B-Side, email verification as out of scope (so Following has no backing data/API yet); anyone can browse signed-out; profiles are public and must never expose email/role; no new services/dependencies; ADRs expected for significant decisions; spec says update Spec/ADRs if a decision changes; tagline: 'Your music collection as 90s record crates. Flip through the sleeves, pull one out, and spin it.'; self-hosted, manually curated, no external music APIs"
+  },
+  "relevant": {
+    "monorepo": "npm workspaces: packages/shared (zod schemas, @frisson/shared), apps/api (Fastify+Drizzle+better-sqlite3, node --watch src/server.ts), apps/web (Vue 3 + vue-router + Pinia). Project name 'frisson' (repo crate-digger).",
+    "web_routing": "apps/web/src/router.ts:15-70. '/' name 'library' -> CrateView (eager, lines 5,18); '/list' LibraryView; '/crates' (requiresAuth); /login /signup; /albums/:id, /albums/new, /albums/:id/edit; '/u/:username' name 'profile' (public, ProfileView, props username :58-63); '/profile/edit' requiresAuth; catch-all NotFound. Global guard router.beforeEach :73-79 awaits session.load() and redirects to login?next= when meta.requiresAuth. No /following, /about, /home, /me route exists. No own-profile alias route (own profile = /u/<session.user.username>).",
+    "app_shell": "apps/web/src/App.vue: header.masthead with RouterLink 'Frisson' to '/', tagline, absolute-positioned .account (AccountMenu if session.user else Log in/Sign up links). NO primary nav exists (no page tabs); main.page max-width 52rem. Add nav here.",
+    "account_menu": "apps/web/src/components/AccountMenu.vue: avatar button + dropdown with View profile (/u/username), Edit profile, Log out (logOut at ~line 63 pushes to 'library' if route requiresAuth). Uses UserAvatar.vue (avatarUrl or initials), VerifiedBadge.",
+    "crates_listing_view": "apps/web/src/views/CrateView.vue (route '/'): uses useLibraryStore (apps/web/src/stores/library.ts) load() -> listCrates + listAlbums; crate tabs, OwnerLink, CrateBox (flip-through crate) with albums, 'Pull it out' spins album then router.push album. LibraryToolbar. LibraryView (/list) is list alternative; CratesView is crate manager.",
+    "profile_view": "apps/web/src/views/ProfileView.vue (+ .test.ts): prop username, getProfile(username) from api/profiles.ts, statuses loading/ready/not-found/error, isOwner via session.user.username, shows links (PLATFORM_LABELS), crates (profileCrate: id,name,color,label,albumCount), VerifiedBadge, initials fallback. EditProfileView.vue at /profile/edit.",
+    "web_api_layer": "apps/web/src/api/client.ts: request<T>(path) fetch to /api (vite proxy in dev), throws ApiRequestError; errorMessage(). Per-domain modules api/{albums,auth,crates,profiles}.ts. Types come from @frisson/shared (packages/shared/src/index.ts: crate :118, publicUser :160, publicProfile :283, profileCrate :273, usernameParams :227, apiError :299, idParams :22). Pinia stores: stores/library.ts, stores/session.ts. No hooks dir other than composables/ (useAlbumSearch, useCrateFlip).",
+    "api_registration": "apps/api/src/app.ts: buildApp(opts) registers plugins errorHandler, db, auth, uploads, covers, avatars then routes under prefix /api: health, auth, crates, albums, covers, profiles, avatars (lines ~55-61), then webPlugin last. Routes are FastifyPluginAsyncZod in apps/api/src/routes/*.ts; services in src/services/*.ts take (db, user, input). New routes need a register line in app.ts.",
+    "auth_session": "API: plugins/auth.ts sets req.user (PublicUser|null) in onRequest from cookie 'frisson_session' (opaque token, sha256 hash stored in sessions table; services/sessions.ts findSessionUser). Require a user: requireUser(req.user) in services/permissions.ts:16 (401), used as route preValidation (routes/profiles.ts:~20); requireAdmin also there; canEditOwner/assertCanEditCrate. Web: GET /api/auth/me (routes/auth.ts:73) -> session store (stores/session.ts): user, loaded, signedIn, isAdmin, load(), logIn/signUp/logOut/refresh. publicUser has id,email,username,displayName,role,avatarUrl,verified.",
+    "db_schema": "apps/api/src/db/schema.ts. users (:21-34): id, email, username, displayName, passwordHash, role(user|admin), createdAt, bio, location, avatarPath, verified. user_links, sessions. crates (:68-80): id, name, color, label, sortBy, sortOrder, ownerId (nullable FK users, set null), created/updated. NO visibility/public/private field on crates (all crates public via GET /api/crates). albums: crateId (restrict), title, artist, year, genre, format, coverPath, sleeveColor, rating, notes, position, spinCount. tracks: albumId, side A-D, position, title, durationSec. No follows/news/recommendation tables.",
+    "migrations": "apps/api/drizzle/: latest is 0004_user_profiles.sql (journal idx 4, meta/_journal.json); next is 0005. Generate with `npm run db:generate -w apps/api` (drizzle-kit, drizzle.config.ts). Migrations auto-applied in db/client.ts createDb() via migrate() on every open. test/migration.test.ts and schema.test.ts exist.",
+    "seed": "apps/api/src/db/seed.ts, run ONLY manually via `npm run db:seed -w apps/api` (apps/api/package.json:11; README:79). NOT run on server start, not in Dockerfile/compose/CI. It is a DESTRUCTIVE script: refuses if NODE_ENV=production; rm -rf DEFAULT_COVERS_DIR; in one transaction deletes all tracks, albums, crates (users untouched) and re-inserts. No skip-if-seeded guard; every run wipes crates. Data: const SEED = [{name,label,color,albums:[{title,artist,year,genre,rating,sleeveColor,notes?,sides?:{A:[titles],B:..}}]}] -- 2 crates ('Guitars' 4 albums, 'Beats & Bass' 6 albums), 10 albums; tracks only as title lists per side (no durations); no coverPath (generated sleeves); crates inserted WITHOUT ownerId (null = legacy; bootstrap assigns to admin only when server starts with ADMIN_EMAIL/ADMIN_PASSWORD, services/bootstrap.ts bootstrapFromEnv, called in src/server.ts:10 each start). Seed creates no users, no avatars. DB lives at <repo>/data/crate.db (paths.ts; data/ has avatars, covers, crate.db).",
+    "seed_wipe_hazard": "Re-running seed deletes ALL crates/albums including any user-created ones and any new seeded content has to be added inside this wipe script or a new idempotent script; deleting crates also leaves users' ownership irrelevant. Seeded users would need createUser (services/users.ts) which hashes password.",
+    "avatar_handling": "avatarPath stores public URL path '/avatars/<file>' (services/avatars.ts:21,72); files in data/avatars served by plugins/avatars.ts static. UserAvatar.vue falls back to initials when avatarUrl null, so seeded fake users need no image files.",
+    "cover_rendering": "apps/web/src/components/crate/SleeveArt.vue: if album.coverPath -> <img :src=coverPath> (served from /covers/ by plugins/covers.ts); else generated sleeve using sleeveColor background, readableInk(utils/color.ts) text, and a motif picked by album.id % 4 ('rings','stripes','sun','grid'), with edge strip + sticker showing title/artist/year. So seeded albums need only sleeveColor (hex) + title/artist/year. Crate color/label drive CrateBox tape labels (utils/crateLayout.ts).",
+    "existing_follow_news_reco": "ABSENT. grep for follow/news/recommend finds nothing in source (no tables, routes, schemas, views). No external HTTP/news client, no AI code in repo.",
+    "test_fixtures": "API (vitest-style via node test? files apps/api/test/*.test.ts): test/helpers.ts exports buildTestApp() (in-memory sqlite, temp covers/avatars dirs, app.inject), signUp(app, overrides)->{user,cookie,headers}, createAdmin(app), addCrate(app,name,sortOrder,ownerId), pngBuffer(), multipart(). Example tests: profiles.test.ts, ownership.test.ts, shared-profile.test.ts. Web: vitest + @vue/test-utils; App.test.ts mounts App with createPinia + memory router (mountApp(path)); router.test.ts; ProfileView.test.ts; stores/session.test.ts, library.test.ts.",
+    "other": "Docs: docs/adr/0004-user-accounts.md, 0005-user-profiles.md, docs/SPEC.md. Git branch is shipyard/home-following-profile-about; recent commits added avatar menu and profiles. Profile API: GET /api/users/:username (public, publicProfile incl crates), PATCH /api/me/profile; no 'list users' endpoint exists."
+  },
+  "verified_commands": {
+    "test": "npm test",
+    "typecheck": "npm run typecheck",
+    "lint": "npm run lint",
+    "format": "npm run format:check"
+  }
+}

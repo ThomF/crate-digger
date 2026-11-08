@@ -1,0 +1,17 @@
+{
+ "structure": {
+  "name": "frisson (repo crate-digger)", "language": "TypeScript, ESM, Node >=22.18 (.nvmrc), runs .ts directly via node (no api build step)",
+  "workspaces": {"tool":"npm workspaces","dirs":["packages/shared (@frisson/shared, zod schemas, src/index.ts, sorting.ts)","apps/api (@frisson/api, Fastify 5 + drizzle-orm + better-sqlite3, sharp, fastify-type-provider-zod)","apps/web (@frisson/web, Vue 3.5 + vue-router + pinia + Vite 6)"]},
+  "dev": "npm run dev (concurrently api + web). api: node --watch src/server.ts on PORT env default 3000; web: vite on 5173, proxies /api, /covers, /avatars to 127.0.0.1:3000",
+  "build": "npm run build (web vite build only; api has no build)",
+  "database": "SQLite file data/crate.db (DATABASE_PATH env); drizzle-orm schema apps/api/src/db/schema.ts; migrations SQL in apps/api/drizzle (0000..0004 + meta/_journal.json); applied automatically on startup via migrate() in apps/api/src/db/client.ts; generate with `npm run db:generate -w apps/api`; also db:seed, db:studio, db:backup, db:restore",
+  "other": "Dockerfile, compose.yaml (needs ADMIN_EMAIL/ADMIN_PASSWORD, DOMAIN in .env), GitHub CI .github/workflows/ci.yml, prettier + eslint flat config at root"
+ },
+ "tests": {
+  "runner": "vitest 3 (api: node env; web: happy-dom + @vue/test-utils configured in apps/web/vite.config.ts). shared has no tests.",
+  "commands": {"all":"npm test","api":"npm test -w apps/api","web":"npm test -w apps/web","single":"npx vitest run <file> (from within apps/api or apps/web)","typecheck":"npm run typecheck (api/shared: tsc --noEmit; web: vue-tsc --noEmit)","lint":"npm run lint (eslint .)","format":"npm run format:check","ci_order":"format:check, lint, typecheck, test, build"},
+  "locations": {"api":"apps/api/test/*.test.ts (albums, auth-accounts, avatars, bootstrap, covers, crates, health, migration, ownership, passwords, profiles, schema, shared-auth, shared-profile, sorting, web)","web":"colocated *.test.ts next to source in apps/web/src (components, views, stores, utils, composables, router, App)"},
+  "helpers": "apps/api/test/helpers.ts: buildTestApp() (in-memory sqlite, temp covers/avatars dirs, generous rate limit; call app.close()), pngBuffer(), SignedIn type and signup/login helpers using app.inject",
+  "e2e": "absent (no playwright/cypress)"
+ }
+}

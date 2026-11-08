@@ -1,0 +1,24 @@
+{
+  "id": "T6",
+  "title": "Web API clients and shared follow and section pieces",
+  "description": "Add typed clients over request():\n- api/news.ts: listNews().\n- api/crates.ts: add listRecommendedCrates() -> CrateCard[] from /crates/recommended.\n- api/follows.ts: follow(username) PUT, unfollow(username) DELETE, listFollowing(), getFeed() from /me/feed, listSuggestedCollectors() from /me/suggested-collectors.\n\nAdd components/DemoTag.vue: a small inline stamp with the exact text 'Demo', styled with base.css tokens.\n\nAdd components/profile/FollowButton.vue: props username, following (boolean). Renders a button.btn labelled 'Follow' or 'Unfollow', aria-busy and disabled while in flight, not optimistic: it waits for the request, then emits `changed` with the new boolean. On failure it shows errorMessage in a role=\"alert\" element and keeps the label matching the prop.\n\nAdd composables/useAsyncSection.ts: `useAsyncSection<T>(loader)` returning { data, status: 'loading'|'ready'|'error', error, load(), refresh() }. load() shows the loading status; refresh() re-requests silently and keeps old data until new data arrives, moving to error if it fails. Home and Following use one instance per section, so one failure never affects another.\n\nColocated tests: FollowButton.test.ts (both labels, emit on success, alert and unchanged label on rejection) and useAsyncSection.test.ts. Tests stub fetch or mock the API modules; no real server.",
+  "criteria": [
+    "AC17",
+    "AC18",
+    "AC25"
+  ],
+  "files": [
+    "apps/web/src/api/news.ts",
+    "apps/web/src/api/crates.ts",
+    "apps/web/src/api/follows.ts",
+    "apps/web/src/components/DemoTag.vue",
+    "apps/web/src/components/profile/FollowButton.vue",
+    "apps/web/src/components/profile/FollowButton.test.ts",
+    "apps/web/src/composables/useAsyncSection.ts",
+    "apps/web/src/composables/useAsyncSection.test.ts"
+  ],
+  "depends_on": [
+    "T2"
+  ],
+  "status": "todo"
+}

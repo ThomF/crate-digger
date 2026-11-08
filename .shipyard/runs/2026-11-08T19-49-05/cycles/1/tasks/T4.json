@@ -1,0 +1,22 @@
+{
+  "id": "T4",
+  "title": "Follow, following, feed and suggestions API",
+  "description": "Create apps/api/src/services/follows.ts and routes/follows.ts (FastifyPluginAsyncZod with data-classification comment) and register `followRoutes` under /api in app.ts, before webPlugin.\n\nRoutes, all with preValidation requireUser so signed-out callers get 401 first:\n- PUT /users/:username/follow: 204. Unknown username 404. Self 400 (badRequest). Repeat is 204 with no new row (onConflictDoNothing).\n- DELETE /users/:username/follow: 204, repeat 204. Unknown username 404. Self is a no-op 204.\n- GET /me/following: collectorSummary[], most recently followed first (created_at desc, id desc).\n- GET /me/feed: crateCard[] for crates owned by followed users, crates.created_at desc then id desc, limit 50, albumCount via left join, createdAt ISO.\n- GET /me/suggested-collectors: collectorSummary[] of users with demo_seed_key not null that the viewer does not follow and is not, ordered by username. Empty list when no demo data exists.\n\nUse the shared schemas as response schemas. Build summaries from explicit field lists; never select email, role, id or demo keys into a response.\n\nTests: test/follows.test.ts covers every status in AC12, row counts, cascade on user delete by direct db access, and AC13 counts changing by exactly 1 after follow and unfollow, including viewerFollows true/false/signed-out. test/feed.test.ts uses three users and crates with set created_at values and asserts inclusion, exclusion, order, the limit of 50 and a recursive absence of email/role/id/ownerId at user level; also covers suggested-collectors by inserting rows with a demo_seed_key directly.\n\nUse buildTestApp (in-memory). Never touch data/.",
+  "criteria": [
+    "AC12",
+    "AC13",
+    "AC14",
+    "AC16"
+  ],
+  "files": [
+    "apps/api/src/services/follows.ts",
+    "apps/api/src/routes/follows.ts",
+    "apps/api/src/app.ts",
+    "apps/api/test/follows.test.ts",
+    "apps/api/test/feed.test.ts"
+  ],
+  "depends_on": [
+    "T2"
+  ],
+  "status": "todo"
+}

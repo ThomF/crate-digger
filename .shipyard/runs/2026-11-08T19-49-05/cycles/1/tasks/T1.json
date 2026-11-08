@@ -1,0 +1,20 @@
+{
+  "id": "T1",
+  "title": "Additive schema and generated migration 0005",
+  "description": "Extend apps/api/src/db/schema.ts, then generate the migration with `npm run db:generate -w apps/api -- --name follows_news_demo` (produces drizzle/0005_follows_news_demo.sql, meta/0005_snapshot.json and a journal entry). This task is the only owner of the migration and snapshot files. Do not hand-edit them or edit 0000-0004.\n\nAdd:\n- Table `follows` (Drizzle export `follows`): id integer PK autoincrement; follower_id and followee_id, integer not null, FK users.id ON DELETE CASCADE; created_at timestamp default unixepoch. uniqueIndex `follows_follower_followee_unique` on (follower_id, followee_id); index `follows_followee_idx` on followee_id; check `follows_no_self` follower_id <> followee_id. Data-classification header comment.\n- Table `news_items` (export `newsItems`): id integer PK autoincrement; seed_key text not null unique; title, summary, source text not null; published_at integer timestamp not null; created_at default unixepoch.\n- Nullable columns: users.demo_seed_key text unique (`demoSeedKey`, non-null means demo user); crates.demo_seed_key text unique; crates.recommended_rank integer (`recommendedRank`, null means not recommended, lower ranks first); albums.demo_seed_key text unique.\n- Relations for follows and $inferSelect/$inferInsert types (Follow, NewsItem, NewNewsItem).\n\nThe generated SQL must only contain CREATE TABLE, ALTER TABLE ADD COLUMN and CREATE INDEX statements. If drizzle produces a table rebuild (`__new_` tables), restructure so it does not. Extend test/migration.test.ts with a 'migration 0005' case modelled on the 0004 one (database at 0000-0004 with users, sessions, links, crates, albums, tracks; opening through createDb keeps every row with new columns NULL). Extend test/schema.test.ts with the unique constraint, cascade on user delete and self-follow check.\n\nSafety: tests use ':memory:' or mkdtemp databases only. Never open or write the real data/ folder. Do not run db:seed, db:studio, or the server without DATA_DIR pointing at a temp dir.",
+  "criteria": [
+    "AC12",
+    "AC21",
+    "AC23"
+  ],
+  "files": [
+    "apps/api/src/db/schema.ts",
+    "apps/api/drizzle/0005_follows_news_demo.sql",
+    "apps/api/drizzle/meta/0005_snapshot.json",
+    "apps/api/drizzle/meta/_journal.json",
+    "apps/api/test/migration.test.ts",
+    "apps/api/test/schema.test.ts"
+  ],
+  "depends_on": [],
+  "status": "todo"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "F1",
+  "title": "Whole-card crate links, crate names in feed, profile crate links, singular counts, stale store",
+  "status": "running",
+  "criteria": ["AC10", "AC17", "AC18", "AC19"],
+  "attempts": [],
+  "files": [
+    "apps/web/src/views/HomeView.vue", "apps/web/src/views/HomeView.test.ts",
+    "apps/web/src/views/FollowingView.vue", "apps/web/src/views/FollowingView.test.ts",
+    "apps/web/src/views/ProfileView.vue", "apps/web/src/views/ProfileView.test.ts",
+    "apps/web/src/views/MyProfileView.vue", "apps/web/src/views/MyProfileView.test.ts",
+    "apps/web/src/views/CrateView.vue", "apps/web/src/views/CrateView.test.ts"
+  ],
+  "description": "1) AC10 defect: on Home, a real click anywhere on a recommended crate card must go to /crates/<id>. Today only the tape label at HomeView.vue:84 is a RouterLink (7% of the card); a click on the crate name stays on /. Use a stretched link (the RouterLink ::after covers the positioned card) with a pointer cursor and a visible focus state, and give the link an accessible name containing the crate name. No nested interactive elements. 2) Feed cards on /following show only the tape label: also show the crate name and make the whole card a link in the same way. 3) Crates listed on /profile and /u/<username> are not links: make each open /crates/<id>. 4) Follower count: show '1 follower' for a count of 1, otherwise 'N followers'. Keep the .follower-count and .following-count elements, and apply this wherever the count renders. 5) Stale store: CrateView calls library.load() without force, so navigating to /crates/<id> for a crate the already loaded store does not know shows 'Crate not found' until reload. When the id is not in the loaded store, force one reload before showing not found; /crates/999999 must still end at 'Crate not found' with no loop. Add or update tests for each. Files may be missing from this list if a test lives elsewhere: if you need another file, report a blocker rather than touching it."
+}

@@ -1,0 +1,15 @@
+{
+"conventions": {
+ "tooling": "npm workspaces (apps/api, apps/web, packages/shared @frisson/shared); Node>=22.18, API runs native TS (.ts import suffixes); Prettier no-semi, single quotes, width 100, trailing commas; ESLint flat config (vue essential + ts recommended, prettier skip-formatting); Vitest both apps, tests colocated in web (*.test.ts), apps/api/test in api",
+ "api": "routes/ thin (FastifyPluginAsyncZod, zod schema params/body/response, preValidation requireUser/requireAdmin), services/ hold logic and throw HttpError via notFound/badRequest (errors.ts), plugins/ for db/auth/uploads/static; drizzle schema in db/schema.ts, migrations via drizzle-kit (0004 latest); routes under /api, e.g. GET /users/:username, PATCH /me/profile; public output only via publicProfile/toPublicProfile (never email/role/id); header comments state 'Data classification'",
+ "shared": "packages/shared/src/index.ts holds zod schemas: input schemas vs response schemas, requiredText/optionalText helpers, friendly messages, strictObject for no self-escalation",
+ "web": "Vue3 script-setup, Pinia stores (session, library), api/ typed fetch wrappers over request() in client.ts, views/ lazy-loaded via router with props functions, meta.requiresAuth guard; components/ flat (AccountMenu, LibraryToolbar); utils/ small pure helpers with tests; views have route '/' = CrateView named 'library'; existing routes: /, /list, /crates, /login, /signup, /albums/*, /u/:username (profile), /profile/edit, catch-all not-found; no /home, /following or /about routes",
+ "styling": "plain CSS with tokens in apps/web/src/styles/base.css :root (--cardboard, --paper, --ink, --ink-soft, --marker-red, --ok-green, --star, --font-display Courier New, --font-body system-ui); shared classes .btn .status-note; focus-visible red outline; 90s record shop feel; reduced-motion respected",
+ "commits": "Conventional Commits with scope: feat(api|web|shared), fix, chore(shipyard), docs, refactor; squash per milestone; branches feat/ fix/ chore/; PR template checklist lint+typecheck+test"
+},
+"documentation": {
+ "files": ["README.md","docs/SPEC.md","docs/DEPLOY.md","docs/adr/0001-0005","docs/adr/0005-user-profiles.md",".github/pull_request_template.md",".shipyard/PROJECT-REPORT.md"],
+ "absent": "no CONTRIBUTING, no CLAUDE.md, no docs/ roadmap file, no brand voice notes; 'Frisson 1.0' appears only in .shipyard/PROJECT-REPORT.md as Phase 1 (accounts) and Phase 2 (profiles); no mention of Home, Following, About pages anywhere in docs",
+ "constraints": "ADR 0005 lists follows, feed, favorites, likes, B-Side, email verification as out of scope (so Following has no backing data/API yet); anyone can browse signed-out; profiles are public and must never expose email/role; no new services/dependencies; ADRs expected for significant decisions; spec says update Spec/ADRs if a decision changes; tagline: 'Your music collection as 90s record crates. Flip through the sleeves, pull one out, and spin it.'; self-hosted, manually curated, no external music APIs"
+}
+}

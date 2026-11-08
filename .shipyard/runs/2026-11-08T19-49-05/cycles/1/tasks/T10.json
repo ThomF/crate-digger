@@ -1,0 +1,23 @@
+{
+  "id": "T10",
+  "title": "ADR 0006, spec, README, deployment docs and config",
+  "description": "Create docs/adr/0006-following-home-and-demo-content.md in the existing ADR format (Status, Date 2026-11-08, Builds on ADR 0005, Context, Decision, Consequences, Alternatives considered). Record: the four-page structure and crate browser move to /shelf; follows table and public-count rule; recommendations as an editorial rank with no AI model; news stored locally with no network calls; demo delivery at start from server.ts with stable seed keys, insert-if-missing, restored after deletion; why db:seed cannot deliver it; production default off plus SEED_DEMO_DATA; demo users inert through sentinel hash and .invalid emails; the known consequence that fake collectors are visible on an instance until removed, with no removal command in scope; tracks not individually keyed.\n\nAdd a one-line pointer in docs/adr/0005-user-profiles.md's out-of-scope bullet saying follows and the feed are now covered by ADR 0006; leave the rest of that ADR as written.\n\ndocs/SPEC.md: add Follow and NewsItem and the new columns to the data model, new endpoints to the API section, the pages to UI / UX, and a line that the crate view lives at /shelf.\n\nREADME.md: page routes (/, /following, /profile, /about, /shelf, /crates/:id alongside /list and /crates); nothing may imply / is the crate browser; API table gains PUT/DELETE /api/users/:username/follow, GET /api/me/following, /api/me/feed, /api/me/suggested-collectors, /api/news, /api/crates/recommended and notes the new profile fields; Database section explains the demo step, follows and news tables, that `db:seed` wipes crates but the next start restores demo crates; env table gains SEED_DEMO_DATA.\n\n.env.example: commented SEED_DEMO_DATA entry (empty by default, 'true' adds fictional demo users, news and crates in production). compose.yaml: pass `SEED_DEMO_DATA: ${SEED_DEMO_DATA:-}` to the app service. docs/DEPLOY.md: short note in the environment section.\n\nThen run format:check, lint, typecheck, test and build and report any failure; write nothing to data/.",
+  "criteria": [
+    "AC24",
+    "AC26"
+  ],
+  "files": [
+    "docs/adr/0006-following-home-and-demo-content.md",
+    "docs/adr/0005-user-profiles.md",
+    "docs/SPEC.md",
+    "docs/DEPLOY.md",
+    "README.md",
+    ".env.example",
+    "compose.yaml"
+  ],
+  "depends_on": [
+    "T5",
+    "T9"
+  ],
+  "status": "todo"
+}
