@@ -16,6 +16,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       # Requests only reach the app through Caddy, so its X-Forwarded-For can be trusted.
       TRUST_PROXY: 'true'
+      # Empty = no demo content in production; 'true' adds fictional users, news and crates.
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-}
     volumes:
       - crate-data:/data
     # No "ports:" on purpose: the app is only reachable through Caddy, on Docker's

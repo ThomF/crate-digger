@@ -72,6 +72,10 @@ In `.env`:
   Compose refuses to start without either one.
 - `DOMAIN`: your domain **without** `http://`, e.g. `crates.yourname.com`. That tells Caddy to
   fetch a real certificate.
+- `SEED_DEMO_DATA` (optional): leave it empty for a real instance. `true` adds fictional demo users,
+  news and crates on each start, so everyone who visits sees them. Setting it back does not remove
+  them, and there is no removal command, so try it on a throwaway instance first
+  (see [ADR 0006](adr/0006-following-home-and-demo-content.md)).
 
 ```bash
 docker compose up -d --build
@@ -90,6 +94,12 @@ docker compose up -d --build
 ```
 
 Database migrations run automatically when the new app container starts.
+
+### Upgrading to following and the Home page
+
+Nothing to do by hand. Migration 0005 adds the follows and news tables when the app starts, and no
+demo content is added unless you set `SEED_DEMO_DATA=true`. Without it, Home shows empty news and
+recommended sections. The crate browser moved from `/` to `/shelf`, so update any bookmarks.
 
 ### Upgrading to user profiles
 

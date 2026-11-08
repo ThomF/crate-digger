@@ -17,13 +17,34 @@ npm install
 npm run dev
 ```
 
-- Web: http://localhost:5173 (Vite, hot reload). Flip through a crate with the scroll wheel,
-  by dragging down, or with ↑/↓, Home/End, PageUp/PageDown; Enter pulls the record out.
-  In a sorted crate, type a letter to jump to its divider.
-  `/list` searches and rearranges the collection; `/crates` adds, renames and sorts crates.
+- Web: http://localhost:5173 (Vite, hot reload), which opens on Home. At `/shelf`, flip through a
+  crate with the scroll wheel, by dragging down, or with ↑/↓, Home/End, PageUp/PageDown; Enter pulls
+  the record out. In a sorted crate, type a letter to jump to its divider.
 - API: http://localhost:3000/api/health (Fastify, restarts on save)
 
 The web dev server proxies `/api/*` to the API, so the browser only ever talks to `:5173`.
+
+A dev start adds fictional demo content to your database (see [Database](#database)).
+
+## Pages
+
+| Route                                    | What it shows                                             |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `/`                                      | Home: music news and recommended crates                   |
+| `/following`                             | Signed in: who you follow, their crates, suggested people |
+| `/profile`                               | Signed in: your own profile                               |
+| `/about`                                 | What Frisson is and which content is made up              |
+| `/shelf`                                 | The crate browser: flip through every crate               |
+| `/crates/:id`                            | The crate browser, opened on one crate (public link)      |
+| `/list`                                  | Search and rearrange the collection                       |
+| `/crates`                                | Signed in: add, rename and sort crates                    |
+| `/u/:username`                           | Anyone's public profile, with a follow button             |
+| `/profile/edit`                          | Signed in: edit your profile                              |
+| `/albums/:id`, `/albums/new`, `.../edit` | One album; adding and editing need a signed-in user       |
+| `/login`, `/signup`                      | Log in or make an account                                 |
+
+The masthead links to Home, Following, Profile and About. Signed-out visitors who open a signed-in
+page are sent to log in first.
 
 ## Scripts
 
@@ -51,15 +72,16 @@ just sign up.
 
 ### Environment variables
 
-| Variable                       | What it does                                                     |
-| ------------------------------ | ---------------------------------------------------------------- |
-| `ADMIN_EMAIL`                  | Email of the first admin account (created on first start)        |
-| `ADMIN_PASSWORD`               | Password of that admin, at least 8 characters                    |
-| `TRUST_PROXY`                  | `true` behind a proxy you control, so rate limits are per IP     |
-| `DATA_DIR`                     | Where the database, covers and avatars live (default `data/`)    |
-| `DATABASE_PATH` / `COVERS_DIR` | Override the database file or covers folder individually         |
-| `AVATARS_DIR`                  | Override the avatars folder (default `DATA_DIR/avatars`)         |
-| `DOMAIN`                       | Compose only: the domain Caddy serves and gets a certificate for |
+| Variable                       | What it does                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `ADMIN_EMAIL`                  | Email of the first admin account (created on first start)                                      |
+| `ADMIN_PASSWORD`               | Password of that admin, at least 8 characters                                                  |
+| `TRUST_PROXY`                  | `true` behind a proxy you control, so rate limits are per IP                                   |
+| `DATA_DIR`                     | Where the database, covers and avatars live (default `data/`)                                  |
+| `DATABASE_PATH` / `COVERS_DIR` | Override the database file or covers folder individually                                       |
+| `AVATARS_DIR`                  | Override the avatars folder (default `DATA_DIR/avatars`)                                       |
+| `DOMAIN`                       | Compose only: the domain Caddy serves and gets a certificate for                               |
+| `SEED_DEMO_DATA`               | `true` adds fictional demo content, `false` never; unset or empty adds it except in production |
 
 `SESSION_SECRET` is no longer used.
 
@@ -76,11 +98,33 @@ Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH`, `C
 
 | Command                                    | What it does                                            |
 | ------------------------------------------ | ------------------------------------------------------- |
-| `npm run db:seed -w apps/api`              | Wipe the DB and load sample records                     |
+| `npm run db:seed -w apps/api`              | Wipe crates, albums, tracks and covers, load samples    |
 | `npm run db:generate -w apps/api`          | After editing `src/db/schema.ts`, write a new migration |
 | `npm run db:studio -w apps/api`            | Browse the data in Drizzle Studio                       |
 | `npm run db:backup -w apps/api`            | Consistent copy of the DB into `data/backups/`          |
 | `npm run db:restore -w apps/api -- <file>` | Replace the DB with a backup (stop the app first)       |
+
+`db:seed` refuses to run in production, and it keeps users, follows and news.
+
+Migration 0005 adds a `follows` table (who follows whom, once per pair) and a `news_items` table
+(local news; nothing is fetched from the network).
+
+### Demo content
+
+Each time the API starts, `apps/api/src/server.ts` adds any missing fictional demo users, crates,
+albums and news items (`src/db/demo-content.ts`). This is on by default, except that with
+`NODE_ENV=production`, which the Docker image sets, it needs `SEED_DEMO_DATA=true`. Set
+`SEED_DEMO_DATA=false` to turn it off anywhere, including for `npm run dev`. Tests start from an empty
+database, since `buildTestApp` never runs this step.
+
+- It only inserts rows that are missing, so editing a demo crate sticks, but a deleted demo row comes
+  back on the next start. So **`db:seed` wipes crates, but the next start restores the demo crates**.
+- A track removed from a demo album stays removed; tracks return only if the whole album does.
+- Demo users can't log in: no password matches, and their emails are undeliverable `.invalid`
+  addresses. If a real account already has a demo username or email, that demo user and their crates
+  are skipped.
+- Demo users and crates are public, as real ones are, and turning the flag off doesn't remove them.
+  There is no removal command. See [ADR 0006](docs/adr/0006-following-home-and-demo-content.md).
 
 ## API
 
@@ -112,11 +156,22 @@ Override the locations with `DATA_DIR`, or individually with `DATABASE_PATH`, `C
 | `DELETE /api/me/avatar`               | Remove your avatar                                      |
 | `GET /avatars/:file`                  | Avatar images (immutable caching)                       |
 | `PATCH /api/users/:username/verified` | Admin only: `{ verified }` sets the badge               |
+| `PUT /api/users/:username/follow`     | Follow someone (204); following twice is fine           |
+| `DELETE /api/users/:username/follow`  | Unfollow (204); not following them is fine              |
+| `GET /api/me/following`               | Who you follow, most recently followed first            |
+| `GET /api/me/feed`                    | Crates of people you follow, newest first, 50 at most   |
+| `GET /api/me/suggested-collectors`    | Demo collectors you don't follow yet                    |
+| `GET /api/news`                       | News items, newest first (public)                       |
+| `GET /api/crates/recommended`         | Ranked crates, lowest rank first (public)               |
 
 Creating needs a signed-in user; changing a crate or its albums needs its owner or an admin
 (401 signed out, 403 not allowed). Profile routes return the public profile; the profile body is
 strict, so sending `verified`, `role`, `email` or `username` is a 400. Errors always look like
 `{ statusCode, error, message, issues? }`.
+
+Profiles also carry `followerCount`, `followingCount`, `viewerFollows` (always false signed out) and
+`isDemo`. Follow and `/api/me/*` routes need a signed-in user (401 otherwise). Following yourself is
+a 400 and an unknown username a 404. Who follows whom stays private: the only list is your own.
 
 ## Layout
 
@@ -125,9 +180,9 @@ packages/shared   Zod schemas + types: the contract between API and web
   src/sorting.ts  filing rules shared by API and web (no Zod: safe for the main bundle)
 apps/api          Fastify backend (src/app.ts builds the app, src/server.ts starts it)
   src/routes/     HTTP: schema in, status code out — thin (profiles: /api/users, /api/me)
-  src/services/   business logic: plain functions taking (db, input), incl. profiles
+  src/services/   business logic: plain functions taking (db, input), incl. profiles, demo-seed
   src/plugins/    db connection, error handler, uploads (covers + avatars)
-  src/db/         schema.ts (tables), client.ts (connect + migrate), seed.ts
+  src/db/         schema.ts (tables), client.ts (connect + migrate), seed.ts, demo-content.ts
   drizzle/        generated SQL migrations — committed, never edited by hand
 apps/web          Vue 3 frontend
   src/api/        typed fetch functions, one file per resource

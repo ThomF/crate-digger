@@ -57,6 +57,7 @@ not add services or dependencies.
   the label is the user's own claim, and https-only blocks `javascript:` and similar schemes.
 - Out of scope: favorites, likes, follows, a feed, B-Side, email verification, password change
   and account deletion.
+  Follows and the feed are now covered by [ADR 0006](0006-following-home-and-demo-content.md).
 
 ## Alternatives considered
 
