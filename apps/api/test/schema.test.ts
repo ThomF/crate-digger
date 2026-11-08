@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { createDb, type Db } from '../src/db/client.ts'
-import { albums, crates, tracks, userLinks, users } from '../src/db/schema.ts'
+import { albums, crates, follows, newsItems, tracks, userLinks, users } from '../src/db/schema.ts'
 
 // These tests pin down the rules the database itself enforces,
 // so later milestones can rely on them.
@@ -156,5 +156,127 @@ describe('database schema', () => {
         .values({ userId: 999, platform: 'x', url: 'https://x.com/nobody', position: 0 })
         .run(),
     ).toThrow(/FOREIGN KEY/)
+  })
+
+  describe('follows', () => {
+    function follow(followerId: number, followeeId: number) {
+      return db.insert(follows).values({ followerId, followeeId }).returning().get()
+    }
+
+    it('fills in created_at', () => {
+      expect(follow(addUser('ada').id, addUser('bob').id).createdAt).toBeInstanceOf(Date)
+    })
+
+    it('allows one row per (follower, followee), in each direction', () => {
+      const ada = addUser('ada')
+      const bob = addUser('bob')
+      follow(ada.id, bob.id)
+
+      expect(() => follow(ada.id, bob.id)).toThrow(/UNIQUE/)
+      follow(bob.id, ada.id)
+      expect(db.select().from(follows).all()).toHaveLength(2)
+    })
+
+    it('refuses a self-follow', () => {
+      const ada = addUser('ada')
+
+      expect(() => follow(ada.id, ada.id)).toThrow(/CHECK/)
+    })
+
+    it('rejects a follow of a user that does not exist', () => {
+      expect(() => follow(addUser('ada').id, 999)).toThrow(/FOREIGN KEY/)
+    })
+
+    it('deletes follow rows on both sides when a user is deleted (cascade)', () => {
+      const ada = addUser('ada')
+      const bob = addUser('bob')
+      const cleo = addUser('cleo')
+      follow(ada.id, bob.id)
+      follow(bob.id, ada.id)
+      const kept = follow(bob.id, cleo.id)
+
+      db.delete(users).where(eq(users.id, ada.id)).run()
+
+      expect(
+        db
+          .select()
+          .from(follows)
+          .all()
+          .map((f) => f.id),
+      ).toEqual([kept.id])
+    })
+
+    it('loads both sides through relations', () => {
+      const ada = addUser('ada')
+      const bob = addUser('bob')
+      follow(ada.id, bob.id)
+
+      const loaded = db.query.users
+        .findFirst({
+          where: eq(users.id, ada.id),
+          with: { following: { with: { followee: true } }, followers: true },
+        })
+        .sync()
+
+      expect(loaded?.following.map((f) => f.followee.username)).toEqual(['bob'])
+      expect(loaded?.followers).toEqual([])
+    })
+  })
+
+  describe('demo columns', () => {
+    it('are NULL by default', () => {
+      const crate = addCrate()
+
+      expect(addUser().demoSeedKey).toBeNull()
+      expect(crate.demoSeedKey).toBeNull()
+      expect(crate.recommendedRank).toBeNull()
+      expect(addAlbum(crate.id).demoSeedKey).toBeNull()
+    })
+
+    it('allow many NULLs but only one row per seed key', () => {
+      const crate = addCrate()
+      addCrate()
+      const other = addCrate()
+      db.update(crates).set({ demoSeedKey: 'k' }).where(eq(crates.id, crate.id)).run()
+
+      expect(() =>
+        db.update(crates).set({ demoSeedKey: 'k' }).where(eq(crates.id, other.id)).run(),
+      ).toThrow(/UNIQUE/)
+      const ada = addUser('ada')
+      const bob = addUser('bob')
+      db.update(users).set({ demoSeedKey: 'k' }).where(eq(users.id, ada.id)).run()
+      expect(() =>
+        db.update(users).set({ demoSeedKey: 'k' }).where(eq(users.id, bob.id)).run(),
+      ).toThrow(/UNIQUE/)
+      const first = addAlbum(crate.id)
+      const second = addAlbum(crate.id)
+      db.update(albums).set({ demoSeedKey: 'k' }).where(eq(albums.id, first.id)).run()
+      expect(() =>
+        db.update(albums).set({ demoSeedKey: 'k' }).where(eq(albums.id, second.id)).run(),
+      ).toThrow(/UNIQUE/)
+    })
+  })
+
+  describe('news items', () => {
+    const item = {
+      seedKey: 'news-1',
+      title: 'Title',
+      summary: 'Summary',
+      source: 'Source',
+      publishedAt: new Date('2026-01-02T03:04:05Z'),
+    }
+
+    it('stores published_at as a date and fills in created_at', () => {
+      const row = db.insert(newsItems).values(item).returning().get()
+
+      expect(row.publishedAt).toEqual(item.publishedAt)
+      expect(row.createdAt).toBeInstanceOf(Date)
+    })
+
+    it('rejects a second item with the same seed key', () => {
+      db.insert(newsItems).values(item).run()
+
+      expect(() => db.insert(newsItems).values(item).run()).toThrow(/UNIQUE/)
+    })
   })
 })

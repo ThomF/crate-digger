@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm'
-import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { CRATE_SORTS } from '@frisson/shared/sorting'
 import { SOCIAL_PLATFORMS, USER_ROLES } from '@frisson/shared'
 
@@ -31,6 +31,8 @@ export const users = sqliteTable('users', {
   location: text('location'),
   avatarPath: text('avatar_path'), // the public URL path of the avatar image, or NULL
   verified: integer('verified', { mode: 'boolean' }).notNull().default(false), // set by admins only
+  // Added in migration 0005. Stable key of a fictional demo user; non-NULL means demo user.
+  demoSeedKey: text('demo_seed_key').unique(),
 })
 
 // Data classification: PUBLIC. Social links shown on a user's profile.
@@ -76,6 +78,10 @@ export const crates = sqliteTable('crates', {
   // Who may edit this crate. NULL = legacy crate from before accounts: only admins may edit.
   // 'set null' = deleting a user leaves their crates behind for admins.
   ownerId: integer('owner_id').references(() => users.id, { onDelete: 'set null' }),
+  // Added in migration 0005. Stable key of a demo crate; NULL for everything else.
+  demoSeedKey: text('demo_seed_key').unique(),
+  // Added in migration 0005. NULL = not recommended; lower ranks come first on Home.
+  recommendedRank: integer('recommended_rank'),
   ...timestamps,
 })
 
@@ -100,6 +106,8 @@ export const albums = sqliteTable(
     notes: text('notes'),
     position: integer('position').notNull().default(0), // order within its crate
     spinCount: integer('spin_count').notNull().default(0), // times pulled out of the crate
+    // Added in migration 0005. Stable key of a demo album; NULL for everything else.
+    demoSeedKey: text('demo_seed_key').unique(),
     ...timestamps,
   },
   (t) => [
@@ -126,12 +134,61 @@ export const tracks = sqliteTable(
   (t) => [index('tracks_album_side_position_idx').on(t.albumId, t.side, t.position)],
 )
 
+// Data classification: INTERNAL (personal data: who follows whom). Only counts and the signed-in
+// viewer's own follows leave the API, never numeric user ids (see the public-data rule).
+// 'cascade' = deleting a user deletes their follow rows in both directions.
+export const follows = sqliteTable(
+  'follows',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    followerId: integer('follower_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    followeeId: integer('followee_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    uniqueIndex('follows_follower_followee_unique').on(t.followerId, t.followeeId),
+    index('follows_followee_idx').on(t.followeeId),
+    check('follows_no_self', sql`${t.followerId} <> ${t.followeeId}`),
+  ],
+)
+
+// Data classification: PUBLIC. Fictional demo news shown on Home. seed_key is the stable key
+// the demo seeding step matches on, so a row is never inserted twice.
+export const newsItems = sqliteTable('news_items', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  seedKey: text('seed_key').notNull().unique(),
+  title: text('title').notNull(),
+  summary: text('summary').notNull(),
+  source: text('source').notNull(),
+  publishedAt: integer('published_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamps.createdAt,
+})
+
 // Relations don't change the database. They teach Drizzle's query API how tables
 // connect, so you can write db.query.albums.findFirst({ with: { tracks: true } }).
 export const usersRelations = relations(users, ({ many }) => ({
   crates: many(crates),
   sessions: many(sessions),
   links: many(userLinks),
+  following: many(follows, { relationName: 'follower' }),
+  followers: many(follows, { relationName: 'followee' }),
+}))
+
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(users, {
+    fields: [follows.followerId],
+    references: [users.id],
+    relationName: 'follower',
+  }),
+  followee: one(users, {
+    fields: [follows.followeeId],
+    references: [users.id],
+    relationName: 'followee',
+  }),
 }))
 
 export const userLinksRelations = relations(userLinks, ({ one }) => ({
@@ -168,3 +225,6 @@ export type Album = typeof albums.$inferSelect
 export type NewAlbum = typeof albums.$inferInsert
 export type Track = typeof tracks.$inferSelect
 export type NewTrack = typeof tracks.$inferInsert
+export type Follow = typeof follows.$inferSelect
+export type NewsItem = typeof newsItems.$inferSelect
+export type NewNewsItem = typeof newsItems.$inferInsert
