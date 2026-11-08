@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { defineComponent } from 'vue'
+import { defineComponent, nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import type { PublicProfile, PublicUser } from '@frisson/shared'
 import { ApiRequestError } from '../api/client.ts'
+import { follow, unfollow } from '../api/follows.ts'
 import { getProfile } from '../api/profiles.ts'
 import { useSessionStore } from '../stores/session.ts'
 import ProfileView from './ProfileView.vue'
 
 vi.mock('../api/profiles.ts', () => ({ getProfile: vi.fn() }))
+vi.mock('../api/follows.ts', () => ({ follow: vi.fn(), unfollow: vi.fn() }))
 const getProfileMock = vi.mocked(getProfile)
+const followMock = vi.mocked(follow)
+const unfollowMock = vi.mocked(unfollow)
 
 const base: PublicProfile = {
   username: 'alice',
@@ -57,6 +61,7 @@ async function mountProfile(username = 'alice', user: PublicUser | null = null) 
     routes: [
       { path: '/', component: Blank },
       { path: '/profile/edit', name: 'profile-edit', component: Blank },
+      { path: '/login', name: 'login', component: Blank },
     ],
   })
   await router.push('/')
@@ -70,7 +75,11 @@ async function mountProfile(username = 'alice', user: PublicUser | null = null) 
 }
 
 describe('ProfileView', () => {
-  beforeEach(() => getProfileMock.mockReset())
+  beforeEach(() => {
+    getProfileMock.mockReset()
+    followMock.mockReset()
+    unfollowMock.mockReset()
+  })
 
   it('loads the profile for the username prop', async () => {
     getProfileMock.mockResolvedValue(base)
@@ -200,6 +209,112 @@ describe('ProfileView', () => {
     const owner = await mountProfile('alice', alice)
     const edit = owner.findAll('a').find((a) => a.text() === 'Edit profile')
     expect(edit?.attributes('href')).toBe('/profile/edit')
+  })
+
+  describe('follow control and counts', () => {
+    const bob: PublicUser = { ...alice, id: 2, username: 'bob', displayName: 'Bob' }
+
+    it('shows both counts with their labels to everyone', async () => {
+      getProfileMock.mockResolvedValue({ ...base, followerCount: 5, followingCount: 2 })
+      for (const viewer of [null, bob, alice]) {
+        const wrapper = await mountProfile('alice', viewer)
+        expect(wrapper.get('.counts').text()).toMatch(/^5 followers\s+2 following$/)
+      }
+    })
+
+    it('signed-in visitor: the button matches viewerFollows', async () => {
+      getProfileMock.mockResolvedValue({ ...base, viewerFollows: false })
+      const notFollowing = await mountProfile('alice', bob)
+      expect(notFollowing.get('.follow-control button').text()).toBe('Follow')
+      expect(notFollowing.text()).not.toContain('Log in to follow')
+
+      getProfileMock.mockResolvedValue({ ...base, viewerFollows: true })
+      const isFollowing = await mountProfile('alice', bob)
+      expect(isFollowing.get('.follow-control button').text()).toBe('Unfollow')
+    })
+
+    it('following adds exactly 1 to the follower count and flips the button', async () => {
+      getProfileMock.mockResolvedValue({ ...base, followerCount: 5, followingCount: 2 })
+      followMock.mockResolvedValue(undefined)
+      const wrapper = await mountProfile('alice', bob)
+
+      await wrapper.get('.follow-control button').trigger('click')
+      await flushPromises()
+
+      expect(followMock).toHaveBeenCalledWith('alice')
+      expect(wrapper.get('.follower-count').text()).toBe('6')
+      expect(wrapper.get('.following-count').text()).toBe('2')
+      expect(wrapper.get('.follow-control button').text()).toBe('Unfollow')
+      expect(getProfileMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('unfollowing takes exactly 1 off the follower count and flips the button', async () => {
+      getProfileMock.mockResolvedValue({ ...base, followerCount: 5, viewerFollows: true })
+      unfollowMock.mockResolvedValue(undefined)
+      const wrapper = await mountProfile('alice', bob)
+
+      await wrapper.get('.follow-control button').trigger('click')
+      await flushPromises()
+
+      expect(unfollowMock).toHaveBeenCalledWith('alice')
+      expect(wrapper.get('.follower-count').text()).toBe('4')
+      expect(wrapper.get('.follow-control button').text()).toBe('Follow')
+    })
+
+    it('a rejected follow leaves the count and label alone and shows an alert', async () => {
+      getProfileMock.mockResolvedValue({ ...base, followerCount: 5 })
+      followMock.mockRejectedValueOnce(
+        new ApiRequestError(500, { statusCode: 500, error: 'Server Error', message: 'Nope' }),
+      )
+      const wrapper = await mountProfile('alice', bob)
+
+      await wrapper.get('.follow-control button').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.get('[role="alert"]').text()).toBe('Nope')
+      expect(wrapper.get('.follower-count').text()).toBe('5')
+      expect(wrapper.get('.follow-control button').text()).toBe('Follow')
+    })
+
+    it('signed-out visitor: a Log in to follow link back to this profile, no button', async () => {
+      getProfileMock.mockResolvedValue(base)
+      const wrapper = await mountProfile('alice', null)
+      const link = wrapper.get('.login-to-follow')
+      expect(link.text()).toBe('Log in to follow')
+      expect(decodeURIComponent(link.attributes('href')!)).toBe('/login?next=/u/alice')
+      expect(wrapper.find('.follow-control button').exists()).toBe(false)
+    })
+
+    it('own profile: no follow control, and the edit link stays', async () => {
+      getProfileMock.mockResolvedValue(base)
+      const wrapper = await mountProfile('alice', alice)
+      expect(wrapper.find('.follow-control').exists()).toBe(false)
+      expect(wrapper.text()).not.toContain('Log in to follow')
+      expect(wrapper.text()).not.toContain('Unfollow')
+      expect(wrapper.text()).toContain('Edit profile')
+    })
+
+    it('a logout during the visit swaps the button for the login link', async () => {
+      getProfileMock.mockResolvedValue({ ...base, viewerFollows: true })
+      const wrapper = await mountProfile('alice', bob)
+      expect(wrapper.get('.follow-control button').text()).toBe('Unfollow')
+
+      useSessionStore().user = null
+      await nextTick()
+
+      expect(wrapper.find('.follow-control button').exists()).toBe(false)
+      expect(wrapper.get('.login-to-follow').text()).toBe('Log in to follow')
+    })
+
+    it('shows the Demo label beside the name only for demo profiles', async () => {
+      getProfileMock.mockResolvedValue({ ...base, isDemo: true })
+      const demo = await mountProfile()
+      expect(demo.get('h1').get('.demo-tag').text()).toBe('Demo')
+
+      getProfileMock.mockResolvedValue({ ...base, isDemo: false })
+      const real = await mountProfile()
+      expect(real.find('.demo-tag').exists()).toBe(false)
+    })
   })
 
   it('renders bio and display name as plain text, never HTML', async () => {

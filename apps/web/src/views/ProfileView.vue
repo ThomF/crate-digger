@@ -5,6 +5,8 @@ import type { PublicProfile, ProfileLink } from '@frisson/shared'
 import { ApiRequestError, errorMessage } from '../api/client.ts'
 import { getProfile } from '../api/profiles.ts'
 import { useSessionStore } from '../stores/session.ts'
+import DemoTag from '../components/DemoTag.vue'
+import FollowButton from '../components/profile/FollowButton.vue'
 import VerifiedBadge from '../components/profile/VerifiedBadge.vue'
 import { initials as initialsFor } from '../utils/initials.ts'
 
@@ -21,6 +23,14 @@ const session = useSessionStore()
 const isOwner = computed(
   () => profile.value !== null && session.user?.username === profile.value.username,
 )
+
+/** Only called after the server has agreed, so the count moves by exactly one per real change. */
+function onFollowChanged(following: boolean) {
+  const current = profile.value
+  if (!current || current.viewerFollows === following) return
+  current.viewerFollows = following
+  current.followerCount += following ? 1 : -1
+}
 
 const PLATFORM_LABELS: Record<ProfileLink['platform'], string> = {
   instagram: 'Instagram',
@@ -87,12 +97,37 @@ watch(() => props.username, load, { immediate: true })
         <h1>
           {{ profile.displayName }}
           <VerifiedBadge v-if="profile.verified" />
+          <DemoTag v-if="profile.isDemo" />
         </h1>
         <p class="handle">@{{ profile.username }}</p>
         <p v-if="profile.location" class="location">{{ profile.location }}</p>
+        <p class="counts">
+          <span class="count-item">
+            <strong class="follower-count">{{ profile.followerCount }}</strong> followers
+          </span>
+          <span class="count-item">
+            <strong class="following-count">{{ profile.followingCount }}</strong> following
+          </span>
+        </p>
         <RouterLink v-if="isOwner" :to="{ name: 'profile-edit' }" class="btn">
           Edit profile
         </RouterLink>
+        <!-- Decided from session.user, so logging out during the visit swaps the control. -->
+        <div v-else class="follow-control">
+          <FollowButton
+            v-if="session.user"
+            :username="profile.username"
+            :following="profile.viewerFollows"
+            @changed="onFollowChanged"
+          />
+          <RouterLink
+            v-else
+            :to="{ name: 'login', query: { next: `/u/${profile.username}` } }"
+            class="login-to-follow"
+          >
+            Log in to follow
+          </RouterLink>
+        </div>
       </div>
     </header>
 
@@ -159,8 +194,14 @@ watch(() => props.username, load, { immediate: true })
   font-weight: bold;
 }
 
+.who {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .who h1 {
   margin: 0;
+  overflow-wrap: anywhere;
   font-family: var(--font-display);
   font-size: 1.75rem;
 }
@@ -170,10 +211,27 @@ watch(() => props.username, load, { immediate: true })
   margin: 0.15rem 0 0;
   font-family: var(--font-display);
   color: var(--ink-soft);
+  overflow-wrap: anywhere;
 }
 
 .who .btn {
   margin-top: 0.6rem;
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display);
+}
+
+.follow-control {
+  margin-top: 0.6rem;
+}
+
+.login-to-follow {
+  font-family: var(--font-display);
 }
 
 .bio {
@@ -218,6 +276,7 @@ ul {
 
 .crate {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
   padding: 0.4rem 0.6rem;
@@ -234,10 +293,12 @@ ul {
 
 .name {
   font-weight: bold;
+  overflow-wrap: anywhere;
 }
 
 .sub {
   color: var(--ink-soft);
+  overflow-wrap: anywhere;
 }
 
 .count {
