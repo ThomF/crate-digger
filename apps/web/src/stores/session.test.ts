@@ -106,6 +106,10 @@ describe('session store', () => {
       verified: false,
       links: [],
       crates: [],
+      followerCount: 0,
+      followingCount: 0,
+      viewerFollows: false,
+      isDemo: false,
     }
 
     it('refresh replaces the user with a fresh /auth/me answer', async () => {

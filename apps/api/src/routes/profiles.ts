@@ -14,7 +14,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/users/:username',
     { schema: { params: usernameParams, response: { 200: publicProfile } } },
-    async (req) => getPublicProfile(app.db, req.params.username),
+    async (req) => getPublicProfile(app.db, req.params.username, req.user),
   )
 
   app.patch(

@@ -289,10 +289,51 @@ export const publicProfile = z.object({
   verified: z.boolean(),
   links: z.array(profileLink),
   crates: z.array(profileCrate),
+  /** How many users follow this user. */
+  followerCount: z.number().int(),
+  /** How many users this user follows. */
+  followingCount: z.number().int(),
+  /** Does the signed-in viewer follow this user? Always false when signed out. */
+  viewerFollows: z.boolean(),
+  /** A fictional demo collector, labelled as such in the UI. */
+  isDemo: z.boolean(),
 })
 
 /** Admin only: mark a user verified or not. */
 export const setVerifiedInput = z.strictObject({ verified: z.boolean() })
+
+// ── Following, feed and news ────────────────────────────────────────────
+
+// Data classification: PUBLIC. A user as lists show them: no id, email or role.
+export const collectorSummary = z.object({
+  username: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable(),
+  verified: z.boolean(),
+  isDemo: z.boolean(),
+})
+
+// Data classification: PUBLIC. A crate in the feed or the recommended list. Deliberately not
+// built on `crate`: that shape carries the numeric ownerId, which these lists must not expose.
+export const crateCard = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  color: z.string(),
+  label: z.string().nullable(),
+  albumCount: z.number().int(),
+  createdAt: z.iso.datetime(),
+  ownerUsername: z.string(),
+  ownerDisplayName: z.string(),
+})
+
+// Data classification: PUBLIC. Fictional demo news shown on Home.
+export const newsItem = z.object({
+  id: z.number().int(),
+  title: z.string(),
+  summary: z.string(),
+  source: z.string(),
+  publishedAt: z.iso.datetime(),
+})
 
 // ── Errors ──────────────────────────────────────────────────────────────
 
@@ -337,3 +378,6 @@ export type UpdateProfileInput = z.infer<typeof updateProfileInput>
 /** What a client sends. */
 export type UpdateProfileRequest = z.input<typeof updateProfileInput>
 export type SetVerifiedInput = z.infer<typeof setVerifiedInput>
+export type CollectorSummary = z.infer<typeof collectorSummary>
+export type CrateCard = z.infer<typeof crateCard>
+export type NewsItem = z.infer<typeof newsItem>

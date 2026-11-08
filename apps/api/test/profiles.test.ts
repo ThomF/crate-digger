@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { PublicProfile, UpdateProfileRequest } from '@frisson/shared'
-import { albums } from '../src/db/schema.ts'
+import { eq } from 'drizzle-orm'
+import { albums, follows, users } from '../src/db/schema.ts'
 import {
   addCrate,
   buildTestApp,
@@ -18,10 +19,14 @@ const PUBLIC_KEYS = [
   'bio',
   'crates',
   'displayName',
+  'followerCount',
+  'followingCount',
+  'isDemo',
   'links',
   'location',
   'username',
   'verified',
+  'viewerFollows',
 ]
 
 const FULL: UpdateProfileRequest = {
@@ -110,6 +115,132 @@ describe('public profile', () => {
       ['Second', 0],
     ])
     expect(crates[1]?.id).toBe(second.id)
+  })
+})
+
+describe('follow fields on the public profile', () => {
+  // Rows go in directly: this suite covers how a profile reads follows, not the follow routes.
+  const follow = (follower: SignedIn, followee: SignedIn) =>
+    app.db
+      .insert(follows)
+      .values({ followerId: follower.user.id, followeeId: followee.user.id })
+      .run()
+  const unfollow = (follower: SignedIn) =>
+    app.db.delete(follows).where(eq(follows.followerId, follower.user.id)).run()
+
+  // Keys that identify a user anywhere in the response. Crates have their own public id, so
+  // `id` is only forbidden outside crates[]; email and role are forbidden at every level.
+  const forbiddenPaths = (value: unknown, path = ''): string[] => {
+    if (Array.isArray(value)) return value.flatMap((v) => forbiddenPaths(v, `${path}[]`))
+    if (typeof value !== 'object' || value === null) return []
+    return Object.entries(value).flatMap(([key, child]) => {
+      const here = `${path}.${key}`
+      const banned =
+        ['email', 'role', 'passwordHash', 'demoSeedKey'].includes(key) ||
+        (key === 'id' && path !== '.crates[]')
+      return [...(banned ? [here] : []), ...forbiddenPaths(child, here)]
+    })
+  }
+
+  it('a fresh user has zero counts, viewerFollows false and isDemo false', async () => {
+    const alice = await signUp(app, { username: 'alice' })
+    await signUp(app, { username: 'bob' })
+    for (const body of [await profileOf('alice'), await profileOf('bob')]) {
+      expect(body).toMatchObject({
+        followerCount: 0,
+        followingCount: 0,
+        viewerFollows: false,
+        isDemo: false,
+      })
+    }
+    const asAlice = await getProfile('bob', alice)
+    expect(asAlice.json<PublicProfile>().viewerFollows).toBe(false)
+  })
+
+  it('counts each direction separately and change by exactly 1', async () => {
+    const alice = await signUp(app, { username: 'alice' })
+    const bob = await signUp(app, { username: 'bob' })
+
+    follow(alice, bob)
+    expect(await profileOf('bob')).toMatchObject({ followerCount: 1, followingCount: 0 })
+    expect(await profileOf('alice')).toMatchObject({ followerCount: 0, followingCount: 1 })
+
+    unfollow(alice)
+    expect(await profileOf('bob')).toMatchObject({ followerCount: 0, followingCount: 0 })
+    expect(await profileOf('alice')).toMatchObject({ followerCount: 0, followingCount: 0 })
+  })
+
+  it('viewerFollows is true only for the viewer who follows, false when signed out', async () => {
+    const alice = await signUp(app, { username: 'alice' })
+    const bob = await signUp(app, { username: 'bob' })
+    const carol = await signUp(app, { username: 'carol' })
+    follow(alice, bob)
+
+    const viewerFollows = async (username: string, who?: SignedIn) =>
+      (await getProfile(username, who)).json<PublicProfile>().viewerFollows
+
+    expect(await viewerFollows('bob', alice)).toBe(true)
+    expect(await viewerFollows('bob', carol)).toBe(false)
+    expect(await viewerFollows('bob')).toBe(false)
+    // Follows are one-way, and nobody follows themselves.
+    expect(await viewerFollows('alice', bob)).toBe(false)
+    expect(await viewerFollows('bob', bob)).toBe(false)
+  })
+
+  it('PATCH /me/profile and PATCH verified answer with real counts', async () => {
+    const admin = await createAdmin(app, { username: 'boss' })
+    const alice = await signUp(app, { username: 'alice' })
+    follow(admin, alice)
+    follow(alice, admin)
+
+    const edited = await patchProfile(FULL, alice)
+    expect(edited.json<PublicProfile>()).toMatchObject({
+      followerCount: 1,
+      followingCount: 1,
+      viewerFollows: false, // the acting user is looking at themselves
+    })
+
+    const verified = await patchVerified('alice', { verified: true }, admin)
+    expect(verified.json<PublicProfile>()).toMatchObject({
+      followerCount: 1,
+      viewerFollows: true, // the acting admin follows alice
+    })
+  })
+
+  it('isDemo follows demoSeedKey, and the key itself is never emitted', async () => {
+    const alice = await signUp(app, { username: 'alice' })
+    app.db
+      .update(users)
+      .set({ demoSeedKey: 'secret-seed-key' })
+      .where(eq(users.id, alice.user.id))
+      .run()
+    const res = await getProfile('alice')
+    expect(res.json<PublicProfile>().isDemo).toBe(true)
+    expect(res.body).not.toContain('secret-seed-key')
+    expect(Object.keys(res.json<object>()).sort()).toEqual(PUBLIC_KEYS)
+  })
+
+  it('no email, role or user id at any nesting level, signed in or out', async () => {
+    const alice = await signUp(app, { username: 'alice', email: 'alice@example.test' })
+    const bob = await signUp(app, { username: 'bob' })
+    addCrate(app, 'Owned', 0, alice.user.id)
+    await patchProfile(FULL, alice)
+    follow(bob, alice)
+
+    for (const who of [undefined, bob, alice]) {
+      const res = await getProfile('alice', who)
+      expect(res.statusCode).toBe(200)
+      expect(forbiddenPaths(res.json())).toEqual([])
+      expect(res.body).not.toContain('alice@example.test')
+    }
+  })
+
+  it('the key walk does catch a leak', () => {
+    expect(forbiddenPaths({ id: 1, crates: [{ id: 2, owner: { role: 'user', id: 3 } }] })).toEqual([
+      '.id',
+      '.crates[].owner.role',
+      '.crates[].owner.id',
+    ])
   })
 })
 

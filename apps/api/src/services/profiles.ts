@@ -1,16 +1,17 @@
-import { asc, count, eq } from 'drizzle-orm'
+import { and, asc, count, eq } from 'drizzle-orm'
 import type { ProfileCrate, PublicProfile, PublicUser, UpdateProfileInput } from '@frisson/shared'
 import { MAX_PROFILE_LINKS } from '@frisson/shared'
 import type { Db } from '../db/client.ts'
-import { albums, crates, userLinks, users, type User } from '../db/schema.ts'
+import { albums, crates, follows, userLinks, users, type User } from '../db/schema.ts'
 import { badRequest, notFound } from '../errors.ts'
 import { requireAdmin, requireUser } from './permissions.ts'
 import { findUserByUsername, getUserById } from './users.ts'
 
 // Data classification: PUBLIC output from CONFIDENTIAL rows. The users table holds emails
 // and password hashes; toPublicProfile is the only way a profile leaves this module, and it
-// copies named public fields only (never id, email, role or passwordHash). Never use
-// toPublicUser here: that is the private, signed-in shape.
+// copies named public fields only (never id, email, role, passwordHash or demoSeedKey). Never
+// use toPublicUser here: that is the private, signed-in shape. The follows table is INTERNAL:
+// only its counts and the viewer's own yes/no leave this module, never who follows whom.
 
 function profileLinks(db: Db, userId: number) {
   return db
@@ -39,8 +40,35 @@ function profileCrates(db: Db, userId: number): ProfileCrate[] {
     .all()
 }
 
-/** The only public shape of a user. Explicit field list, so new private columns never leak. */
-export function toPublicProfile(db: Db, user: User): PublicProfile {
+function followCounts(db: Db, userId: number) {
+  const followers = db
+    .select({ total: count() })
+    .from(follows)
+    .where(eq(follows.followeeId, userId))
+    .get()
+  const following = db
+    .select({ total: count() })
+    .from(follows)
+    .where(eq(follows.followerId, userId))
+    .get()
+  return { followerCount: followers?.total ?? 0, followingCount: following?.total ?? 0 }
+}
+
+function isFollowedBy(db: Db, userId: number, viewerId: number | null): boolean {
+  if (viewerId === null) return false
+  const row = db
+    .select({ id: follows.id })
+    .from(follows)
+    .where(and(eq(follows.followerId, viewerId), eq(follows.followeeId, userId)))
+    .get()
+  return row !== undefined
+}
+
+/**
+ * The only public shape of a user. Explicit field list, so new private columns never leak.
+ * viewerId is who is looking (null = signed out); it only affects viewerFollows.
+ */
+export function toPublicProfile(db: Db, user: User, viewerId: number | null = null): PublicProfile {
   return {
     username: user.username,
     displayName: user.displayName,
@@ -50,6 +78,9 @@ export function toPublicProfile(db: Db, user: User): PublicProfile {
     verified: user.verified,
     links: profileLinks(db, user.id),
     crates: profileCrates(db, user.id),
+    ...followCounts(db, user.id),
+    viewerFollows: isFollowedBy(db, user.id, viewerId),
+    isDemo: user.demoSeedKey !== null,
   }
 }
 
@@ -60,8 +91,12 @@ function findOrThrow(db: Db, username: string): User {
 }
 
 /** Anyone may read a profile. 404 for an unknown username; lookup is case-insensitive. */
-export function getPublicProfile(db: Db, username: string): PublicProfile {
-  return toPublicProfile(db, findOrThrow(db, username))
+export function getPublicProfile(
+  db: Db,
+  username: string,
+  viewer: PublicUser | null = null,
+): PublicProfile {
+  return toPublicProfile(db, findOrThrow(db, username), viewer?.id ?? null)
 }
 
 /**
@@ -101,7 +136,7 @@ export function updateOwnProfile(
 
   const fresh = getUserById(db, signedIn.id)
   if (!fresh) throw notFound('User')
-  return toPublicProfile(db, fresh)
+  return toPublicProfile(db, fresh, signedIn.id)
 }
 
 /** Admins only (401 signed out, 403 otherwise, even on their own name), 404 unknown user. */
@@ -114,5 +149,5 @@ export function setVerified(
   requireAdmin(actor)
   const target = findOrThrow(db, username)
   db.update(users).set({ verified }).where(eq(users.id, target.id)).run()
-  return getPublicProfile(db, target.username)
+  return getPublicProfile(db, target.username, actor)
 }

@@ -28,6 +28,10 @@ const base: PublicProfile = {
     { id: 1, name: 'Shoegaze', color: '#2f6fa3', label: 'SHOE', albumCount: 12 },
     { id: 2, name: 'Jazz', color: '#c8a374', label: null, albumCount: 1 },
   ],
+  followerCount: 0,
+  followingCount: 0,
+  viewerFollows: false,
+  isDemo: false,
 }
 
 const alice: PublicUser = {

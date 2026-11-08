@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   MAX_AVATAR_BYTES,
   SOCIAL_PLATFORMS,
+  collectorSummary,
+  crateCard,
+  newsItem,
   profileLinkInput,
   profileLinkUrl,
   publicProfile,
@@ -171,6 +174,11 @@ describe('shared profile schemas', () => {
         verified: false,
         links: [{ platform: 'x', url: 'https://x.com/ada' }],
         crates: [{ id: 1, name: 'Jazz', color: '#112233', label: null, albumCount: 3 }],
+        followerCount: 2,
+        followingCount: 1,
+        viewerFollows: false,
+        isDemo: false,
+        demoSeedKey: 'demo-ada',
       })
 
       expect(Object.keys(parsed).sort()).toEqual([
@@ -178,11 +186,104 @@ describe('shared profile schemas', () => {
         'bio',
         'crates',
         'displayName',
+        'followerCount',
+        'followingCount',
+        'isDemo',
         'links',
         'location',
         'username',
         'verified',
+        'viewerFollows',
       ])
+    })
+
+    it.each(['followerCount', 'followingCount', 'viewerFollows', 'isDemo'])(
+      'requires %s',
+      (key) => {
+        const complete: Record<string, unknown> = {
+          username: 'ada',
+          displayName: 'Ada',
+          bio: '',
+          location: null,
+          avatarUrl: null,
+          verified: false,
+          links: [],
+          crates: [],
+          followerCount: 0,
+          followingCount: 0,
+          viewerFollows: false,
+          isDemo: false,
+        }
+        expect(publicProfile.safeParse(complete).success).toBe(true)
+        delete complete[key]
+        expect(publicProfile.safeParse(complete).success).toBe(false)
+      },
+    )
+  })
+
+  describe('collectorSummary', () => {
+    it('strips unknown keys, including id, email and role', () => {
+      const parsed = collectorSummary.parse({
+        id: 7,
+        email: 'ada@example.com',
+        role: 'admin',
+        demoSeedKey: 'demo-ada',
+        username: 'ada',
+        displayName: 'Ada',
+        avatarUrl: null,
+        verified: false,
+        isDemo: true,
+      })
+      expect(Object.keys(parsed).sort()).toEqual([
+        'avatarUrl',
+        'displayName',
+        'isDemo',
+        'username',
+        'verified',
+      ])
+    })
+  })
+
+  describe('crateCard', () => {
+    const card = {
+      id: 3,
+      name: 'Jazz',
+      color: '#112233',
+      label: null,
+      albumCount: 4,
+      createdAt: '2026-11-08T12:00:00.000Z',
+      ownerUsername: 'ada',
+      ownerDisplayName: 'Ada',
+    }
+
+    it('strips unknown keys, including the numeric ownerId', () => {
+      const parsed = crateCard.parse({ ...card, ownerId: 7, sortBy: 'manual', sortOrder: 1 })
+      expect(Object.keys(parsed).sort()).toEqual(Object.keys(card).sort())
+      expect(crateCard.shape).not.toHaveProperty('ownerId')
+    })
+
+    it('needs an owner and an ISO createdAt', () => {
+      expect(crateCard.safeParse({ ...card, ownerUsername: null }).success).toBe(false)
+      expect(crateCard.safeParse({ ...card, createdAt: 'last Tuesday' }).success).toBe(false)
+    })
+  })
+
+  describe('newsItem', () => {
+    const item = {
+      id: 1,
+      title: 'Headline',
+      summary: 'Text',
+      source: 'Source',
+      publishedAt: '2026-11-08T12:00:00.000Z',
+    }
+
+    it('accepts an item and strips unknown keys', () => {
+      const parsed = newsItem.parse({ ...item, seedKey: 'news-1' })
+      expect(parsed).toEqual(item)
+    })
+
+    it('needs an ISO publishedAt', () => {
+      expect(newsItem.safeParse({ ...item, publishedAt: 'yesterday' }).success).toBe(false)
     })
   })
 
