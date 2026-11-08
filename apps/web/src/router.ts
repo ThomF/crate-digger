@@ -1,6 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded } from 'vue-router'
 import { useSessionStore } from './stores/session.ts'
-import CrateView from './views/CrateView.vue'
+import HomeView from './views/HomeView.vue'
 import LibraryView from './views/LibraryView.vue'
 import NotFoundView from './views/NotFoundView.vue'
 
@@ -11,16 +11,42 @@ declare module 'vue-router' {
   }
 }
 
+// Shared by /shelf and /crates/:id, so moving between them keeps the same view instance.
+const CrateView = () => import('./views/CrateView.vue')
+
+const inCrateBrowser = (route: RouteLocationNormalizedLoaded) =>
+  route.name === 'library' || route.name === 'crate'
+
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'library', component: CrateView },
+    { path: '/', name: 'home', component: HomeView },
+    { path: '/shelf', name: 'library', component: CrateView },
     { path: '/list', name: 'list', component: LibraryView },
     {
       path: '/crates',
       name: 'crates',
       component: () => import('./views/CratesView.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      // Public deep link to one crate. /crates (above) stays the guarded manage page, and
+      // (\\d+) sends /crates/abc to not-found.
+      path: '/crates/:id(\\d+)',
+      name: 'crate',
+      component: CrateView,
+      props: (route) => ({ crateId: Number(route.params.id) }),
+    },
+    {
+      path: '/following',
+      name: 'following',
+      component: () => import('./views/FollowingView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('./views/AboutView.vue'),
     },
     {
       path: '/login',
@@ -70,6 +96,12 @@ export const router = createRouter({
       props: (route) => ({ username: String(route.params.username) }),
     },
     {
+      path: '/profile',
+      name: 'my-profile',
+      component: () => import('./views/MyProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/profile/edit',
       name: 'profile-edit',
       component: () => import('./views/EditProfileView.vue'),
@@ -77,7 +109,8 @@ export const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
-  scrollBehavior: () => ({ top: 0 }),
+  // Crate tabs change the URL; they shouldn't also jump the page back to the top.
+  scrollBehavior: (to, from) => (inCrateBrowser(to) && inCrateBrowser(from) ? false : { top: 0 }),
 })
 
 // Pages that change things send signed-out visitors to log in first, then back here.

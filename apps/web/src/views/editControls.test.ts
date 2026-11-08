@@ -102,7 +102,13 @@ async function visit(path: string, user: PublicUser | null) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/', name: 'library', component: CrateView },
+      { path: '/shelf', name: 'library', component: CrateView },
+      {
+        path: '/crates/:id(\\d+)',
+        name: 'crate',
+        component: CrateView,
+        props: (route) => ({ crateId: Number(route.params.id) }),
+      },
       { path: '/list', name: 'list', component: LibraryView },
       { path: '/crates', name: 'crates', component: CratesView },
       { path: '/login', name: 'login', component: Blank },
@@ -183,7 +189,7 @@ describe('per-crate edit controls', () => {
   })
 
   it('crate view counts a spin only for records in a crate the user can edit', async () => {
-    const { wrapper } = await visit('/', alice)
+    const { wrapper } = await visit('/shelf', alice)
     const spins = () =>
       fetchMock.mock.calls.filter(
         ([, init]) => (init as RequestInit | undefined)?.method === 'POST',
@@ -196,11 +202,12 @@ describe('per-crate edit controls', () => {
   })
 
   it("crate view doesn't count spins for records in someone else's crate", async () => {
-    const { wrapper } = await visit('/', alice)
+    const { wrapper } = await visit('/shelf', alice)
     await wrapper
       .findAll('button.tab')
       .find((b) => b.text() === 'Bob B')!
       .trigger('click')
+    await flushPromises()
     await wrapper.find('button.pull').trigger('click')
     await flushPromises()
     const posts = fetchMock.mock.calls.filter(

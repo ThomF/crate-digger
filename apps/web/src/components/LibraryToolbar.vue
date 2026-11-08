@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { useSessionStore } from '../stores/session.ts'
 
 // Global actions: anyone signed in may make a crate or add a record to one of theirs.
 // addToCrateId preselects a crate, so only pass one the user can edit.
 defineProps<{ addToCrateId?: number }>()
 const session = useSessionStore()
+const route = useRoute()
+// One crate's own URL (/crates/:id) is still the crate browser, so Crates stays lit there.
+const onCrates = computed(() => route.name === 'library' || route.name === 'crate')
 </script>
 
 <template>
   <div class="toolbar">
     <nav class="views" aria-label="View">
-      <RouterLink :to="{ name: 'library' }" exact-active-class="active">Crates</RouterLink>
+      <RouterLink :to="{ name: 'library' }" :class="{ active: onCrates }">Crates</RouterLink>
       <RouterLink :to="{ name: 'list' }" exact-active-class="active">List</RouterLink>
     </nav>
     <div v-if="session.signedIn" class="end">

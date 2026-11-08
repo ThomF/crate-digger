@@ -73,7 +73,7 @@ watch(() => props.id, load, { immediate: true })
 
 <template>
   <nav class="top">
-    <RouterLink to="/" class="back">← Back to the crates</RouterLink>
+    <RouterLink :to="{ name: 'library' }" class="back">← Back to the crates</RouterLink>
     <RouterLink
       v-if="status === 'ready' && editable"
       :to="{ name: 'album-edit', params: { id } }"

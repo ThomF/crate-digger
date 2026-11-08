@@ -10,8 +10,13 @@ onMounted(() => session.load())
 
 <template>
   <header class="masthead">
-    <RouterLink to="/" class="sign">Frisson</RouterLink>
-    <p class="tagline">Used &amp; new vinyl · est. 1994</p>
+    <div class="brand">
+      <!-- A plain <a>, so the sign doesn't carry a second aria-current next to the Home link. -->
+      <RouterLink v-slot="{ href, navigate }" to="/" custom>
+        <a :href="href" class="sign" @click="navigate">Frisson</a>
+      </RouterLink>
+      <p class="tagline">Used &amp; new vinyl · est. 1994</p>
+    </div>
 
     <div v-if="session.loaded" class="account">
       <AccountMenu v-if="session.user" :user="session.user" />
@@ -20,6 +25,13 @@ onMounted(() => session.load())
         <RouterLink v-if="$route.name !== 'signup'" :to="{ name: 'signup' }">Sign up</RouterLink>
       </nav>
     </div>
+
+    <nav class="main-nav" aria-label="Main">
+      <RouterLink to="/">Home</RouterLink>
+      <RouterLink to="/following">Following</RouterLink>
+      <RouterLink to="/profile">Profile</RouterLink>
+      <RouterLink to="/about">About</RouterLink>
+    </nav>
   </header>
 
   <main class="page">
@@ -31,9 +43,13 @@ onMounted(() => session.load())
 .masthead {
   position: relative;
   text-align: center;
-  /* Side padding keeps the centered sign clear of the account control on the right. */
-  padding: 2rem 4.75rem 1rem;
+  padding-bottom: 0.5rem;
   border-bottom: 3px double var(--cardboard-dark);
+}
+
+.brand {
+  /* Side padding keeps the centered sign clear of the account control on the right. */
+  padding: 2rem 4.75rem 0.5rem;
 }
 
 .sign {
@@ -76,9 +92,40 @@ onMounted(() => session.load())
   color: var(--marker-red);
 }
 
+/* One line at every width: its full-width row (outside .brand's padding) fits all four at 320px. */
+.main-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  padding-inline: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.main-nav a {
+  padding: 0.5rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.main-nav a:hover {
+  color: var(--marker-red);
+}
+
+.main-nav a[aria-current='page'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 @media (min-width: 40rem) {
-  .masthead {
+  .brand {
     padding-inline: 10rem;
+  }
+
+  .main-nav {
+    gap: 1rem;
+    font-size: 1rem;
   }
 
   .account {

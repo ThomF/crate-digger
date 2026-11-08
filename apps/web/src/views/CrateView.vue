@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import type { AlbumSummary } from '@frisson/shared'
 import { spinAlbum } from '../api/albums.ts'
@@ -12,16 +12,36 @@ import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 import RatingStars from '../components/album/RatingStars.vue'
 
+// Set on /crates/:id. Without it (/shelf) the view shows whichever crate is selected.
+const props = defineProps<{ crateId?: number }>()
+
 const library = useLibraryStore()
 const session = useSessionStore()
 const router = useRouter()
 
 onMounted(() => {
-  document.title = 'Frisson'
+  document.title = 'Crates · Frisson'
   library.load()
 })
 
-const crate = computed(() => library.selectedCrate)
+// A deep link shows exactly that crate or nothing, never some other crate in its place.
+const crate = computed(() =>
+  props.crateId === undefined ? library.selectedCrate : library.crateById(props.crateId),
+)
+
+// Remember it, so going back to /shelf from here stays in the same crate.
+watch(
+  () => props.crateId,
+  (id) => {
+    if (id !== undefined) library.selectCrate(id)
+  },
+  { immediate: true },
+)
+
+function chooseCrate(id: number) {
+  library.selectCrate(id)
+  router.replace({ name: 'crate', params: { id } })
+}
 const albums = computed(
   () => library.crateShelves.find((s) => s.crate.id === crate.value?.id)?.albums ?? [],
 )
@@ -60,6 +80,11 @@ async function open(album: AlbumSummary) {
     <button type="button" class="btn" @click="library.load({ force: true })">Try again</button>
   </p>
 
+  <div v-else-if="crateId !== undefined && !crate" class="status-note">
+    <p>Crate not found</p>
+    <RouterLink :to="{ name: 'library' }">Browse all crates</RouterLink>
+  </div>
+
   <EmptyShelf v-else-if="!crate" />
 
   <template v-else>
@@ -72,7 +97,7 @@ async function open(album: AlbumSummary) {
         class="tab"
         :aria-pressed="c.id === crate.id"
         :style="{ '--tab-color': c.color }"
-        @click="library.selectCrate(c.id)"
+        @click="chooseCrate(c.id)"
       >
         {{ c.label ?? c.name }}
       </button>
@@ -141,6 +166,9 @@ async function open(album: AlbumSummary) {
   border: 2px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
+  /* Long crate labels wrap inside the tab rather than widening the page. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .tab[aria-pressed='true'] {

@@ -54,7 +54,12 @@ async function mountApp(path = '/') {
   router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/', name: 'library', component: Blank },
+      { path: '/', name: 'home', component: Blank },
+      { path: '/shelf', name: 'library', component: Blank },
+      { path: '/list', name: 'list', component: Blank },
+      { path: '/following', name: 'following', component: Blank },
+      { path: '/profile', name: 'my-profile', component: Blank },
+      { path: '/about', name: 'about', component: Blank },
       { path: '/login', name: 'login', component: Blank },
       { path: '/signup', name: 'signup', component: Blank },
       { path: '/u/:username', name: 'profile', component: Blank },
@@ -222,17 +227,18 @@ describe('App header account menu', () => {
     const account = w.get('.account')
     expect(account.text()).toContain('Log in')
     expect(account.text()).toContain('Sign up')
-    expect(router.currentRoute.value.name).toBe('library')
+    // Already on a public page, so log out stays put.
+    expect(router.currentRoute.value.name).toBe('home')
   })
 
-  it('log out on an auth-required page redirects to the library', async () => {
+  it('log out on an auth-required page redirects home', async () => {
     stubApi(alice)
     const w = await mountApp('/private')
     expect(router.currentRoute.value.name).toBe('private')
     const panel = await openMenu(w)
     await panel.findAll('[role="menuitem"]')[2]!.trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('library')
+    expect(router.currentRoute.value.name).toBe('home')
   })
 
   it('log out failure shows an alert', async () => {
@@ -275,5 +281,78 @@ describe('App header account menu', () => {
         .findAll('a')
         .map((a) => a.text()),
     ).toEqual(['Log in'])
+  })
+})
+
+describe('App main nav', () => {
+  beforeEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    wrapper?.unmount()
+    wrapper = null
+    vi.unstubAllGlobals()
+  })
+
+  const nav = (w: VueWrapper) => w.get('header.masthead nav.main-nav')
+  const current = (w: VueWrapper) =>
+    nav(w)
+      .findAll('a')
+      .filter((a) => a.attributes('aria-current') === 'page')
+      .map((a) => a.text())
+
+  it.each([
+    ['signed in', alice],
+    ['signed out', null],
+  ])('has the four links in order when %s, on every route', async (_label, user) => {
+    for (const path of ['/', '/about', '/list', '/u/x', '/private']) {
+      stubApi(user)
+      const w = await mountApp(path)
+      expect(nav(w).attributes('aria-label')).toBe('Main')
+      const links = nav(w).findAll('a')
+      expect(links.map((a) => [a.text(), a.attributes('href')])).toEqual([
+        ['Home', '/'],
+        ['Following', '/following'],
+        ['Profile', '/profile'],
+        ['About', '/about'],
+      ])
+      w.unmount()
+      wrapper = null
+    }
+  })
+
+  it.each([
+    ['/', 'Home'],
+    ['/following', 'Following'],
+    ['/profile', 'Profile'],
+    ['/about', 'About'],
+  ])('marks only the matching link current at %s', async (path, label) => {
+    stubApi(alice)
+    const w = await mountApp(path)
+    expect(current(w)).toEqual([label])
+  })
+
+  it.each(['/shelf', '/list', '/u/x', '/profile/edit'])(
+    'marks no nav link current at %s',
+    async (path) => {
+      stubApi(alice)
+      const w = await mountApp(path)
+      expect(current(w)).toEqual([])
+    },
+  )
+
+  it('keeps the sign out of aria-current, so the page has one current link at /', async () => {
+    stubApi(null)
+    const w = await mountApp('/')
+    const sign = w.get('a.sign')
+    expect(sign.attributes('href')).toBe('/')
+    expect(sign.attributes('aria-current')).toBeUndefined()
+    expect(w.findAll('[aria-current="page"]')).toHaveLength(1)
+  })
+
+  it('the sign navigates home', async () => {
+    stubApi(null)
+    const w = await mountApp('/about')
+    await w.get('a.sign').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('home')
   })
 })

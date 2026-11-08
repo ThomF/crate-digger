@@ -70,7 +70,7 @@ async function logOut() {
     logOutError.value = errorMessage(err)
     return
   }
-  if (router.currentRoute.value.meta.requiresAuth) await router.push({ name: 'library' })
+  if (router.currentRoute.value.meta.requiresAuth) await router.push({ name: 'home' })
 }
 </script>
 
