@@ -154,6 +154,14 @@ defineExpose({ focus: () => scene.value?.focus() })
   height: var(--sleeve);
   transform: translateX(-50%);
   transform-style: preserve-3d;
+  /* The crate box is a transparent plane tilted in front of the sleeves and would
+     swallow their clicks; let events pass through it and restore them on its children.
+     The pointer, wheel and key handlers live on .scene, so they still fire. */
+  pointer-events: none;
+}
+
+.crate > * {
+  pointer-events: auto;
 }
 
 .sleeve {
