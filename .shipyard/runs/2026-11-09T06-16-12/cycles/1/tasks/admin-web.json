@@ -1,0 +1,64 @@
+{
+  "id": "admin-web",
+  "goal": "Build the /admin panel, its admin route guard and account menu link, with unit tests and a real-browser check, then run the full repo gate.",
+  "description": "API CONTRACT (implemented by admin-api; types come from @frisson/shared, use `import type` only so Zod stays out of the main bundle):\n- GET /admin/overview -> AdminOverview {users, crates, suggestedCrates, albums, news}\n- GET /admin/users -> AdminUser[] {id,email,username,displayName,role,verified,isDemo,createdAt,crateCount}\n- GET /admin/crates -> AdminCrate[] {id,name,label,color,albumCount,ownerUsername|null,ownerDisplayName|null,recommendedRank|null,isDemo,createdAt}, suggested first in rank order\n- POST /admin/crates AdminCreateCrateRequest {name,label?,color?,sortBy?,suggested?} -> 201 AdminCrate\n- PATCH /admin/crates/:id/suggested {suggested} -> AdminCrate (409 for an ownerless crate)\n- GET /admin/news -> AdminNewsItem[] {id,title,summary,source,publishedAt,isDemo}\n- POST /admin/news AdminNewsRequest {title,summary,source,publishedAt?} -> 201\n- PATCH /admin/news/:id AdminUpdateNewsRequest -> AdminNewsItem\n- DELETE /admin/news/:id -> 204\n- POST /admin/import AdminImportRequest {crates:[{name,label?,color?,suggested?,albums?:[{title,artist,year?,genre?,format?,tracks?}]}],news:[...]} -> 201 AdminImportResult {crates,albums,tracks,news}\nVerification uses the existing setVerified(username, verified) in apps/web/src/api/profiles.ts.\nErrors: `request` and `errorMessage` from apps/web/src/api/client.ts. ApiRequestError.body.issues is [{path,message}], with paths like 'body/crates/0/albums/1/artist'. errorMessage alone only says 'Request is invalid', so the bulk form MUST render the issues inline to name the failing entry.\n\nFILES.\n- apps/web/src/api/admin.ts: thin client functions, one per endpoint, following apps/web/src/api/profiles.ts.\n- apps/web/src/router.ts: add `requiresAdmin?: boolean` to RouteMeta and a lazy route { path: '/admin', name: 'admin', meta: { requiresAuth: true, requiresAdmin: true } } before the catch-all. In router.beforeEach keep the login redirect for requiresAuth, and then if to.meta.requiresAdmin && !session.isAdmin return { name: 'home' }. requiresAuth also makes AccountMenu's logOut leave /admin, since it checks currentRoute.meta.requiresAuth.\n- apps/web/src/components/AccountMenu.vue: add a RouterLink role=menuitem, class menu-item, text 'Admin', to { name: 'admin' }, with @click=close and v-if on session.isAdmin, placed before Log out so the Log out last-child style stays correct.\n- apps/web/src/views/AdminView.vue plus components under apps/web/src/components/admin/ as needed. Include a CONFIDENTIAL (PII) data-classification comment wherever the users list is held. Never persist or log it.\n\nPANEL.\n- Use one useAsyncSection(loader) from apps/web/src/composables/useAsyncSection.ts per section ({data,status,error,load,refresh}: load shows loading, refresh is silent, neither rejects). Each section renders its own role=alert error with a Try again, never an empty list on failure. If refresh() fails, status is 'error' with old data retained, so show the error.\n- Sections have headings exactly: an overview with counts; 'News'; 'Suggested crates' (recommendedRank non-null); 'User created crates' (all others, each showing owner, and 'No owner' for ownerless); 'Users'; and a 'Bulk import' form.\n- News: create form; inline edit; delete with window.confirm (the pattern used in CratesView.vue). Next to delete on isDemo items, state that demo news returns on the next restart while demo seeding is on.\n- Crates: create form with Name and a Suggested checkbox. Each crate name links to /crates/:id. A suggested on/off control, disabled with an explanation for ownerless crates. An add-records link to /albums/new?crateId=<id>, and a link to /crates for editing and deleting. Do not add crate editing or deletion here.\n- Users: email, username (link to /u/:username), display name, role, demo marker, crate count, VerifiedBadge (components/profile/VerifiedBadge.vue), and a verify/unverify button that updates the row without reload. If the target is the signed-in admin, also call session.refresh() so the masthead badge stays current. No role change, deletion or other out-of-scope actions.\n- Bulk import: textarea with a short example of the shape. JSON.parse locally; a parse failure shows an inline error and sends nothing. Show server issues inline and keep the pasted text on any error, including 413. On success show the created counts, clear the text, and refresh all sections. Note that bulk import is not de-duplicated and suggest db:backup first.\n- Disable every submit while its request is in flight, since a double post would create duplicates.\n- TRAP: the library Pinia store (apps/web/src/stores/library.ts) caches crates and albums once loaded, and CrateView, LibraryView and the album editor read from it. After any successful crate create, suggested toggle or import, call useLibraryStore().load({ force: true }) when its status is not 'idle'. Otherwise the same SPA session shows a stale /list, /albums/new dropdown, or a missing crate at /crates/:id, which would fail AC11.\n- Layout: no page-level horizontal overflow at 1280px or 390px. Use a stacked layout or an inner scroller on narrow widths, overflow-wrap:anywhere on emails and long names, and make controls comfortably tappable. Use the existing CSS variables and classes (.btn, .status-note, --paper, --ink, --marker-red) and set document.title as other views do.\n\nUNIT TESTS (AC9). Add to apps/web/src/router.test.ts (additions only, do not change existing cases) for signed-out -> login with next=/admin, role=user -> home, admin -> /admin. New apps/web/src/views/AdminView.test.ts covering section labels, fixture items from each list including owner names, a failed load showing an error rather than an empty list, invalid JSON sending nothing, and the verify toggle. New apps/web/src/components/AccountMenu.test.ts for the Admin link shown only to admins.\n\nBROWSER CHECK. Do NOT write it: the browser tester writes .shipyard/checks/admin-panel.check.mjs and judges AC10 and AC11. You may run the app yourself to confirm your own work, only on a temporary DATA_DIR (see startApp in .shipyard/checks/lib.mjs, read-only), never data/crate.db. The login and signup limit is 10 attempts per IP per 15 minutes. Build so that every clause of AC10 and AC11 in the brief works with real typing, clicks and touch taps.\n\nFINAL GATE (AC12), from the repo root: npm run format:check, npm run lint, npm run typecheck, npm test, npm run build, and also npm run check:dev-admin -w apps/api. All 357 baseline tests must still pass; list any changed existing test with the reason. If a failure belongs to a file you do not own, report it rather than editing that file.",
+  "ownsFiles": [
+    "apps/web/src/api/admin.ts",
+    "apps/web/src/router.ts",
+    "apps/web/src/router.test.ts",
+    "apps/web/src/components/AccountMenu.vue",
+    "apps/web/src/components/AccountMenu.test.ts",
+    "apps/web/src/views/AdminView.vue",
+    "apps/web/src/views/AdminView.test.ts",
+    "apps/web/src/components/admin/**"
+  ],
+  "dependsOn": [
+    "dev-admin",
+    "admin-api"
+  ],
+  "criteriaIds": [
+    "AC9",
+    "AC10",
+    "AC11",
+    "AC12"
+  ],
+  "model": "opus",
+  "criteria": [
+    {
+      "id": "AC9",
+      "statement": "Web unit tests: visiting /admin signed out redirects to login with next=/admin, as role=user redirects to home, and as admin renders the panel with sections labelled News, Suggested crates, User created crates and Users. Those sections show fixture items from each API list, including owner names. The account menu shows an Admin link for an admin and no such link for role=user. A failed API load shows an error message, not an empty list.",
+      "check": "unit"
+    },
+    {
+      "id": "AC10",
+      "statement": "Real browser, temporary database, 1280px wide. Type admin@frisson.com and admin into the /login form and submit, open the account menu, and click Admin, which lands on /admin. Use the panel forms to create a news item and a crate with Suggested on; both appear in the panel without a page reload. In a separate signed-out browser context, / shows the news item under Music news and the crate under Recommended crates, and /list shows the crate. In a third context, signed in as a role=user account, going to /admin directly ends on / with no panel content visible.",
+      "check": "browser"
+    },
+    {
+      "id": "AC11",
+      "statement": "Same browser pass, as admin. Click the verify control on a user in the Users section; without a reload the row shows verified, and that user's public /u/:username page in a signed-out context shows the verified badge. Click it again and the badge is gone after a reload. Paste a valid JSON payload holding a crate with 2 albums and a news item into the bulk form and submit: a success count shows, the crate opens at /crates/:id showing both records, and the news shows on /. Pasting invalid JSON shows an inline error and adds nothing. At 1280px and 390px wide, /admin has no page-level horizontal overflow (document scrollWidth <= viewport width), and the verify and create controls can be clicked with real mouse and touch input at those widths respectively.",
+      "check": "browser"
+    },
+    {
+      "id": "AC12",
+      "statement": "From the repo root, npm run format:check, npm run lint, npm run typecheck, npm test and npm run build all exit 0. Every test in the baseline (357 tests) still passes, or any that had to change is listed with the reason in the run report; passwords.test.ts and auth-accounts.test.ts must not be among those changed.",
+      "check": "command"
+    }
+  ],
+  "constraints": [
+    "Admin account path: add a new idempotent step (for example ensureDevAdmin in apps/api/src/services/) called from apps/api/src/server.ts after bootstrapFromEnv. It only ever inserts one users row. It must not call db:seed, delete or update any existing row, or change an existing account's password or role.",
+    "The existing bootstrapAdmin cannot be reused as it stands, for two reasons. It does nothing when any admin already exists. Its createUser call goes through hashPassword, which throws 400 for passwords under 8 characters, and a thrown error in that server.ts try block exits the process. So ADMIN_PASSWORD=admin would stop the app from starting.",
+    "The 8-character minimum stays in force for signup, hashPassword's public behaviour and ADMIN_EMAIL/ADMIN_PASSWORD bootstrap. The short password is allowed only inside the dev-admin step, through a narrowly scoped internal hash path. apps/api/test/passwords.test.ts and the signup test in apps/api/test/auth-accounts.test.ts must pass unchanged.",
+    "Production guard: the dev-admin step never runs when NODE_ENV=production, whatever other variables are set. The Dockerfile already sets NODE_ENV=production. SEED_DEV_ADMIN=false disables it in other environments, following the shouldSeedDemo pattern, and SEED_DEV_ADMIN=true cannot override production. Production admins continue to come only from ADMIN_EMAIL/ADMIN_PASSWORD. A failure in this step is logged and must not stop the API from starting.",
+    "The plaintext password must never be logged. password_hash must never appear in any API response.",
+    "All new endpoints live under /api/admin/*, are registered in a new routes file with prefix /api, and call the existing requireAdmin from apps/api/src/services/permissions.ts, which stays the single authority. Verification reuses the existing PATCH /api/users/:username/verified route and setVerified.",
+    "Suggested means crates.recommended_rank is non-NULL, the same column that drives Home's Recommended crates section. Do not add a second flag.",
+    "Admin-created news uses the existing news_items table. seed_key is NOT NULL UNIQUE, so generate a key such as admin:<uuid>. It must never collide with the demo 'news:' keys and must not appear in any response. Any migration must be additive and must keep existing rows.",
+    "Follow the repo's conventions: Vue view plus Pinia session store (session.isAdmin), a router meta guard next to requiresAuth, shared zod schemas in packages/shared, Prettier and ESLint, Conventional Commits, data-classification comments. The users list is CONFIDENTIAL PII.",
+    "Document the dev-admin step and SEED_DEV_ADMIN in README.md, docs/DEPLOY.md and .env.example.",
+    "Browser and command checks run on a temporary DATA_DIR or a temporary copy of the database, never on the owner's data/crate.db.",
+    "Out of scope: changing roles, deleting or suspending users, password reset or change, audit log, deleting demo rows permanently, and any real news feed or AI recommendations."
+  ],
+  "testCommand": "npm test",
+  "status": "running"
+}

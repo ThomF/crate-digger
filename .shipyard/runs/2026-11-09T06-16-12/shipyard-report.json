@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "plan": "I want to add an admin panel in. this admin panel shows all news, crates by the suggestions, by user created. users (can allow for user verification aka verified tag!). and any other admin like things we should add. add ways to seed in crates and news as the console admin that shows on the front end. for a login can we assign an admin login admin@frisson.com, password: admin on the users without resetting any data there.\n\nGoal: Add an admin-only panel at /admin. It lists all news, all crates (suggested and user-created) and all users, and lets an admin grant or revoke the verified tag. Admins can also create news and crates, singly or in bulk, that appear on the public front end. An admin@frisson.com / admin login is added to the existing users idempotently, with no data reset, and never in production.",
+  "plan_changes": [
+    {
+      "change": "AC12 baseline corrected from 326 to 357 tests; stale assumption about an unmerged run removed",
+      "why": "Harbormaster measured baseline on this branch; the cached map was stale"
+    },
+    {
+      "change": "Browser check moved from the admin-web dev to the browser tester",
+      "why": "Separation of duties: the plan had the dev writing the check that judges its own work"
+    },
+    {
+      "change": "AC12 baseline corrected again: 717 tests (360 API, 357 web), not 357",
+      "why": "The harbormaster had read only the tail of the baseline output, which showed the web workspace alone"
+    }
+  ],
+  "files_changed": [
+    {
+      "path": ".env.example",
+      "status": "modified"
+    },
+    {
+      "path": "README.md",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/package.json",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/scripts/check-dev-admin.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/app.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/routes/admin.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/server.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/services/admin.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/services/bootstrap.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/services/dev-admin.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/services/news.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/services/passwords.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/admin-access.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/admin.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/dev-admin.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/tsconfig.json",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/api/admin.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/AccountMenu.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/AccountMenu.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminBulkImport.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminCrateRow.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminCratesSection.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminFormError.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminNewsRow.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminNewsSection.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminSectionStatus.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminUserRow.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/AdminUsersSection.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/admin-panel.css",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/admin/adminPanel.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/router.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/router.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/AdminView.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/AdminView.vue",
+      "status": "added"
+    },
+    {
+      "path": "docs/DEPLOY.md",
+      "status": "modified"
+    },
+    {
+      "path": "docs/adr/0007-dev-admin-login.md",
+      "status": "added"
+    },
+    {
+      "path": "packages/shared/src/index.ts",
+      "status": "modified"
+    }
+  ],
+  "tests": [
+    {
+      "name": "AC1: A test in apps/api/test/ populates a database with users, crates, albums, tracks, follows and news, then runs the dev-admin step with NODE_ENV unset. Exactly one new users row exists, with email admin@frisson.com and role admin, and logging in through the existing login endpoint with admin@frisson.com / admin returns 200. Every row that existed before is deep-equal to its earlier value. A second run adds no row and leaves that account's password_hash byte-identical.",
+      "status": "pass",
+      "evidence": "dev-admin.test.ts 'ensureDevAdmin on a populated database (AC1)' inserts one admin row, rows unchanged, idempotent, login 200; suite green."
+    },
+    {
+      "name": "AC2: Tests prove each of the following. (a) NODE_ENV=production creates no row, including with SEED_DEV_ADMIN=true. (b) SEED_DEV_ADMIN=false creates no row. (c) If admin@frisson.com already belongs to a role=user account, that row is unchanged (role and hash), a warning is logged, and nothing throws. (d) If username 'admin' is taken by another account, the new account gets admin-2 and that other account is unchanged. (e) No log output contains the plaintext password. (f) Signup with a 5-character password still returns 400, and hashPassword('admin') still rejects.",
+      "status": "pass",
+      "evidence": "dev-admin.test.ts (a)-(f) present. (e) pins every logged message to exact fixed strings, no password/scrypt/hash; not a vacuous search. (f) signup 400 and hashPassword rejects."
+    },
+    {
+      "name": "AC3: Start the real API (node apps/api/src/server.ts, with NODE_ENV unset and SEED_DEMO_DATA=false) against a temporary database already holding users, crates, albums and news, then stop it and start it again. After both starts, every table's pre-existing rows are identical to a dump taken before the first start (the only allowed difference is the one added admin users row), and the users count has risen by exactly 1. POST login with admin@frisson.com / admin returns 200, and the session's user has role admin. A third start with NODE_ENV=production on a separate temporary database that has no such account does not create it, and login there returns 401.",
+      "status": "pass",
+      "evidence": "npm run check:dev-admin: all steps PASS (two starts, only one admin row added, hash identical, login 200 role admin, production start login 401, no row, data/crate.db untouched)."
+    },
+    {
+      "name": "AC4: A test enumerates every route registered under /api/admin (collected from the Fastify app with an onRoute hook, not a hand-written list), and asserts the list is non-empty, plus PATCH /api/users/:username/verified. Each route returns 401 when signed out and 403 when signed in as a role=user account. Table row counts are unchanged after those refused calls. The same test confirms that an admin session does not receive 401 or 403 on those routes.",
+      "status": "pass",
+      "evidence": "admin-access.test.ts collects routes via buildTestApp onRoute hook, asserts non-empty plus PATCH verified, 401 signed out, 403 role=user, row counts unchanged, admin never 401/403."
+    },
+    {
+      "name": "AC5: As an admin, GET /api/admin/overview returns correct counts of users, crates, suggested crates, albums and news for a known fixture. GET /api/admin/users returns every user, including role=user and demo users, each with id, email, username, displayName, role, verified, an isDemo boolean, createdAt and crateCount. A recursive check of the serialized response finds no passwordHash, password_hash or demoSeedKey key. After PATCH /api/users/:username/verified with {verified:true}, that user shows verified:true in GET /api/admin/users and on the public profile response. After {verified:false}, both show false.",
+      "status": "pass",
+      "evidence": "admin.test.ts overview counts, users list with no credential/seed key, verified toggle reflected in admin list and profile."
+    },
+    {
+      "name": "AC6: As an admin, GET /api/admin/crates returns every crate, including ownerless ones, with id, name, ownerUsername (null if ownerless), albumCount, recommendedRank and createdAt. POST /api/admin/crates with {name, suggested:true} creates a crate owned by the admin, which appears in public GET /api/crates and last in public recommended-crates order. PATCH /api/admin/crates/:id/suggested with {suggested:false} sets recommendedRank to null and removes it from the recommended list; {suggested:true} adds it back at the end. Suggesting an ownerless crate returns 409, and an unknown id returns 404.",
+      "status": "pass",
+      "evidence": "admin.test.ts GET/POST crates, PATCH suggested incl. rank order, 409 ownerless, 404 unknown."
+    },
+    {
+      "name": "AC7: As an admin: POST /api/admin/news with title, summary and source returns 201, and the item appears first in public GET /api/news (signed out) with no seedKey field. PATCH /api/admin/news/:id changes the fields seen in public GET /api/news. DELETE /api/admin/news/:id removes the item from it. A missing or blank title, summary or source returns 400 and writes no row. An unknown id returns 404. After running seedDemoContent, the admin-created item is still present and unchanged, and there are no duplicate rows.",
+      "status": "pass",
+      "evidence": "admin.test.ts 'admin news' create/patch/delete, 400 per field, 404, survives demo seed with no duplicates."
+    },
+    {
+      "name": "AC8: As an admin, POST /api/admin/import with {crates:[{name, label?, color?, suggested?, albums?:[{title, artist, year?, genre?, format?, tracks?}]}], news:[{title, summary, source, publishedAt?}]} creates everything and returns the created counts. The crates, their albums and tracks, and the news are then readable through the public crate, album and news endpoints. A payload with one invalid entry anywhere (for example, the last album with no artist) returns 400 naming the failing entry, and all table row counts are unchanged, proving all-or-nothing.",
+      "status": "pass",
+      "evidence": "admin.test.ts POST /api/admin/import creates all, readable publicly; 400 naming failing entry with zero rows written; rollback test."
+    },
+    {
+      "name": "AC9: Web unit tests: visiting /admin signed out redirects to login with next=/admin, as role=user redirects to home, and as admin renders the panel with sections labelled News, Suggested crates, User created crates and Users. Those sections show fixture items from each API list, including owner names. The account menu shows an Admin link for an admin and no such link for role=user. A failed API load shows an error message, not an empty list.",
+      "status": "pass",
+      "evidence": "router.test.ts redirects (login next=/admin, home, admin ok); AdminView.test.ts section headings, owners, failure error tests; AccountMenu.test.ts Admin link admin vs user."
+    },
+    {
+      "name": "AC12: From the repo root, npm run format:check, npm run lint, npm run typecheck, npm test and npm run build all exit 0. Every test in the baseline (717 tests: 360 API, 357 web) still passes, or any that had to change is listed with the reason in the run report; passwords.test.ts and auth-accounts.test.ts must not be among those changed.",
+      "status": "pass",
+      "evidence": "format:check, lint, typecheck, test, build all exit 0; 428 api + 400 web tests pass. Diff vs 8f53e04: passwords.test.ts and auth-accounts.test.ts unchanged; only router.test.ts pre-existing test file touched (22 added lines)."
+    },
+    {
+      "name": "AC10: Real browser, temporary database, 1280px wide. Type admin@frisson.com and admin into the /login form and submit, open the account menu, and click Admin, which lands on /admin. Use the panel forms to create a news item and a crate with Suggested on; both appear in the panel without a page reload. In a separate signed-out browser context, / shows the news item under Music news and the crate under Recommended crates, and /list shows the crate. In a third context, signed in as a role=user account, going to /admin directly ends on / with no panel content visible.",
+      "status": "pass",
+      "evidence": ".shipyard/checks/admin-panel.check.mjs on a temp DATA_DIR, port 4332, Chromium 1280px. Typed admin@frisson.com / admin into /login, opened the account menu, clicked Admin and landed on /admin (9 mouse points on the button and on the menu item, no dead spots). The panel forms created a news item and a Suggested crate; both appeared in the panel with no reload (window marker survived). Signed-out context: / showed the news under Music news and the crate under Recommended crates, and /list showed the crate, both by direct load and from Home's link. role=user context, signed in through the form: /admin ended on / with no panel content, .admin-panel was never in the DOM (MutationObserver, also with the API slowed by 600ms), no Admin menu link, API 403."
+    },
+    {
+      "name": "AC11: Same browser pass, as admin. Click the verify control on a user in the Users section; without a reload the row shows verified, and that user's public /u/:username page in a signed-out context shows the verified badge. Click it again and the badge is gone after a reload. Paste a valid JSON payload holding a crate with 2 albums and a news item into the bulk form and submit: a success count shows, the crate opens at /crates/:id showing both records, and the news shows on /. Pasting invalid JSON shows an inline error and adds nothing. At 1280px and 390px wide, /admin has no page-level horizontal overflow (document scrollWidth <= viewport width), and the verify and create controls can be clicked with real mouse and touch input at those widths respectively.",
+      "status": "pass",
+      "evidence": "Same script. Verify at 1280px: the row showed Verified and a badge with no reload, the signed-out /u/ruth showed the badge; clicked again, the badge was gone after reload on both pages. Real clipboard paste of a crate with 2 albums and a news item: 'Imported 1 crate, 2 albums, 0 tracks, 1 news item.'; the crate opened at /crates/:id with both records from the panel link (with the library store already loaded) and signed out; the news showed on /. Truncated JSON, non-JSON, empty and [] showed an inline error, sent no request and left the admin lists unchanged; a payload with one bad crate and {} were refused by the API with an inline error, also adding nothing. No overflow at 1280 or 390 (scrollWidth <= width) with maximum-length text, error shown and Example open. Verify, Create news item and Create crate had no dead spots across 9 points with real mouse at 1280 and real touch at 390 (touch context, touchscreen.tap); touch also verified end to end, ticked Suggested and imported."
+    }
+  ],
+  "branch": "shipyard/admin-panel-2026-11-09T06-16-12",
+  "base": "8f53e0411f0821d4812a7dc33cda9aefd07cde0f",
+  "notes": [
+    "Intake read the admin@frisson.com/admin login as dev-only: never created under NODE_ENV=production. Owner should confirm.",
+    "Intake read \"crates by the suggestions, by user created\" as two sections: Suggested (recommended_rank set) and User created.",
+    "admin-api added two shared extras beyond the brief: adminNoContent (204 schema, because apps/api does not declare zod) and inferred input types.",
+    "dev-admin: the failure path of the new server.ts try/catch is untested. check-dev-admin uses process.execPath instead of node, and a crate.db-wal change prints WARN rather than failing, because the owner dev server also writes that file.",
+    "admin-web known gap: a verify landing during an in-flight users refresh could be overwritten by the stale response.",
+    "A temporary owner edit to apps/web/src/App.vue appeared during the build and the owner removed it. It never reached the branch. The AC12 gate ran on a clean export of HEAD.",
+    "Checklist tester was quick (8 tool calls) and judged AC3 from the PASS lines without reading the script. The harbormaster spot-checked the script (env from scratch, table dumps, production start with override attempt) and the test titles against the AC clauses, and accepted the verdicts."
+  ]
+}

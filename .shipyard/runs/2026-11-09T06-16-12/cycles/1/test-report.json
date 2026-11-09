@@ -1,0 +1,12 @@
+{"criteria":{
+"AC1":{"verdict":"pass","evidence":"dev-admin.test.ts 'ensureDevAdmin on a populated database (AC1)' inserts one admin row, rows unchanged, idempotent, login 200; suite green."},
+"AC2":{"verdict":"pass","evidence":"dev-admin.test.ts (a)-(f) present. (e) pins every logged message to exact fixed strings, no password/scrypt/hash; not a vacuous search. (f) signup 400 and hashPassword rejects."},
+"AC3":{"verdict":"pass","evidence":"npm run check:dev-admin: all steps PASS (two starts, only one admin row added, hash identical, login 200 role admin, production start login 401, no row, data/crate.db untouched)."},
+"AC4":{"verdict":"pass","evidence":"admin-access.test.ts collects routes via buildTestApp onRoute hook, asserts non-empty plus PATCH verified, 401 signed out, 403 role=user, row counts unchanged, admin never 401/403."},
+"AC5":{"verdict":"pass","evidence":"admin.test.ts overview counts, users list with no credential/seed key, verified toggle reflected in admin list and profile."},
+"AC6":{"verdict":"pass","evidence":"admin.test.ts GET/POST crates, PATCH suggested incl. rank order, 409 ownerless, 404 unknown."},
+"AC7":{"verdict":"pass","evidence":"admin.test.ts 'admin news' create/patch/delete, 400 per field, 404, survives demo seed with no duplicates."},
+"AC8":{"verdict":"pass","evidence":"admin.test.ts POST /api/admin/import creates all, readable publicly; 400 naming failing entry with zero rows written; rollback test."},
+"AC9":{"verdict":"pass","evidence":"router.test.ts redirects (login next=/admin, home, admin ok); AdminView.test.ts section headings, owners, failure error tests; AccountMenu.test.ts Admin link admin vs user."},
+"AC12":{"verdict":"pass","evidence":"format:check, lint, typecheck, test, build all exit 0; 428 api + 400 web tests pass. Diff vs 8f53e04: passwords.test.ts and auth-accounts.test.ts unchanged; only router.test.ts pre-existing test file touched (22 added lines)."}},
+"observations":[{"what":"Baseline 357 figure not reconcilable per workspace; judged by unchanged pre-existing tests.","severity":"low"}]}

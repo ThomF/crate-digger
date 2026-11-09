@@ -1,0 +1,72 @@
+{
+  "commit": "8f53e0411f0821d4812a7dc33cda9aefd07cde0f",
+  "testCommand": "npm test",
+  "structure": {
+    "layout": "npm workspaces monorepo (packages/*, apps/*), ESM, Node >=22.18, package name frisson",
+    "language": "TypeScript ~5.8.3; the API runs .ts directly via node",
+    "packages": {
+      "apps/web": "@frisson/web. Vue 3, Vue Router, Pinia SPA on Vite 6. Typecheck with vue-tsc. Sources in apps/web/src (components, views, stores, composables, utils, forms, router, App).",
+      "apps/api": "@frisson/api. Fastify 5 with zod type provider. SQLite via better-sqlite3 and drizzle-orm. Tests in apps/api/test.",
+      "packages/shared": "@frisson/shared. Zod schemas and sorting. Typecheck only."
+    },
+    "buildSystem": "Root scripts: dev, build, typecheck, test, lint (eslint .), format, format:check. Playwright ^1.65 is a root dev dependency."
+  },
+  "tests": {
+    "runner": "vitest ^3.2 in apps/web (happy-dom, @vue/test-utils) and apps/api",
+    "testCommand": "npm test",
+    "notes": "Run from the repo root. Single file: npm test -w apps/web -- src/views/CrateView.test.ts. Typecheck: npm run typecheck. Lint: npm run lint.",
+    "locations": "apps/api/test/*.test.ts; apps/web/src/**/*.test.ts colocated with source",
+    "baseline": "exit 0, 357 tests in 32 files, about 8s",
+    "browser": "No Playwright config or e2e script. .shipyard/checks/browser.mjs is a Playwright script printing PASS/FAIL per criterion. README documents DATA_DIR temp + SEED_DEMO_DATA=false for browser checks."
+  },
+  "conventions": {
+    "formatting": "Prettier: no semis, single quotes, width 100, trailing commas all. Editorconfig: lf, 2 spaces.",
+    "lint": "ESLint 9 flat config with eslint-plugin-vue flat/essential and @vue/eslint-config-typescript. Prettier owns style.",
+    "ci": ".github/workflows/ci.yml: npm ci, format:check, lint, typecheck, test, build, plus docker smoke test",
+    "webStructure": "src/api, stores (Pinia), views (*View.vue), components by feature (album/, crate/, forms/, profile/), composables (useXxx.ts), utils (plain functions)",
+    "naming": "Vue files PascalCase; composables useXxx.ts; tests *.test.ts next to source",
+    "git": "Conventional Commits with scope, e.g. fix(web): ...; ADRs for significant decisions"
+  },
+  "documentation": {
+    "files": [
+      "README.md",
+      "docs/SPEC.md",
+      "docs/DEPLOY.md",
+      "docs/adr/0001-0006",
+      ".github/pull_request_template.md"
+    ],
+    "gaps": "No CLAUDE.md, CONTRIBUTING or CHANGELOG. docs/SPEC.md repo tree is an early plan and differs from the actual files."
+  },
+  "relevant": {
+    "stack": "npm workspaces: apps/api (Fastify + zod type provider, drizzle-orm + better-sqlite3), apps/web (Vue 3, vue-router, pinia, vitest), packages/shared (@frisson/shared, zod schemas in packages/shared/src/index.ts). Docs: docs/SPEC.md, docs/adr/0006-following-home-and-demo-content.md.",
+    "user_model_and_auth": {
+      "table": "users in /Users/thomasfuhriman/code/crate-digger/apps/api/src/db/schema.ts: id, email(unique, lowercased), username(unique, lowercased), displayName, passwordHash, role enum USER_ROLES=['user','admin'] default 'user', createdAt, bio, location, avatarPath, verified (boolean, default false, 'set by admins only'), demoSeedKey(unique, nullable). Related: user_links, sessions, follows.",
+      "password_hashing": "scrypt, format scrypt$N$r$p$salt$hash, /apps/api/src/services/passwords.ts. hashPassword throws 400 under MIN_PASSWORD_LENGTH=8. Shared signup schema (packages/shared/src/index.ts ~line 198) requires password min 8, max 200. Login schema (~line 204) is email + password min(1), so login with password 'admin' passes validation, but a stored 'admin' hash can't be created through createUser/hashPassword (it would throw 400 for 5 chars). A seed would have to bypass the length check.",
+      "session": "Opaque random token in cookie 'frisson_session' (httpOnly, sameSite lax, secure in production). DB sessions.id = sha256 of the token, expiresAt. apps/api/src/plugins/auth.ts sets request.user (PublicUser|null) in an onRequest hook via services/sessions.ts findSessionUser. No JWT. Login route in apps/api/src/routes/auth.ts (rate limited, verifyPassword plus verifyAgainstDummy for timing). services/users.ts: createUser(db,input,role), findUserByEmail/Username, toPublicUser (id,email,username,displayName,role,avatarUrl,verified).",
+      "existing_admin_role": "Yes. Role 'admin' exists. services/permissions.ts has requireUser, canEditOwner, assertCanEditCrate/Album (admins edit everything), and requireAdmin(user) (401/403). No admin route prefix, no admin plugin or middleware, no /api/admin routes.",
+      "only_existing_admin_endpoint": "PUT-style route '/users/:username/verified' in apps/api/src/routes/profiles.ts (~line 33), guarded by requireAdmin, calling setVerified in services/profiles.ts (~line 147). Web client in apps/web/src/api/profiles.ts.",
+      "admin_bootstrap": "apps/api/src/services/bootstrap.ts bootstrapAdmin/bootstrapFromEnv, run in apps/api/src/server.ts on every start, before listen. If no admin exists and ADMIN_EMAIL and ADMIN_PASSWORD are both set, it creates one via createUser (username 'admin', or admin-2 etc if taken, displayName 'Admin'). It never changes an existing admin's password. It also assigns all ownerless crates (ownerId NULL) to the earliest admin. /Users/thomasfuhriman/code/crate-digger/.env currently has ADMIN_EMAIL=trf@frission.com (so an admin may already exist with that email in the DB; .env.example has ADMIN_EMAIL= and SEED_DEMO_DATA=). Dockerfile comments document ADMIN_EMAIL/ADMIN_PASSWORD (min 8 chars). Test: apps/api/test/bootstrap.test.ts."
+    },
+    "db_schema_and_migrations": {
+      "mechanism": "drizzle-kit generated SQL in apps/api/drizzle/ (0000_init, 0001_crate_sort_by, 0002_album_spin_count, 0003_accounts, 0004_user_profiles, 0005_follows_news_demo) with meta/_journal.json and snapshots. Generate with `npm run db:generate -w apps/api`; drizzle.config.ts in apps/api. createDb() in apps/api/src/db/client.ts runs migrate() automatically on open (foreign_keys ON, WAL), so migrations apply at API start, including buildApp via plugins/db.ts. Tests use ':memory:'.",
+      "tables": "users, user_links, sessions, crates, albums, tracks, follows, news_items.",
+      "non_destructive_data_at_start": "server.ts after buildApp: bootstrapFromEnv, then seedDemoFromEnv (services/demo-seed.ts) inside try/catch. Both are idempotent, insert-only, matched by seed key. The pattern to extend is: add a step in server.ts or a service that upserts a user by email/key without touching existing rows. The `npm run db:seed` script (apps/api/src/db/seed.ts) also exists.",
+      "demo_seed": "services/demo-seed.ts seedDemoContent/seedDemoFromEnv/shouldSeedDemo (SEED_DEMO_DATA 'true' always, 'false' never, else on unless NODE_ENV=production). Content in apps/api/src/db/demo-content.ts (DEMO_USERS, DEMO_CRATES with recommendedRank and albums/sides, DEMO_NEWS). Demo users get passwordHash 'demo-account-no-login' (can never log in), verified false, role user. One transaction; collision on username/email skips that demo user and its crates. Tests: apps/api/test/demo-seed.test.ts, migration.test.ts, schema.test.ts."
+    },
+    "news": {
+      "model": "news_items: id, seedKey (NOT NULL unique), title, summary, source, publishedAt, createdAt. No author, no published flag, no url, no image.",
+      "api": "GET /api/news only (apps/api/src/routes/news.ts, public), services/news.ts listNews (newest first, no seedKey in response). Shared schema newsItem {id,title,summary,source,publishedAt}. No create/update/delete route exists.",
+      "frontend": "apps/web/src/views/HomeView.vue 'Music news' section (uses useAsyncSection(listNews) from apps/web/src/api/news.ts); AboutView.vue says news is demo data. Tests: apps/api/test/news.test.ts, feed.test.ts; apps/web/src/views/HomeView.test.ts."
+    },
+    "crates": {
+      "model": "crates: id, name, color, label, sortBy, sortOrder, ownerId (FK users, set null on delete; NULL = legacy admin-only), demoSeedKey (unique, nullable = demo crate), recommendedRank (nullable; non-null = recommended, ascending order on Home), timestamps. albums (crateId restrict FK, demoSeedKey) and tracks (cascade).",
+      "suggested_vs_user_created": "No 'suggestion' table or status. The closest concept is crates.recommendedRank (curated/recommended on Home; only set by seed data, no API to set it) and demoSeedKey (demo vs real). User-created = ownerId set to a real user. The word 'suggest' does not appear as a feature.",
+      "api": "apps/api/src/routes/crates.ts: GET /crates, GET /crates/recommended (crateCard: id,name,color,label,albumCount,createdAt,ownerUsername,ownerDisplayName), GET /crates/:id, POST /crates, PATCH /crates/:id, DELETE /crates/:id (409 if it has records), PUT /crates/order. Logic in services/crates.ts (listRecommendedCrates ~line 64 filters isNotNull recommendedRank). Albums routes: routes/albums.ts, covers: routes/covers.ts.",
+      "frontend": "HomeView.vue (recommended crates + news + following), CrateView.vue (/shelf and /crates/:id), CratesView.vue (/crates, requiresAuth, uses session.isAdmin for actions), LibraryView.vue (/list), ProfileView/MyProfileView/FollowingView, CrateBox.vue, CrateSettings.vue, apps/web/src/api/crates.ts, utils/permissions.ts (admin or owner may edit). Tests: apps/api/test/crates.test.ts, ownership.test.ts, recommended.test.ts, sorting.test.ts; web CrateView.test.ts, crateActions.test.ts, editControls.test.ts, CrateBox.test.ts, utils/permissions.test.ts."
+    },
+    "verified_badge": "Exists. users.verified column, publicUser.verified, apps/web/src/components/profile/VerifiedBadge.vue (+ test), shown in AccountMenu.vue, ProfileView.vue, FollowingView.vue. Admin toggle API exists (route above) but no admin UI calls it that I confirmed beyond apps/web/src/api/profiles.ts. Tests in apps/api/test/profiles.test.ts (26 hits), shared-profile.test.ts, ProfileView.test.ts.",
+    "web_routing": "apps/web/src/router.ts. Routes: / home, /shelf, /list, /crates (requiresAuth), /crates/:id, /following (requiresAuth), /about, /login, /signup, /albums/:id, /albums/new, /albums/:id/edit, /u/:username, /profile, /profile/edit (requiresAuth), catch-all not-found. Guard router.beforeEach: awaits session.load(); only checks meta.requiresAuth and redirects to login with ?next. No admin-only meta or guard; no /admin route. Meta type declares requiresAuth only (line ~10). router.test.ts tests routes. Session store: apps/web/src/stores/session.ts (isAdmin computed from user.role, signedIn). Nav: apps/web/src/App.vue (not opened) and components/AccountMenu.vue (shows VerifiedBadge); App.test.ts exists.",
+    "reports_moderation": "Absent. No report, flag, or moderation tables, routes or UI. Grep hits for report/flag/suggest are unrelated (follows, form code).",
+    "other_notes": "Public-data rule: numeric user ids are avoided in public payloads (follows). Shared exports needed for new API shapes live in packages/shared/src/index.ts. apps/api/dist/ contains stale built JS, ignore it. Test helpers: apps/api/test/helpers.ts. Email in .env is 'frission.com' while the request says admin@frisson.com."
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "id": "admin-api",
+  "goal": "Add the shared admin schemas and the admin-only /api/admin/* endpoints for overview, users, crates, news and all-or-nothing bulk import.",
+  "description": "NO MIGRATION is needed: news_items, crates.recommended_rank and users.verified all exist. Do not add a flag or column. Verification stays on the existing PATCH /api/users/:username/verified and setVerified; do not duplicate it.\n\nSHARED (packages/shared/src/index.ts). Add an Admin section using the existing private helpers requiredText, hexColor and the existing createCrateInput, createAlbumInput and newsItem. Use these exact names, because the web task relies on them:\n- adminOverview = {users, crates, suggestedCrates, albums, news} (all ints)\n- adminUser = {id, email, username, displayName, role, verified, isDemo: boolean, createdAt: iso datetime, crateCount: int}, marked CONFIDENTIAL (PII)\n- adminCrate = {id, name, label: string|null, color, albumCount, ownerUsername: string|null, ownerDisplayName: string|null, recommendedRank: int|null, isDemo: boolean, createdAt: iso datetime}\n- adminNewsItem = newsItem.extend({isDemo: z.boolean()}), with no seed key\n- adminCreateCrateInput = createCrateInput.extend({suggested: z.boolean().default(false)})\n- adminSetSuggestedInput = z.strictObject({suggested: z.boolean()})\n- adminNewsInput = {title: requiredText(200), summary: requiredText(2000), source: requiredText(100), publishedAt: z.iso.datetime().optional()}\n- adminUpdateNewsInput = adminNewsInput.partial() with a refine requiring at least one field\n- adminImportAlbum = createAlbumInput.omit({crateId: true})\n- adminImportCrate = adminCreateCrateInput.extend({albums: z.array(adminImportAlbum).default([])})\n- adminImportInput = z.object({crates: z.array(adminImportCrate).default([]), news: z.array(adminNewsInput).default([])}) with a refine requiring at least one entry\n- adminImportResult = {crates, albums, tracks, news} (ints)\nExport inferred types AdminOverview, AdminUser, AdminCrate, AdminNewsItem, AdminImportResult, plus request types from z.input: AdminCreateCrateRequest, AdminNewsRequest, AdminUpdateNewsRequest, AdminImportRequest.\n\nROUTES (new apps/api/src/routes/admin.ts, exporting adminRoutes: FastifyPluginAsyncZod; register in apps/api/src/app.ts with prefix '/api' next to the others, before webPlugin). Guard the whole plugin with a plugin-level hook: app.addHook('onRequest', async (req) => { requireAdmin(req.user) }), using requireAdmin from services/permissions.ts. onRequest means a new route cannot forget the guard, and a signed-out oversized or malformed body gets 401 rather than 413 or 400. authPlugin sets req.user in a global onRequest hook that runs first. Do not wrap this plugin in fastify-plugin, because the hook must stay encapsulated.\nEndpoints, each with zod response schemas:\n- GET /admin/overview -> adminOverview\n- GET /admin/users -> adminUser[]\n- GET /admin/crates -> adminCrate[]: suggested first by rank then id, then the rest by id\n- POST /admin/crates -> 201 adminCrate\n- PATCH /admin/crates/:id/suggested -> adminCrate\n- GET /admin/news -> adminNewsItem[]: same order as public listNews\n- POST /admin/news -> 201 adminNewsItem\n- PATCH /admin/news/:id -> adminNewsItem\n- DELETE /admin/news/:id -> 204\n- POST /admin/import -> 201 adminImportResult\nUse idParams for :id. Throw HttpError(409, ...) and notFound(...) from errors.ts.\n\nSERVICE (new apps/api/src/services/admin.ts). Thin routes, logic here. Select columns by hand so passwordHash, demoSeedKey and seedKey never enter a result. isDemo for users and crates is demoSeedKey !== null. isDemo for news is !seedKey.startsWith('admin:'), and the key is dropped before returning. Dates go out through toISOString(). users.crateCount and crates.albumCount use LEFT JOINs so zero and ownerless cases appear.\n- Suggesting: rank = (max(crates.recommendedRank) ?? 0) + 1. Toggle order is: 404 for an unknown id; {suggested:true} on an ownerless crate returns 409, because listRecommendedCrates inner-joins the owner and a card must name one; {suggested:true} on an already suggested crate keeps its rank (no-op); {suggested:false} sets NULL.\n- Create crate: owner is the signed-in admin, and sortOrder = max(sortOrder)+1 as in services/crates.ts createCrate. Destructure `suggested` out before inserting.\n- News create: seedKey = `admin:${randomUUID()}`. publishedAt defaults to new Date(). The column has second precision, and listNews breaks ties by id descending, so a new item still sorts first. PATCH updates only fields provided and never touches seedKey. Editing or deleting demo rows is allowed.\n- Import: run everything in one synchronous db.transaction((tx) => ...) with direct tx inserts, as apps/api/src/services/demo-seed.ts does (it has `type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]`). createAlbum and createCrate take Db, not tx, so do not call them inside. Increment sortOrder and rank per crate in request order. Album position is its index. Crates are owned by the admin. Zod validation rejects a bad entry before any write, and the error handler already returns issues with paths like 'body/crates/0/albums/1/artist', which is how the failing entry gets named.\n\nALSO. Add an optional `onRoute?: (route: RouteOptions) => void` to AppOptions in app.ts, wired with app.addHook('onRoute', opts.onRoute) straight after Fastify() and before any register, so the AC4 test can collect real routes. buildTestApp already spreads opts into buildApp, so apps/api/test/helpers.ts needs no change. Update the 'Fictional demo news' classification comments in packages/shared/src/index.ts and apps/api/src/services/news.ts to say PUBLIC demo or admin-written news. listNews behaviour is unchanged. Keep the default Fastify bodyLimit.\n\nTESTS (apps/api/test/admin-access.test.ts for AC4, apps/api/test/admin.test.ts for AC5 to AC8). Helpers: buildTestApp, signUp, createAdmin, addCrate.\n- AC4: enumerate with onRoute, filter url startsWith '/api/admin', assert non-empty, add PATCH /api/users/:username/verified, and substitute params (:id -> 1, :username -> an existing user). Auto-generated HEAD routes will appear in the list; handle them as ordinary routes. Each returns 401 signed out and 403 as role=user, with row counts of all tables unchanged. As admin, status is neither 401 nor 403.\n- AC5 to AC8 as written in the brief, including a recursive key check for passwordHash, password_hash, demoSeedKey and seedKey.\n- Also cover: an oversized import returns 413 with zero rows written; un-suggesting a demo crate stays un-suggested after seedDemoContent; a repeat {suggested:true} keeps the rank; signed-out public /api/news has no seedKey.\n\nRun prettier, lint, typecheck and npm test. All tests use in-memory databases.",
+  "ownsFiles": [
+    "packages/shared/src/index.ts",
+    "apps/api/src/app.ts",
+    "apps/api/src/routes/admin.ts",
+    "apps/api/src/services/admin.ts",
+    "apps/api/src/services/news.ts",
+    "apps/api/test/admin-access.test.ts",
+    "apps/api/test/admin.test.ts"
+  ],
+  "dependsOn": [],
+  "criteriaIds": [
+    "AC4",
+    "AC5",
+    "AC6",
+    "AC7",
+    "AC8",
+    "AC12"
+  ],
+  "model": "opus",
+  "criteria": [
+    {
+      "id": "AC4",
+      "statement": "A test enumerates every route registered under /api/admin (collected from the Fastify app with an onRoute hook, not a hand-written list), and asserts the list is non-empty, plus PATCH /api/users/:username/verified. Each route returns 401 when signed out and 403 when signed in as a role=user account. Table row counts are unchanged after those refused calls. The same test confirms that an admin session does not receive 401 or 403 on those routes.",
+      "check": "api"
+    },
+    {
+      "id": "AC5",
+      "statement": "As an admin, GET /api/admin/overview returns correct counts of users, crates, suggested crates, albums and news for a known fixture. GET /api/admin/users returns every user, including role=user and demo users, each with id, email, username, displayName, role, verified, an isDemo boolean, createdAt and crateCount. A recursive check of the serialized response finds no passwordHash, password_hash or demoSeedKey key. After PATCH /api/users/:username/verified with {verified:true}, that user shows verified:true in GET /api/admin/users and on the public profile response. After {verified:false}, both show false.",
+      "check": "api"
+    },
+    {
+      "id": "AC6",
+      "statement": "As an admin, GET /api/admin/crates returns every crate, including ownerless ones, with id, name, ownerUsername (null if ownerless), albumCount, recommendedRank and createdAt. POST /api/admin/crates with {name, suggested:true} creates a crate owned by the admin, which appears in public GET /api/crates and last in public recommended-crates order. PATCH /api/admin/crates/:id/suggested with {suggested:false} sets recommendedRank to null and removes it from the recommended list; {suggested:true} adds it back at the end. Suggesting an ownerless crate returns 409, and an unknown id returns 404.",
+      "check": "api"
+    },
+    {
+      "id": "AC7",
+      "statement": "As an admin: POST /api/admin/news with title, summary and source returns 201, and the item appears first in public GET /api/news (signed out) with no seedKey field. PATCH /api/admin/news/:id changes the fields seen in public GET /api/news. DELETE /api/admin/news/:id removes the item from it. A missing or blank title, summary or source returns 400 and writes no row. An unknown id returns 404. After running seedDemoContent, the admin-created item is still present and unchanged, and there are no duplicate rows.",
+      "check": "api"
+    },
+    {
+      "id": "AC8",
+      "statement": "As an admin, POST /api/admin/import with {crates:[{name, label?, color?, suggested?, albums?:[{title, artist, year?, genre?, format?, tracks?}]}], news:[{title, summary, source, publishedAt?}]} creates everything and returns the created counts. The crates, their albums and tracks, and the news are then readable through the public crate, album and news endpoints. A payload with one invalid entry anywhere (for example, the last album with no artist) returns 400 naming the failing entry, and all table row counts are unchanged, proving all-or-nothing.",
+      "check": "api"
+    },
+    {
+      "id": "AC12",
+      "statement": "From the repo root, npm run format:check, npm run lint, npm run typecheck, npm test and npm run build all exit 0. Every test in the baseline (357 tests) still passes, or any that had to change is listed with the reason in the run report; passwords.test.ts and auth-accounts.test.ts must not be among those changed.",
+      "check": "command"
+    }
+  ],
+  "constraints": [
+    "Admin account path: add a new idempotent step (for example ensureDevAdmin in apps/api/src/services/) called from apps/api/src/server.ts after bootstrapFromEnv. It only ever inserts one users row. It must not call db:seed, delete or update any existing row, or change an existing account's password or role.",
+    "The existing bootstrapAdmin cannot be reused as it stands, for two reasons. It does nothing when any admin already exists. Its createUser call goes through hashPassword, which throws 400 for passwords under 8 characters, and a thrown error in that server.ts try block exits the process. So ADMIN_PASSWORD=admin would stop the app from starting.",
+    "The 8-character minimum stays in force for signup, hashPassword's public behaviour and ADMIN_EMAIL/ADMIN_PASSWORD bootstrap. The short password is allowed only inside the dev-admin step, through a narrowly scoped internal hash path. apps/api/test/passwords.test.ts and the signup test in apps/api/test/auth-accounts.test.ts must pass unchanged.",
+    "Production guard: the dev-admin step never runs when NODE_ENV=production, whatever other variables are set. The Dockerfile already sets NODE_ENV=production. SEED_DEV_ADMIN=false disables it in other environments, following the shouldSeedDemo pattern, and SEED_DEV_ADMIN=true cannot override production. Production admins continue to come only from ADMIN_EMAIL/ADMIN_PASSWORD. A failure in this step is logged and must not stop the API from starting.",
+    "The plaintext password must never be logged. password_hash must never appear in any API response.",
+    "All new endpoints live under /api/admin/*, are registered in a new routes file with prefix /api, and call the existing requireAdmin from apps/api/src/services/permissions.ts, which stays the single authority. Verification reuses the existing PATCH /api/users/:username/verified route and setVerified.",
+    "Suggested means crates.recommended_rank is non-NULL, the same column that drives Home's Recommended crates section. Do not add a second flag.",
+    "Admin-created news uses the existing news_items table. seed_key is NOT NULL UNIQUE, so generate a key such as admin:<uuid>. It must never collide with the demo 'news:' keys and must not appear in any response. Any migration must be additive and must keep existing rows.",
+    "Follow the repo's conventions: Vue view plus Pinia session store (session.isAdmin), a router meta guard next to requiresAuth, shared zod schemas in packages/shared, Prettier and ESLint, Conventional Commits, data-classification comments. The users list is CONFIDENTIAL PII.",
+    "Document the dev-admin step and SEED_DEV_ADMIN in README.md, docs/DEPLOY.md and .env.example.",
+    "Browser and command checks run on a temporary DATA_DIR or a temporary copy of the database, never on the owner's data/crate.db.",
+    "Out of scope: changing roles, deleting or suspending users, password reset or change, audit log, deleting demo rows permanently, and any real news feed or AI recommendations."
+  ],
+  "testCommand": "npm test",
+  "status": "running"
+}

@@ -1,0 +1,30 @@
+{
+  "criteria": {
+    "AC10": {
+      "verdict": "pass",
+      "evidence": ".shipyard/checks/admin-panel.check.mjs on a temp DATA_DIR, port 4332, Chromium 1280px. Typed admin@frisson.com / admin into /login, opened the account menu, clicked Admin and landed on /admin (9 mouse points on the button and on the menu item, no dead spots). The panel forms created a news item and a Suggested crate; both appeared in the panel with no reload (window marker survived). Signed-out context: / showed the news under Music news and the crate under Recommended crates, and /list showed the crate, both by direct load and from Home's link. role=user context, signed in through the form: /admin ended on / with no panel content, .admin-panel was never in the DOM (MutationObserver, also with the API slowed by 600ms), no Admin menu link, API 403."
+    },
+    "AC11": {
+      "verdict": "pass",
+      "evidence": "Same script. Verify at 1280px: the row showed Verified and a badge with no reload, the signed-out /u/ruth showed the badge; clicked again, the badge was gone after reload on both pages. Real clipboard paste of a crate with 2 albums and a news item: 'Imported 1 crate, 2 albums, 0 tracks, 1 news item.'; the crate opened at /crates/:id with both records from the panel link (with the library store already loaded) and signed out; the news showed on /. Truncated JSON, non-JSON, empty and [] showed an inline error, sent no request and left the admin lists unchanged; a payload with one bad crate and {} were refused by the API with an inline error, also adding nothing. No overflow at 1280 or 390 (scrollWidth <= width) with maximum-length text, error shown and Example open. Verify, Create news item and Create crate had no dead spots across 9 points with real mouse at 1280 and real touch at 390 (touch context, touchscreen.tap); touch also verified end to end, ticked Suggested and imported."
+    }
+  },
+  "observations": [
+    {
+      "what": "Home shows a red 'Demo' tag on every news item, including news an admin just created in the panel (HomeView.vue renders <DemoTag /> unconditionally), and the Recommended section still says 'Curated demo picks'. Admin-created content is presented to the public as demo.",
+      "severity": "medium"
+    },
+    {
+      "what": "For about half a second after any route change, the app's view transition makes every click or tap land on <html> and do nothing. Seen as a lost first click on the account button after login and a lost first tap on Verify after opening /admin. Comes from viewTransitions.ts, not this change; the check waits for the transition to end before raw clicks.",
+      "severity": "low"
+    },
+    {
+      "what": "/admin gets very long on a phone with no way to jump between sections: about 13,900 CSS px at 390px in this test's data, with Bulk import at the very bottom below every user.",
+      "severity": "low"
+    },
+    {
+      "what": "Real-admin pass worked: a panel-created crate's Add records link opened /albums/new?crateId= with the crate picked, the record saved, the row showed 1 record, Suggest and Stop suggesting moved the row and were reflected on signed-out Home. Double-clicking Create crate made one crate.",
+      "severity": "info"
+    }
+  ]
+}

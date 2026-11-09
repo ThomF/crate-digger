@@ -70,3 +70,16 @@
 - Owner to confirm: /shelf keeps both actions on another user's crate; admins lose them on other users' crates; "new crate stuff" read as the Edit crates link
 - Known limit: browser.mjs still rewrites tracked ac12-long PNGs on every checks run; the harbormaster restored them
 - Not merged or pushed
+
+## 2026-11-09T06-16-12: admin panel and admin@frisson.com login
+- Verdict: shipped (12/12 criteria, real-browser checks on a temp DB), 1 cycle, 0 fix rounds, 3 tasks
+- Wall clock: 43m 53s; slowest stage: build (17m 56s)
+- Tokens: 682,066 across 9 agents (size standard, harbormaster's own tokens not included).
+- Deaths: none. Blockers: none
+- Fast paths: survey-cache
+- Harbormaster moved the browser check from the dev to the browser tester (separation of duties). Corrected the test baseline to 717 (360 API, 357 web)
+- Owner to confirm: login is dev-only; crates read as Suggested and User created sections
+- The owner dev server applied the dev admin to data/crate.db during the build (0 ownerless crates, nothing reassigned). It is now the sole admin there, so ADMIN_EMAIL will not create another
+- Known limits: Home tags all news Demo, including admin-written; server.ts try/catch failure path untested; stale refresh can overwrite a verify; bulk import not de-duplicated; guard fails open if NODE_ENV is unset; Chromium only
+- Lesson: a dev server on the working copy runs insert-at-start steps on the real DB as soon as they are written. Testers can be fast and shallow, so spot-check evidence against the tests
+- Not merged or pushed

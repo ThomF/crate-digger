@@ -1,0 +1,65 @@
+{
+  "id": "dev-admin",
+  "goal": "Add an insert-only dev admin step (admin@frisson.com / admin) that never runs in production, a repeatable real-server check command, and the docs for both.",
+  "description": "CONTEXT. apps/api/src/server.ts runs bootstrapFromEnv(app.db, process.env, app.log), then seedDemoFromEnv in its own inner try/catch, then listen. bootstrapAdmin cannot be reused: it does nothing when any admin exists, and createUser calls hashPassword, which throws 400 under 8 characters.\n\nPASSWORDS (apps/api/src/services/passwords.ts). Split the salt, derive and format code into a private unexported helper. Keep hashPassword's behaviour exactly. Export `hashDevAdminPassword(): Promise<string>`, which takes NO argument and hashes only a module-private constant 'admin'. This is the narrow path: it cannot weaken the policy for any other password. Do not export the unchecked helper. apps/api/test/passwords.test.ts and apps/api/test/auth-accounts.test.ts must not be edited.\n\nBOOTSTRAP (apps/api/src/services/bootstrap.ts). Only add `export` to freeAdminUsername(db: Db): string. BootstrapLog ({info(msg), warn(msg)}) is already exported.\n\nNEW SERVICE (apps/api/src/services/dev-admin.ts), with a CONFIDENTIAL (credentials) data-classification comment:\n- `export const DEV_ADMIN_EMAIL = 'admin@frisson.com'`\n- `export function shouldSeedDevAdmin(env: NodeJS.ProcessEnv = process.env): boolean`. Production check first: false if env.NODE_ENV, trimmed and lower-cased, is 'production', whatever else is set. Then false if SEED_DEV_ADMIN === 'false'. Otherwise true. SEED_DEV_ADMIN=true never overrides production.\n- `export async function ensureDevAdmin(db: Db, env: NodeJS.ProcessEnv = process.env, log: BootstrapLog = silent): Promise<{ created: boolean }>`. Logic: if the guard is false, return {created:false}. Call findUserByEmail(db, DEV_ADMIN_EMAIL) from services/users.ts. If the row has role admin, return silently with no change. If it has any other role, log.warn a refusal to promote and return with no change. Otherwise hash with hashDevAdminPassword and do exactly one direct db.insert(users) with {email, username: freeAdminUsername(db), displayName: 'Admin', passwordHash, role: 'admin'}. Do NOT go through createUser. Catch a unique-constraint race (code SQLITE_CONSTRAINT_UNIQUE), warn, and do not throw. Do not touch crates or any other table. Log only fixed strings plus the username, never the password.\n\nSERVER (apps/api/src/server.ts). Immediately after bootstrapFromEnv, add an inner try { await ensureDevAdmin(app.db, process.env, app.log) } catch (err) { app.log.error(err, 'Could not add the dev admin; starting without it') }. Do not call it from buildApp, because tests and existing row counts rely on buildApp creating nothing.\n\nTESTS (apps/api/test/dev-admin.test.ts). Use buildTestApp, signUp and addCrate from apps/api/test/helpers.ts, and pass env explicitly (for example {}), since vitest sets NODE_ENV=test.\n- AC1: populate users, crates, albums, tracks, follows and news. Snapshot every row of every table with raw SQL. Run with NODE_ENV unset. Expect one new row, role admin, and POST /api/auth/login with admin@frisson.com / admin returning 200. All earlier rows must be deep-equal. A second run adds no row and leaves password_hash byte-identical.\n- AC2 (a) to (f) as written in the brief.\n- AC2(e) trap: the password 'admin' is a substring of the email and of ordinary messages, so a naive includes('admin') check cannot work. Instead capture every log call and assert each message exactly equals an expected fixed string, that no message contains the word 'password' with a value, and that only string arguments were passed. Also assert the hash never appears in logs.\n- Add a case where ADMIN_EMAIL has already created admin@frisson.com as admin: the step is a no-op.\n\nAC3 COMMAND. Create apps/api/scripts/check-dev-admin.ts, add `\"check:dev-admin\": \"node scripts/check-dev-admin.ts\"` to apps/api/package.json, and add \"scripts\" to include in apps/api/tsconfig.json. Run it as `npm run check:dev-admin -w apps/api`. It prints PASS or FAIL per step and exits non-zero on any failure. Behaviour:\n1. mkdtemp a temp DATA_DIR and build the fixture with createDb(path) from apps/api/src/db/client.ts (it returns an object with db). Add users, crates, albums, tracks and news, then close it. Every fixture crate MUST have an owner. Say why in a comment: bootstrap hands ownerless crates to the earliest admin on the next start, which is existing documented behaviour and would otherwise change rows.\n2. Dump every non-sqlite_ table from a separate connection.\n3. Spawn `node apps/api/src/server.ts` with cwd at the repo root and an env built from scratch: PATH and HOME only, plus DATA_DIR, PORT (free port), HOST=127.0.0.1, SEED_DEMO_DATA=false. No NODE_ENV, no ADMIN_*, no WEB_DIR, no DATABASE_PATH. Poll GET /api/health, SIGTERM, await exit, and start it again.\n4. While it is up and BEFORE login creates a session row, dump and compare. All pre-existing rows are identical, the only difference is one added users row, and the users count is +1.\n5. POST /api/auth/login returns 200 and GET /api/auth/me has role admin, using the returned cookie. Stop.\n6. Third start on a second, separate temp DB with NODE_ENV=production and SEED_DEV_ADMIN=true. Login returns 401 and no such row exists.\n7. Scan captured server stdout and stderr: no password_hash value, no scrypt$ string.\n8. Refuse to run if the resolved DB path is the repo's data/crate.db. Record size and mtime of data/crate.db (if present) before and after, and fail if they changed. Always remove the temp dirs and child processes, including on failure.\n\nDOCS.\n- README.md: env table row for SEED_DEV_ADMIN, how the local admin login works, a short /admin panel paragraph, and the check command.\n- docs/DEPLOY.md: production admins come only from ADMIN_EMAIL/ADMIN_PASSWORD. The guard fails open if NODE_ENV is unset on an internet-facing host started outside the Dockerfile or Compose, so always set it. A dev database restored through db:backup/db:restore or a copied file carries the working admin/admin row, so remove that row or use a clean production database. Run db:backup before bulk imports. With no earlier admin and no ADMIN_EMAIL, the dev admin becomes the earliest admin and receives ownerless crates on the next start. Demo rows deleted from the panel return on restart while seeding is on.\n- .env.example: a commented SEED_DEV_ADMIN entry saying it has no effect in production.\n- docs/adr/0007-dev-admin-login.md: a short ADR on the decision and its accepted risk.\nDo not touch compose.yaml or the Dockerfile.\n\nRun prettier, lint, typecheck and npm test. Never start the API without a temporary DATA_DIR.",
+  "ownsFiles": [
+    "apps/api/src/services/passwords.ts",
+    "apps/api/src/services/bootstrap.ts",
+    "apps/api/src/services/dev-admin.ts",
+    "apps/api/src/server.ts",
+    "apps/api/test/dev-admin.test.ts",
+    "apps/api/scripts/check-dev-admin.ts",
+    "apps/api/package.json",
+    "apps/api/tsconfig.json",
+    "README.md",
+    "docs/DEPLOY.md",
+    "docs/adr/0007-dev-admin-login.md",
+    ".env.example"
+  ],
+  "dependsOn": [],
+  "criteriaIds": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC12"
+  ],
+  "model": "opus",
+  "criteria": [
+    {
+      "id": "AC1",
+      "statement": "A test in apps/api/test/ populates a database with users, crates, albums, tracks, follows and news, then runs the dev-admin step with NODE_ENV unset. Exactly one new users row exists, with email admin@frisson.com and role admin, and logging in through the existing login endpoint with admin@frisson.com / admin returns 200. Every row that existed before is deep-equal to its earlier value. A second run adds no row and leaves that account's password_hash byte-identical.",
+      "check": "unit"
+    },
+    {
+      "id": "AC2",
+      "statement": "Tests prove each of the following. (a) NODE_ENV=production creates no row, including with SEED_DEV_ADMIN=true. (b) SEED_DEV_ADMIN=false creates no row. (c) If admin@frisson.com already belongs to a role=user account, that row is unchanged (role and hash), a warning is logged, and nothing throws. (d) If username 'admin' is taken by another account, the new account gets admin-2 and that other account is unchanged. (e) No log output contains the plaintext password. (f) Signup with a 5-character password still returns 400, and hashPassword('admin') still rejects.",
+      "check": "unit"
+    },
+    {
+      "id": "AC3",
+      "statement": "Start the real API (node apps/api/src/server.ts, with NODE_ENV unset and SEED_DEMO_DATA=false) against a temporary database already holding users, crates, albums and news, then stop it and start it again. After both starts, every table's pre-existing rows are identical to a dump taken before the first start (the only allowed difference is the one added admin users row), and the users count has risen by exactly 1. POST login with admin@frisson.com / admin returns 200, and the session's user has role admin. A third start with NODE_ENV=production on a separate temporary database that has no such account does not create it, and login there returns 401.",
+      "check": "command"
+    },
+    {
+      "id": "AC12",
+      "statement": "From the repo root, npm run format:check, npm run lint, npm run typecheck, npm test and npm run build all exit 0. Every test in the baseline (357 tests) still passes, or any that had to change is listed with the reason in the run report; passwords.test.ts and auth-accounts.test.ts must not be among those changed.",
+      "check": "command"
+    }
+  ],
+  "constraints": [
+    "Admin account path: add a new idempotent step (for example ensureDevAdmin in apps/api/src/services/) called from apps/api/src/server.ts after bootstrapFromEnv. It only ever inserts one users row. It must not call db:seed, delete or update any existing row, or change an existing account's password or role.",
+    "The existing bootstrapAdmin cannot be reused as it stands, for two reasons. It does nothing when any admin already exists. Its createUser call goes through hashPassword, which throws 400 for passwords under 8 characters, and a thrown error in that server.ts try block exits the process. So ADMIN_PASSWORD=admin would stop the app from starting.",
+    "The 8-character minimum stays in force for signup, hashPassword's public behaviour and ADMIN_EMAIL/ADMIN_PASSWORD bootstrap. The short password is allowed only inside the dev-admin step, through a narrowly scoped internal hash path. apps/api/test/passwords.test.ts and the signup test in apps/api/test/auth-accounts.test.ts must pass unchanged.",
+    "Production guard: the dev-admin step never runs when NODE_ENV=production, whatever other variables are set. The Dockerfile already sets NODE_ENV=production. SEED_DEV_ADMIN=false disables it in other environments, following the shouldSeedDemo pattern, and SEED_DEV_ADMIN=true cannot override production. Production admins continue to come only from ADMIN_EMAIL/ADMIN_PASSWORD. A failure in this step is logged and must not stop the API from starting.",
+    "The plaintext password must never be logged. password_hash must never appear in any API response.",
+    "All new endpoints live under /api/admin/*, are registered in a new routes file with prefix /api, and call the existing requireAdmin from apps/api/src/services/permissions.ts, which stays the single authority. Verification reuses the existing PATCH /api/users/:username/verified route and setVerified.",
+    "Suggested means crates.recommended_rank is non-NULL, the same column that drives Home's Recommended crates section. Do not add a second flag.",
+    "Admin-created news uses the existing news_items table. seed_key is NOT NULL UNIQUE, so generate a key such as admin:<uuid>. It must never collide with the demo 'news:' keys and must not appear in any response. Any migration must be additive and must keep existing rows.",
+    "Follow the repo's conventions: Vue view plus Pinia session store (session.isAdmin), a router meta guard next to requiresAuth, shared zod schemas in packages/shared, Prettier and ESLint, Conventional Commits, data-classification comments. The users list is CONFIDENTIAL PII.",
+    "Document the dev-admin step and SEED_DEV_ADMIN in README.md, docs/DEPLOY.md and .env.example.",
+    "Browser and command checks run on a temporary DATA_DIR or a temporary copy of the database, never on the owner's data/crate.db.",
+    "Out of scope: changing roles, deleting or suspending users, password reset or change, audit log, deleting demo rows permanently, and any real news feed or AI recommendations."
+  ],
+  "testCommand": "npm test",
+  "status": "running"
+}

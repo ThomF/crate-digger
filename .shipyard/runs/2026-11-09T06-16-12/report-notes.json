@@ -1,0 +1,55 @@
+{
+  "plan_changes": [
+    {
+      "change": "AC12 baseline corrected from 326 to 357 tests; stale assumption about an unmerged run removed",
+      "why": "Harbormaster measured baseline on this branch; the cached map was stale"
+    },
+    {
+      "change": "Browser check moved from the admin-web dev to the browser tester",
+      "why": "Separation of duties: the plan had the dev writing the check that judges its own work"
+    },
+    {
+      "change": "AC12 baseline corrected again: 717 tests (360 API, 357 web), not 357",
+      "why": "The harbormaster had read only the tail of the baseline output, which showed the web workspace alone"
+    }
+  ],
+  "notes": [
+    "Intake read the admin@frisson.com/admin login as dev-only: never created under NODE_ENV=production. Owner should confirm.",
+    "Intake read \"crates by the suggestions, by user created\" as two sections: Suggested (recommended_rank set) and User created.",
+    "admin-api added two shared extras beyond the brief: adminNoContent (204 schema, because apps/api does not declare zod) and inferred input types.",
+    "dev-admin: the failure path of the new server.ts try/catch is untested. check-dev-admin uses process.execPath instead of node, and a crate.db-wal change prints WARN rather than failing, because the owner dev server also writes that file.",
+    "admin-web known gap: a verify landing during an in-flight users refresh could be overwritten by the stale response.",
+    "A temporary owner edit to apps/web/src/App.vue appeared during the build and the owner removed it. It never reached the branch. The AC12 gate ran on a clean export of HEAD.",
+    "Checklist tester was quick (8 tool calls) and judged AC3 from the PASS lines without reading the script. The harbormaster spot-checked the script (env from scratch, table dumps, production start with override attempt) and the test titles against the AC clauses, and accepted the verdicts."
+  ],
+  "observations": [
+    {
+      "what": "AboutView tells visitors the news and recommendations are demo data, which becomes untrue once an admin publishes real items. Left unchanged, outside the brief.",
+      "severity": "low"
+    },
+    {
+      "what": ".env has ADMIN_EMAIL=trf@frission.com (double s), which differs from the frisson.com domain of the new login. Nothing here changes .env.",
+      "severity": "low"
+    },
+    {
+      "what": "apps/api/src/db/schema.ts still comments news as fictional demo news; news can now be admin-written.",
+      "severity": "low"
+    },
+    {
+      "what": "The owner dev server applied the dev admin to data/crate.db during the build (read-only check: 9 users, 1 admin, 0 ownerless crates, so nothing was reassigned). It is now the only and earliest admin, so ADMIN_EMAIL in .env will not create a second admin on this database, because bootstrap only acts when no admin exists.",
+      "severity": "medium"
+    },
+    {
+      "what": "Home tags every news item Demo, including admin-created ones (unconditional DemoTag in HomeView.vue). Published news shows on the front end with a Demo label.",
+      "severity": "medium"
+    },
+    {
+      "what": "For about 0.5s after a route change the view transition swallows clicks and taps (viewTransitions.ts); pre-existing, not from this change.",
+      "severity": "low"
+    },
+    {
+      "what": "/admin is very long at 390px, with no way to jump between sections.",
+      "severity": "low"
+    }
+  ]
+}

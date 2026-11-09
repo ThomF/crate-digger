@@ -1,0 +1,102 @@
+{
+  "goal": "Add an admin-only panel at /admin. It lists all news, all crates (suggested and user-created) and all users, and lets an admin grant or revoke the verified tag. Admins can also create news and crates, singly or in bulk, that appear on the public front end. An admin@frisson.com / admin login is added to the existing users idempotently, with no data reset, and never in production.",
+  "constraints": [
+    "Admin account path: add a new idempotent step (for example ensureDevAdmin in apps/api/src/services/) called from apps/api/src/server.ts after bootstrapFromEnv. It only ever inserts one users row. It must not call db:seed, delete or update any existing row, or change an existing account's password or role.",
+    "The existing bootstrapAdmin cannot be reused as it stands, for two reasons. It does nothing when any admin already exists. Its createUser call goes through hashPassword, which throws 400 for passwords under 8 characters, and a thrown error in that server.ts try block exits the process. So ADMIN_PASSWORD=admin would stop the app from starting.",
+    "The 8-character minimum stays in force for signup, hashPassword's public behaviour and ADMIN_EMAIL/ADMIN_PASSWORD bootstrap. The short password is allowed only inside the dev-admin step, through a narrowly scoped internal hash path. apps/api/test/passwords.test.ts and the signup test in apps/api/test/auth-accounts.test.ts must pass unchanged.",
+    "Production guard: the dev-admin step never runs when NODE_ENV=production, whatever other variables are set. The Dockerfile already sets NODE_ENV=production. SEED_DEV_ADMIN=false disables it in other environments, following the shouldSeedDemo pattern, and SEED_DEV_ADMIN=true cannot override production. Production admins continue to come only from ADMIN_EMAIL/ADMIN_PASSWORD. A failure in this step is logged and must not stop the API from starting.",
+    "The plaintext password must never be logged. password_hash must never appear in any API response.",
+    "All new endpoints live under /api/admin/*, are registered in a new routes file with prefix /api, and call the existing requireAdmin from apps/api/src/services/permissions.ts, which stays the single authority. Verification reuses the existing PATCH /api/users/:username/verified route and setVerified.",
+    "Suggested means crates.recommended_rank is non-NULL, the same column that drives Home's Recommended crates section. Do not add a second flag.",
+    "Admin-created news uses the existing news_items table. seed_key is NOT NULL UNIQUE, so generate a key such as admin:<uuid>. It must never collide with the demo 'news:' keys and must not appear in any response. Any migration must be additive and must keep existing rows.",
+    "Follow the repo's conventions: Vue view plus Pinia session store (session.isAdmin), a router meta guard next to requiresAuth, shared zod schemas in packages/shared, Prettier and ESLint, Conventional Commits, data-classification comments. The users list is CONFIDENTIAL PII.",
+    "Document the dev-admin step and SEED_DEV_ADMIN in README.md, docs/DEPLOY.md and .env.example.",
+    "Browser and command checks run on a temporary DATA_DIR or a temporary copy of the database, never on the owner's data/crate.db.",
+    "Out of scope: changing roles, deleting or suspending users, password reset or change, audit log, deleting demo rows permanently, and any real news feed or AI recommendations."
+  ],
+  "assumptions": [
+    "'crates by the suggestions, by user created' is read as one crates view with two sections: Suggested (recommended_rank set, in rank order) and User created (all other crates, each showing its owner). Please confirm.",
+    "'Seed ... as the console admin' is read, as the brief instructs, as creating content from the panel UI, plus a bulk JSON paste form for crates-with-records and news. No CLI seed command is added.",
+    "Admin-created crates are owned by the signed-in admin. There is no 'create on behalf of another user'.",
+    "Records are added to a single-form crate through the existing /albums/new?crateId= editor, which admins can already use, or through the bulk form. Crate editing and deletion stay on the existing /crates page, which the panel links to. Deleting a crate that still holds records keeps the existing 409.",
+    "'Any other admin like things' is limited to: overview counts, the suggested on/off toggle, and news edit and delete. Anything further is left for a later run so this contract stays small.",
+    "The login is dev-only, as decided in this brief from the repo's existing NODE_ENV and Dockerfile pattern. On a production deployment the owner would set ADMIN_EMAIL=admin@frisson.com with a strong ADMIN_PASSWORD. If the owner really wants password 'admin' in production, that decision has to be made explicitly.",
+    "If admin@frisson.com already belongs to an ordinary account, the step refuses to promote it. It logs a warning and leaves the row untouched, matching bootstrap's existing 'refuse to promote silently' rule. The owner's data/crate.db was not inspected, so whether that email already exists there is unknown.",
+    "The account's username is 'admin', or the next free admin-N if that is taken, the same rule as freeAdminUsername. The display name is 'Admin'.",
+    "Non-admins who open /admin are redirected to home rather than shown a 403 page. Signed-out visitors go to login with ?next=/admin.",
+    "New news defaults publishedAt to the current time, which places it above the demo news (all dated in the past). Bulk import is not de-duplicated, so pasting the same JSON twice creates duplicates."
+  ],
+  "risks": [
+    "Password 'admin' is trivially guessable and below the app's own 8-character policy. It is requested by the owner and accepted for local development only. The guard is the NODE_ENV=production refusal plus the API's default loopback bind (HOST 127.0.0.1).",
+    "The guard fails open if NODE_ENV is unset on an internet-facing host started outside the Dockerfile or Compose. The same weakness exists in shouldSeedDemo. DEPLOY.md must say so.",
+    "The credential travels with the data. A dev database restored to production through db:backup/db:restore, or a copied file, carries the working admin/admin row, and the production guard only stops creation. DEPLOY.md must tell operators to remove that row or use a clean production database. A startup check that detects it is a sensible follow-up.",
+    "If the target database has no admin yet and ADMIN_EMAIL is unset, the dev admin becomes the earliest admin. The existing bootstrap then assigns every ownerless crate to it on the next start. That changes owner_id on those crates, by existing design. Running after bootstrapFromEnv keeps a real ADMIN_EMAIL admin first, and when an earlier admin exists nothing changes.",
+    "Demo rows come back after deletion. seedDemoContent re-inserts any missing demo news or crate on every start while seeding is on, which is the default outside production. A demo news item deleted from the panel returns on restart, though admin-created rows do not. Edited demo rows stay edited because they are matched by key. The panel should state this next to delete, or the owner may read it as a bug.",
+    "Panel-created content is real data in the owner's database. There is no audit trail and no undo, and bulk import can add many rows at once. Run db:backup before bulk imports.",
+    "The API's body size limit may constrain large bulk pastes, because the repo sets no explicit bodyLimit and Fastify's default of about 1 MB applies. An oversized paste must fail as a clean error with nothing written, not partially.",
+    "The users list exposes every email address to any admin, by design. Only admin-only routes may return it.",
+    "Browser checks run in Chromium only, as in earlier runs."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "statement": "A test in apps/api/test/ populates a database with users, crates, albums, tracks, follows and news, then runs the dev-admin step with NODE_ENV unset. Exactly one new users row exists, with email admin@frisson.com and role admin, and logging in through the existing login endpoint with admin@frisson.com / admin returns 200. Every row that existed before is deep-equal to its earlier value. A second run adds no row and leaves that account's password_hash byte-identical.",
+      "check": "unit"
+    },
+    {
+      "id": "AC2",
+      "statement": "Tests prove each of the following. (a) NODE_ENV=production creates no row, including with SEED_DEV_ADMIN=true. (b) SEED_DEV_ADMIN=false creates no row. (c) If admin@frisson.com already belongs to a role=user account, that row is unchanged (role and hash), a warning is logged, and nothing throws. (d) If username 'admin' is taken by another account, the new account gets admin-2 and that other account is unchanged. (e) No log output contains the plaintext password. (f) Signup with a 5-character password still returns 400, and hashPassword('admin') still rejects.",
+      "check": "unit"
+    },
+    {
+      "id": "AC3",
+      "statement": "Start the real API (node apps/api/src/server.ts, with NODE_ENV unset and SEED_DEMO_DATA=false) against a temporary database already holding users, crates, albums and news, then stop it and start it again. After both starts, every table's pre-existing rows are identical to a dump taken before the first start (the only allowed difference is the one added admin users row), and the users count has risen by exactly 1. POST login with admin@frisson.com / admin returns 200, and the session's user has role admin. A third start with NODE_ENV=production on a separate temporary database that has no such account does not create it, and login there returns 401.",
+      "check": "command"
+    },
+    {
+      "id": "AC4",
+      "statement": "A test enumerates every route registered under /api/admin (collected from the Fastify app with an onRoute hook, not a hand-written list), and asserts the list is non-empty, plus PATCH /api/users/:username/verified. Each route returns 401 when signed out and 403 when signed in as a role=user account. Table row counts are unchanged after those refused calls. The same test confirms that an admin session does not receive 401 or 403 on those routes.",
+      "check": "api"
+    },
+    {
+      "id": "AC5",
+      "statement": "As an admin, GET /api/admin/overview returns correct counts of users, crates, suggested crates, albums and news for a known fixture. GET /api/admin/users returns every user, including role=user and demo users, each with id, email, username, displayName, role, verified, an isDemo boolean, createdAt and crateCount. A recursive check of the serialized response finds no passwordHash, password_hash or demoSeedKey key. After PATCH /api/users/:username/verified with {verified:true}, that user shows verified:true in GET /api/admin/users and on the public profile response. After {verified:false}, both show false.",
+      "check": "api"
+    },
+    {
+      "id": "AC6",
+      "statement": "As an admin, GET /api/admin/crates returns every crate, including ownerless ones, with id, name, ownerUsername (null if ownerless), albumCount, recommendedRank and createdAt. POST /api/admin/crates with {name, suggested:true} creates a crate owned by the admin, which appears in public GET /api/crates and last in public recommended-crates order. PATCH /api/admin/crates/:id/suggested with {suggested:false} sets recommendedRank to null and removes it from the recommended list; {suggested:true} adds it back at the end. Suggesting an ownerless crate returns 409, and an unknown id returns 404.",
+      "check": "api"
+    },
+    {
+      "id": "AC7",
+      "statement": "As an admin: POST /api/admin/news with title, summary and source returns 201, and the item appears first in public GET /api/news (signed out) with no seedKey field. PATCH /api/admin/news/:id changes the fields seen in public GET /api/news. DELETE /api/admin/news/:id removes the item from it. A missing or blank title, summary or source returns 400 and writes no row. An unknown id returns 404. After running seedDemoContent, the admin-created item is still present and unchanged, and there are no duplicate rows.",
+      "check": "api"
+    },
+    {
+      "id": "AC8",
+      "statement": "As an admin, POST /api/admin/import with {crates:[{name, label?, color?, suggested?, albums?:[{title, artist, year?, genre?, format?, tracks?}]}], news:[{title, summary, source, publishedAt?}]} creates everything and returns the created counts. The crates, their albums and tracks, and the news are then readable through the public crate, album and news endpoints. A payload with one invalid entry anywhere (for example, the last album with no artist) returns 400 naming the failing entry, and all table row counts are unchanged, proving all-or-nothing.",
+      "check": "api"
+    },
+    {
+      "id": "AC9",
+      "statement": "Web unit tests: visiting /admin signed out redirects to login with next=/admin, as role=user redirects to home, and as admin renders the panel with sections labelled News, Suggested crates, User created crates and Users. Those sections show fixture items from each API list, including owner names. The account menu shows an Admin link for an admin and no such link for role=user. A failed API load shows an error message, not an empty list.",
+      "check": "unit"
+    },
+    {
+      "id": "AC10",
+      "statement": "Real browser, temporary database, 1280px wide. Type admin@frisson.com and admin into the /login form and submit, open the account menu, and click Admin, which lands on /admin. Use the panel forms to create a news item and a crate with Suggested on; both appear in the panel without a page reload. In a separate signed-out browser context, / shows the news item under Music news and the crate under Recommended crates, and /list shows the crate. In a third context, signed in as a role=user account, going to /admin directly ends on / with no panel content visible.",
+      "check": "browser"
+    },
+    {
+      "id": "AC11",
+      "statement": "Same browser pass, as admin. Click the verify control on a user in the Users section; without a reload the row shows verified, and that user's public /u/:username page in a signed-out context shows the verified badge. Click it again and the badge is gone after a reload. Paste a valid JSON payload holding a crate with 2 albums and a news item into the bulk form and submit: a success count shows, the crate opens at /crates/:id showing both records, and the news shows on /. Pasting invalid JSON shows an inline error and adds nothing. At 1280px and 390px wide, /admin has no page-level horizontal overflow (document scrollWidth <= viewport width), and the verify and create controls can be clicked with real mouse and touch input at those widths respectively.",
+      "check": "browser"
+    },
+    {
+      "id": "AC12",
+      "statement": "From the repo root, npm run format:check, npm run lint, npm run typecheck, npm test and npm run build all exit 0. Every test in the baseline (717 tests: 360 API, 357 web) still passes, or any that had to change is listed with the reason in the run report; passwords.test.ts and auth-accounts.test.ts must not be among those changed.",
+      "check": "command"
+    }
+  ]
+}
