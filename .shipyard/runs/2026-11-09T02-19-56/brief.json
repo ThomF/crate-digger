@@ -1,0 +1,61 @@
+{
+  "goal": "After a flip, no invisible flipped sleeve catches clicks. Clicking the crate front or tape label does nothing, the visible art still opens the record on show, and all flip controls keep working. This is proven by real mouse and touch input sampled across the crate, not on one strip.",
+  "constraints": [
+    "Bug fix only: the expected change is in /Users/thomasfuhriman/code/crate-digger/apps/web/src/components/crate/CrateBox.vue, and possibly /Users/thomasfuhriman/code/crate-digger/apps/web/src/utils/crateLayout.ts. No redesign of the crate.",
+    "The flip-out animation stays: flipped sleeves remain drawn with the same transform and opacity. Do not remove them with v-if or display:none.",
+    "Real-click proof goes in /Users/thomasfuhriman/code/crate-digger/.shipyard/checks/browser.mjs, using real mouse and touch input on a temp DB. A component test cannot stand in for it.",
+    "Existing checks in browser.mjs may be added to but not removed or loosened.",
+    "Out of scope, as recorded known limits: phone swipe on the crate never scrolling, 'Back to the crates' returning to /shelf, and Firefox and Safari coverage.",
+    "No merge or push."
+  ],
+  "assumptions": [
+    "Clicking the crate front or tape label should do nothing. The request says only that moving back one record is wrong. The panel has no click handler, and a click on it at position 1, with no flipped sleeve drawn, should already do nothing. If the owner wants the label to open the record, AC1 changes.",
+    "Clicking an invisible sleeve is not a feature worth keeping. Going back stays available through the Back button, ArrowUp, wheel up and drag up.",
+    "'The fix' in the request means commit 57302be, which set pointer-events on the crate box and its children.",
+    "Clicking a visible back-sleeve edge should still flip forward to that record. The existing unit test and the code comment both describe this.",
+    "/shelf uses the same CrateBox, so it has the same defect and needs one sample rather than a full matrix.",
+    "Position survives in-app navigation because the library store keeps it in memory, so returning from an album can show flipped sleeves without any flip on that page visit.",
+    "Chromium via Playwright is enough for this run, matching the existing check."
+  ],
+  "risks": [
+    "The defect was diagnosed from the code and not reproduced at intake. A flipped sleeve (offset < 0) has opacity 0 but gets pointer-events: auto from `.crate > *`, and its tipped top edge comes forward of the front panel's translateZ(70px). onSleeveClick then calls goTo(index + offset), which moves back.",
+    "Two flipped sleeves can be drawn, not one, because visibleRange starts at index - 2. Testing only position 2 of 4 would miss the offset -2 sleeve.",
+    "The current check cannot see this defect. Part b2 always starts from a fresh visit at position 1, so no flipped sleeve exists, and its one observation is logged rather than asserted.",
+    "Hand geometry for a 272px sleeve suggests the catch zone covers only a band of the panel: roughly y 337-407 in the scene, against a panel at 307-430. It may spill about 7px past each panel side. These are estimates, so the check should sample the panel rather than rely on them. A sample 10px below the panel top, like the existing one, would miss the band.",
+    "Tempting wrong fixes the criteria must reject: pointer-events: none on the panel lets clicks reach the current sleeve and opens the album (AC1). Ignoring offset < 0 in the click handler leaves the invisible sleeve on top and still showing a pointer cursor (AC1 hit test). Removing flipped sleeves from the DOM kills the animation (AC5).",
+    "Playwright's touchscreen API only taps, so touch flips use the Flip button rather than a swipe. Touch-drag behaviour after the fix is not exercised.",
+    "The sample matrix adds runtime to a check whose stage was already the slowest last run (14m 11s). Share one browser pass and avoid long sleeps per sample."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "statement": "Crate front does nothing after a flip. Use a 4-record crate on /crates/:id at 1280px mouse, 390px mouse and 390px touch (tap). Sample at positions 2/4 and 3/4, reached by ArrowDown with mouse and by tapping Flip with touch, plus one 1280px case each reached by wheel and by drag. Sample these points: tape label centre, each label end, just above the label, midway from label to panel bottom, 8px inside each panel side at label height, and 3px outside each panel side at label height. For every sample, .count and the URL are unchanged after the click, and document.elementFromPoint beforehand returns an element not inside a .sleeve. Also, at 1280px: (a) a label-centre click with no wait after a flip leaves .count unchanged; (b) after opening a record from 3/4 and pressing browser Back, .count reads 3/4 and a label-centre click changes nothing; (c) on /shelf at position 2 or later, a label-centre click changes neither .count nor the URL.",
+      "check": "browser"
+    },
+    {
+      "id": "AC2",
+      "statement": "Visible art opens the record on show after a flip. At 1280px mouse, 390px mouse and 390px touch, at positions 2/4 and 3/4, a click (or a tap on touch) on the current sleeve's horizontal centre navigates to the href held by .now h2 a at that position. Mouse samples are at 25%, 50%, 75% and 2px above the panel top of the visible art height. Touch samples at 50%. Browser Back then returns to the crate URL with .count unchanged.",
+      "check": "browser"
+    },
+    {
+      "id": "AC3",
+      "statement": "Flip controls still work, at 1280px starting from 2/4. (a) Scanning upward from the current sleeve's top edge finds a point whose elementFromPoint is a non-current .sleeve, and clicking it increases .count with the URL unchanged; finding no such point is a failure. (b) The Back button moves to 1/4. (c) ArrowUp moves back one. (d) A wheel-up of -120 with the pointer on the tape label moves back one. (e) A mouse drag starting on the tape label, moving at least 72px down, increases .count, and moving at least 72px up decreases it. Neither drag direction opens an album.",
+      "check": "browser"
+    },
+    {
+      "id": "AC4",
+      "statement": "Running `node .shipyard/checks/browser.mjs` from the repo root exits 0 and prints no FAIL line. Its output has one line per AC1, AC2 and AC3 sample, naming viewport, position, sample point, hit element and result. All checks present at ffb78fa are still present.",
+      "check": "command"
+    },
+    {
+      "id": "AC5",
+      "statement": "A named test in apps/web/src/components/crate/CrateBox.test.ts mounts CrateBox at index 2 and asserts the two flipped sleeves are still rendered, each with transform 'translateZ(40px) rotateX(-55deg)' and opacity 0. `npm test --workspace apps/web` passes it, and the existing test 'flips to a record further back when you click its edge' passes unmodified.",
+      "check": "unit"
+    },
+    {
+      "id": "AC6",
+      "statement": "The new check fails without the fix: with apps/web/src restored to ffb78fa and the updated .shipyard/checks/browser.mjs kept, the check exits 1 with at least one FAIL line naming a tape-label sample. With the fix restored, `npm test`, `npm run typecheck` and `npm run lint` all exit 0.",
+      "check": "command"
+    }
+  ]
+}

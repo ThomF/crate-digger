@@ -1,0 +1,44 @@
+{
+  "commit": "ffb78fa828415e5968151ccc4f24d3fa4b6aadab",
+  "testCommand": "npm test",
+  "structure": {
+    "layout": "npm workspaces monorepo (packages/*, apps/*), ESM, Node >=22.18, package name frisson",
+    "language": "TypeScript ~5.8.3; the API runs .ts directly via node",
+    "packages": {
+      "apps/web": "@frisson/web. Vue 3, Vue Router, Pinia SPA on Vite 6. Typecheck with vue-tsc. Sources in apps/web/src (components, views, stores, composables, utils, forms, router, App).",
+      "apps/api": "@frisson/api. Fastify 5 with zod type provider. SQLite via better-sqlite3 and drizzle-orm. Tests in apps/api/test.",
+      "packages/shared": "@frisson/shared. Zod schemas and sorting. Typecheck only."
+    },
+    "buildSystem": "Root scripts: dev, build, typecheck, test, lint (eslint .), format, format:check. Playwright ^1.65 is a root dev dependency."
+  },
+  "tests": {
+    "runner": "vitest ^3.2 in apps/web (happy-dom, @vue/test-utils) and apps/api",
+    "testCommand": "npm test",
+    "notes": "Run from the repo root. Single file: npm test -w apps/web -- src/views/CrateView.test.ts. Typecheck: npm run typecheck. Lint: npm run lint.",
+    "locations": "apps/api/test/*.test.ts; apps/web/src/**/*.test.ts colocated with source",
+    "baseline": "exit 0, 326 tests in 31 files, about 8s",
+    "browser": "No Playwright config or e2e script. .shipyard/checks/browser.mjs is a Playwright script printing PASS/FAIL per criterion. README documents DATA_DIR temp + SEED_DEMO_DATA=false for browser checks."
+  },
+  "conventions": {
+    "formatting": "Prettier: no semis, single quotes, width 100, trailing commas all. Editorconfig: lf, 2 spaces.",
+    "lint": "ESLint 9 flat config with eslint-plugin-vue flat/essential and @vue/eslint-config-typescript. Prettier owns style.",
+    "ci": ".github/workflows/ci.yml: npm ci, format:check, lint, typecheck, test, build, plus docker smoke test",
+    "webStructure": "src/api, stores (Pinia), views (*View.vue), components by feature (album/, crate/, forms/, profile/), composables (useXxx.ts), utils (plain functions)",
+    "naming": "Vue files PascalCase; composables useXxx.ts; tests *.test.ts next to source",
+    "git": "Conventional Commits with scope, e.g. fix(web): ...; ADRs for significant decisions"
+  },
+  "documentation": {
+    "files": ["README.md", "docs/SPEC.md", "docs/DEPLOY.md", "docs/adr/0001-0006", ".github/pull_request_template.md"],
+    "gaps": "No CLAUDE.md, CONTRIBUTING or CHANGELOG. docs/SPEC.md repo tree is an early plan and differs from the actual files."
+  },
+  "relevant": {
+    "owner": "apps/web/src/components/crate/CrateBox.vue owns the sleeve stack. Flip state is v-model:index, driven by apps/web/src/composables/useCrateFlip.ts (goTo, wheel, keys, pointer drag, dragged ref). apps/web/src/views/CrateView.vue binds index to the library store and renders CrateBox, .now text and the Back/Pull/Flip buttons.",
+    "sleeveRendering": "apps/web/src/utils/crateLayout.ts: sleevePose(offset), visibleRange(index,count). CrateBox drawn computed slices albums via visibleRange: start = index - VISIBLE_FLIPPED(1) - 1, end = index + 12 + 2. Each is div.sleeve (class current when offset 0) with inline transform, opacity, zIndex from sleevePose.",
+    "flippedSleeves": "offset < 0: transform translateZ(40px) rotateX(-55deg), opacity 0, zIndex 101 (above all unflipped sleeves at 100 - depth). Invisible only through opacity 0; still hit-testable. Up to 2 rendered. Sleeves deeper than 12 behind are also opacity 0, with a low zIndex.",
+    "clickHandler": "div.sleeve @click=onSleeveClick(offset, album) in CrateBox.vue: if flip.dragged return; if offset===0 emit('open', album); else flip.goTo(index + offset). A click on the invisible offset -1 sleeve calls goTo(index-1), moving back one record.",
+    "tapeLabel": "span.crate-label inside div.panel.front in CrateBox.vue (crate.label ?? crate.name). .panel.front is translateZ(70px), bottom -4%, height 42%. Distinct from the .tab crate-picker buttons in CrateView (comments also call those tape labels) and from .divider-tab.",
+    "priorFix": "57302be set .crate { pointer-events: none } and .crate > * { pointer-events: auto } so the tilted crate plane stops swallowing sleeve clicks. No rule disables pointer events on flipped sleeves.",
+    "coverage": "CrateBox.test.ts (no layout or hit-testing) has no test for offset<0 sleeves or the front panel. .shipyard/checks/browser.mjs clickCase clicks art only at index 0 on a fresh load and never after a flip; a click 10px below the panel top is logged as OBS with no assertion; nothing clicks .crate-label. Helpers artGeometry and hitAt exist there.",
+    "unverified": "The surveyor did not run the app, so the actual hit overlap is unconfirmed."
+  }
+}

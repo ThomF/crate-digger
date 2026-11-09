@@ -1,0 +1,23 @@
+{
+  "round": 1,
+  "defects": [
+    {
+      "id": "D1",
+      "criterion": "AC1",
+      "cause": "After a backward flip the new current sleeve (offset 0, pointer events on) animates up from the tipped pose, in front of the front panel. A click in the first 20-30ms lands on it and opens the album. Evidence: ArrowUp then label click at 0, 10 and 20ms opened /albums/N; 30 and 40ms did nothing; from 3/4 and 2/4.",
+      "verdictNote": "Tester passed AC1 with (a) asserted on forward flips only and flagged the limit. Harbormaster reads a flip as either direction, so AC1 fails.",
+      "task": "T1-fix1",
+      "files": [
+        "apps/web/src/components/crate/CrateBox.vue",
+        "apps/web/src/components/crate/CrateBox.test.ts"
+      ],
+      "attempts": [
+        {
+          "round": 0,
+          "tried": "pointerEvents none on offset<0 sleeves",
+          "result": "Fixes flipped sleeves; does not cover offset 0 sleeve animating back."
+        }
+      ]
+    }
+  ]
+}

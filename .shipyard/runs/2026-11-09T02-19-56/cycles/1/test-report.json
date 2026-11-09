@@ -1,0 +1,20 @@
+{
+  "criteria": [
+    {
+      "id": "AC5",
+      "verdict": "pass",
+      "evidence": "Test 'keeps flipped sleeves drawn for the flip-out animation, without catching clicks' exists in CrateBox.test.ts (line 84). It mounts at index 2 (mountCrate(2)), asserts exactly 2 non-current .sleeve elements are rendered, each with transform 'translateZ(40px) rotateX(-55deg)', opacity '0', pointerEvents 'none', and that the current sleeve is not pointer-events none. test-output.txt shows CrateBox.test.ts 10 tests passed; web suite 327/327 passed, no failures. 'flips to a record further back when you click its edge' (line 74) is unmodified: git diff ffb78fa HEAD on the file shows 16 insertions only, none touching that test; it asserts update:index [[2]] and no open."
+    },
+    {
+      "id": "AC4",
+      "verdict": "pass",
+      "evidence": "Run by the harbormaster: node .shipyard/checks/browser.mjs exit 0, no FAIL line, PASS AC12/AC1/AC2/AC3, 99s. Only removed line against ffb78fa is the old process.exit, relocated. Output: cycles/1/ac4-output.txt"
+    },
+    {
+      "id": "AC6",
+      "verdict": "pass",
+      "evidence": "Run by the harbormaster on a temp export of ffb78fa with the updated check: exit 1, FAIL AC1 (47 of 97), with FAIL lines naming tape label centre, left end and right end. With the fix, npm test, typecheck and lint exit 0. Output: cycles/1/ac6-output.txt"
+    }
+  ],
+  "observations": []
+}

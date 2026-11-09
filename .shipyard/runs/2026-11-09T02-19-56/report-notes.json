@@ -1,0 +1,33 @@
+{
+  "plan_changes": [
+    {
+      "change": "AC1(a) enforced for backward flips as well as forward, with a fix round added.",
+      "why": "The browser tester asserted forward flips only and flagged it. The criterion says a flip, and the backward case opens the album, so the harbormaster failed AC1 instead of narrowing it."
+    }
+  ],
+  "notes": [
+    "dev-T1 did not write its report file, citing a standing rule against report files; the harbormaster saved its final message as agents/dev-T1.md.",
+    "Hit testing during a backward flip: for about 20ms the sleeve is still the hit target over the panel and the click is ignored by the guard. So the backward no-wait samples assert count and URL but not the hit element, and the pointer cursor could show for that moment.",
+    "Backward no-wait clicks were asserted at 1280px mouse on the label centre only, not at 390px, not with touch, and not at the points just outside the panel sides, where the rect guard does not apply.",
+    "The window was measured in headless Chromium; 20ms is not a guaranteed bound on slower machines.",
+    "Harbormaster verified the final check three ways: current code exit 0; pre-fix-round source b7918c1 exit 1 with 6 of 104 AC1 samples failing; ffb78fa source exit 1 with 53 of 103 failing, 49 FAIL lines naming the tape label. Final npm test, typecheck and lint exit 0."
+  ],
+  "observations": [
+    {
+      "what": "Confirmed by the browser tester: an invisible sleeve at offset 13 catches clicks. In a 16-record crate at 1/16 and 1280px, clicking above the visible stack jumped to 14/16 with no visible target. Different defect from the flipped sleeves; a fix round may not take it. The manager suggests the pointer-events condition could become pose.opacity === 0.",
+      "severity": "medium"
+    },
+    {
+      "what": "The check writes .shipyard/checks/ac12-long-*.png, which are tracked, so every run leaves them modified. The harbormaster restored them after each run in this one.",
+      "severity": "low"
+    },
+    {
+      "what": "One -120 wheel event moves one record though WHEEL_STEP is 60, apparently because goTo reads a model value not yet updated in that tick. AC3(d) depends on this.",
+      "severity": "low"
+    },
+    {
+      "what": "Dragging down from the tape label leaves .scene after about 40px, so that drag ends early and moves one record.",
+      "severity": "low"
+    }
+  ]
+}

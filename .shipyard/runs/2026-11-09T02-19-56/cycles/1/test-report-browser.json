@@ -1,0 +1,41 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "verdict": "pass",
+      "evidence": "`node .shipyard/checks/browser.mjs` printed PASS AC1 with 98 of 98 samples ok (output: .shipyard/runs/2026-11-09T02-19-56/cycles/1/browser-output.txt). Covers 9 points at 2/4 and 3/4 for 1280 mouse, 390 mouse, 390 touch via Flip tap, and 1280 reached by wheel and by drag, plus (a), (b), (c). Example: '1280-mouse pos=2 / 4 via=ArrowDown point=\"tape label centre\" at=(640.0,749.0) hit=span.crate-label count=2 / 4->2 / 4 url=/crates/4'. Discrimination: the same script run on a scratch copy of ffb78fa source exited 1 with AC1 at 47 of 97 failing, e.g. 'FAIL AC1 1280-mouse pos=2 / 4 via=ArrowDown point=\"tape label centre\" ... hit=div.motif (in non-current .sleeve) count=2 / 4->1 / 4'. So the defect is reproduced and the fix removes it. Limit: (a) was asserted for forward flips (ArrowDown), the way AC1 reaches its positions. A no-wait click after a backward flip opens the album; see the first observation. If the owner reads 'a flip' in (a) to include backward flips, this criterion fails."
+    },
+    {
+      "id": "AC2",
+      "verdict": "pass",
+      "evidence": "PASS AC2 with 21 of 21 samples ok. Mouse at 25%, 50%, 75% and 2px above panel top, touch at 50%, at 1280, 390 and 390 touch, positions 2/4 and 3/4, each opening the .now h2 a href, with Back restoring the crate URL and .count. Example: '1280-mouse pos=2 / 4 via=ArrowDown point=\"2px above panel top\" at=(640.0,665.7) hit=div.motif (in current .sleeve) opened=/albums/14 expected=/albums/14 backCount=2 / 4 backUrl=/crates/4'. Also 9-point deadSpots sweeps across the visible art (1280 at both positions, 390 at 3/4): dead=[]."
+    },
+    {
+      "id": "AC3",
+      "verdict": "pass",
+      "evidence": "PASS AC3 with 12 of 12 samples ok at 1280. (a) scan found hit=p.edge (in non-current .sleeve) at y=465.5, click moved 2/4->3/4 with URL unchanged, 3-point sweep along the edge dead=[]. (b) Back button 2/4->1/4; 9-point sweeps of Back and Flip dead=[]. (c) ArrowUp 2->1 and 3->2. (d) wheel -120 on tape label 2->1 and 3->2; 3/4 was added because the clamp at 1/4 would hide a double step. (e) drag 80px from tape label: down 2->3, up 2->1, up 3->1, URL unchanged, no album opened."
+    }
+  ],
+  "observations": [
+    {
+      "what": "Clicking the tape label within about 20-30ms of a backward flip opens the album. Repeatable: ArrowUp then a click at delays of 0, 10 and 20ms opened /albums/N, while 30ms and 40ms did nothing, and it reproduces from both 3/4 and 2/4. Cause: the new current sleeve animates back from the tipped pose, in front of the panel, with pointer events on. A person would rarely hit a window this short. The script prints this as an OBS line and does not assert it. It is outside the fix's offset<0 rule and may predate it (not checked on ffb78fa, where the same click landed on a flipped sleeve instead).",
+      "severity": "low"
+    },
+    {
+      "what": "Confirmed the spec's open question: an invisible sleeve at offset 13 catches clicks. In a 16-record crate at 1/16 and 1280px, clicking above the visible stack (hit p.edge in a sleeve with opacity 0, top about 348 against 353 for the last visible sleeve) jumped to 14 / 16 with no visible target. This is a different defect from the flipped sleeves and the 4-record check cannot see it.",
+      "severity": "medium"
+    },
+    {
+      "what": "The existing partA writes .shipyard/checks/ac12-long-{1280,390,320}.png, and these are tracked, so every run of the check leaves them modified in git status. They sit inside .shipyard and I left that code alone under AC4, but someone should decide whether to commit or restore them. .shipyard/checks/browser.mjs is also tracked and now modified.",
+      "severity": "low"
+    },
+    {
+      "what": "Wheel: one -120 event moves one record even though WHEEL_STEP is 60, apparently because goTo reads a model value that has not yet updated within the tick. AC3(d) depends on this behaviour. A code reader would expect two steps.",
+      "severity": "low"
+    },
+    {
+      "what": "Full script runtime was about 100s on the fixed build, of which AC1 to AC3 take about 76s. Dragging down from the tape label leaves .scene and its panel after about 40px, so that drag ends early and moves one record (2/4->3/4) rather than two.",
+      "severity": "low"
+    }
+  ]
+}

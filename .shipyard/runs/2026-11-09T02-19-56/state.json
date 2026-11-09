@@ -1,0 +1,156 @@
+{
+  "runId": "2026-11-09T02-19-56",
+  "target": "/Users/thomasfuhriman/code/crate-digger",
+  "request": "Open the shipyard here. issue: clicks after a flip: an invisible sleeve sits over the crate front, so clicking the tape label moves back one record. This wasn't re-tested after the fix.",
+  "branch": "shipyard/crate-sleeve-click-fix-2026-11-09T02-19-56",
+  "size": "standard",
+  "budgetTokens": null,
+  "stage": "done",
+  "cycle": 1,
+  "maxCycles": 3,
+  "fixRound": 1,
+  "maxFixRounds": 3,
+  "criteria": {
+    "AC1": "pass",
+    "AC2": "pass",
+    "AC3": "pass",
+    "AC4": "pass",
+    "AC5": "pass",
+    "AC6": "pass"
+  },
+  "tasks": {
+    "T1": "done",
+    "T1-fix1": "done"
+  },
+  "deaths": [],
+  "verdict": "shipped",
+  "baseCommit": "ffb78fa828415e5968151ccc4f24d3fa4b6aadab",
+  "startedAt": "2026-11-09T02:20:00Z",
+  "endedAt": "2026-11-09T02:57:05Z",
+  "stageTimes": {
+    "intake": {
+      "start": "2026-11-09T02:20:00Z",
+      "end": "2026-11-09T02:22:54Z"
+    },
+    "survey": {
+      "start": "2026-11-09T02:20:00Z",
+      "end": "2026-11-09T02:21:18Z"
+    },
+    "plan": {
+      "start": "2026-11-09T02:22:54Z",
+      "end": "2026-11-09T02:24:47Z"
+    },
+    "build": {
+      "start": "2026-11-09T02:24:47Z",
+      "end": "2026-11-09T02:26:13Z"
+    },
+    "test": {
+      "start": "2026-11-09T02:26:13Z",
+      "end": "2026-11-09T02:44:03Z"
+    },
+    "fix": {
+      "start": "2026-11-09T02:44:03Z",
+      "end": "2026-11-09T02:55:35Z"
+    },
+    "report": {
+      "start": "2026-11-09T02:55:35Z",
+      "end": "2026-11-09T02:57:05Z"
+    }
+  },
+  "active": [],
+  "fastPaths": [
+    "direct-fix",
+    "scoped-retest"
+  ],
+  "usage": [
+    {
+      "agent": "surveyor-structure-tests",
+      "role": "surveyor",
+      "model": "sonnet",
+      "tokens": 14424,
+      "toolUses": 10,
+      "durationMs": 15115
+    },
+    {
+      "agent": "surveyor-relevant",
+      "role": "surveyor",
+      "model": "sonnet",
+      "tokens": 22885,
+      "toolUses": 9,
+      "durationMs": 22489
+    },
+    {
+      "agent": "surveyor-conventions-docs",
+      "role": "surveyor",
+      "model": "sonnet",
+      "tokens": 29039,
+      "toolUses": 18,
+      "durationMs": 29981
+    },
+    {
+      "agent": "intake-1",
+      "role": "intake",
+      "model": "opus",
+      "tokens": 39231,
+      "toolUses": 16,
+      "durationMs": 122280
+    },
+    {
+      "agent": "manager-1",
+      "role": "manager",
+      "model": "opus",
+      "tokens": 29563,
+      "toolUses": 8,
+      "durationMs": 79024
+    },
+    {
+      "agent": "dev-T1",
+      "role": "dev",
+      "model": "sonnet",
+      "tokens": 18347,
+      "toolUses": 10,
+      "durationMs": 39840
+    },
+    {
+      "agent": "tester-checklist",
+      "role": "tester",
+      "model": "sonnet",
+      "tokens": 49857,
+      "toolUses": 4,
+      "durationMs": 14437
+    },
+    {
+      "agent": "tester-browser",
+      "role": "tester",
+      "model": "opus",
+      "tokens": 123423,
+      "toolUses": 21,
+      "durationMs": 751433
+    },
+    {
+      "agent": "dev-T1-fix1",
+      "role": "dev",
+      "model": "sonnet",
+      "tokens": 15791,
+      "toolUses": 6,
+      "durationMs": 34398,
+      "fixOf": "T1"
+    },
+    {
+      "agent": "tester-retest-1",
+      "role": "tester",
+      "model": "sonnet",
+      "tokens": 55657,
+      "toolUses": 7,
+      "durationMs": 242389
+    },
+    {
+      "agent": "reporter-1",
+      "role": "reporter",
+      "model": "sonnet",
+      "tokens": 55059,
+      "toolUses": 14,
+      "durationMs": 39481
+    }
+  ]
+}

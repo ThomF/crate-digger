@@ -47,3 +47,15 @@
 - Lesson: a click check on one strip proves nothing; .shipyard/checks/browser.mjs now samples the visible art with real mouse and touch input
 - Known limits: invisible flipped sleeve catches clicks on the crate front; phone swipe on the crate never scrolls; "Back to the crates" returns to /shelf; Firefox and Safari untested
 - Not merged or pushed. Branch sits on the unmerged four-page branch
+
+## 2026-11-09T02-19-56: clicks after a flip, invisible sleeve over the crate front
+- Verdict: shipped (6/6 criteria, real-browser checks on a temp DB), 1 cycle, 1 fix round (AC1(a), label click just after a backward flip opened the album), 1 task plus the fix
+- Wall clock: 37m 5s; slowest stage: test (17m 50s)
+- Tokens: 453,276 across 11 agents (size standard, harbormaster's own tokens not included).
+- Deaths: none. Blockers: none. dev-T1 wrote no report file; the harbormaster saved its message
+- Fast paths: direct-fix, scoped-retest. Survey cache rejected (manifest changed), refreshed
+- Harbormaster overruled the tester on AC1: it had asserted (a) on forward flips only
+- Lesson: check hit testing in both flip directions and in the first frames after a flip, not only at rest. Run a new check against the unfixed source to prove it can fail
+- Known limits: invisible offset-13 sleeve catches clicks above the stack in crates of 14+ (confirmed, not fixed); backward no-wait samples cover 1280px mouse on the label centre only; touch drag unexercised; check rewrites tracked ac12-long PNGs on every run; Chromium only
+- Assumption to confirm: clicking the crate front or tape label does nothing
+- Not merged or pushed

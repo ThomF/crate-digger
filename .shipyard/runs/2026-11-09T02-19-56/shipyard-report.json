@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "plan": "Open the shipyard here. issue: clicks after a flip: an invisible sleeve sits over the crate front, so clicking the tape label moves back one record. This wasn't re-tested after the fix.\n\nGoal: After a flip, no invisible flipped sleeve catches clicks. Clicking the crate front or tape label does nothing, the visible art still opens the record on show, and all flip controls keep working. This is proven by real mouse and touch input sampled across the crate, not on one strip.",
+  "plan_changes": [
+    {
+      "change": "AC1(a) enforced for backward flips as well as forward, with a fix round added.",
+      "why": "The browser tester asserted forward flips only and flagged it. The criterion says a flip, and the backward case opens the album, so the harbormaster failed AC1 instead of narrowing it."
+    }
+  ],
+  "files_changed": [
+    {
+      "path": "apps/web/src/components/crate/CrateBox.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/components/crate/CrateBox.vue",
+      "status": "modified"
+    }
+  ],
+  "tests": [
+    {
+      "name": "0",
+      "status": "pass",
+      "evidence": "node .shipyard/checks/browser.mjs exit 0, output in cycles/1/browser-output-fix1.txt: PASS AC1 (plus AC12, AC2, AC3). The former OBS is now six asserted AC1(a) samples at 1280px: ArrowUp then a label-centre click at 0/10/20ms, from 3/4 (count 3->2, url unchanged) and from 2/4 (count 2->1, url unchanged), all ok. The forward no-wait ArrowDown click samples (pos 2 and 3) remain asserted and ok. In the backward samples the click lands on div.motif inside .sleeve and is ignored, which is the intended fix; the sample asserts count and url only, since the hit element is expected to be the sleeve there."
+    },
+    {
+      "name": "1",
+      "status": "pass",
+      "evidence": "PASS AC2 with 21 of 21 samples ok. Mouse at 25%, 50%, 75% and 2px above panel top, touch at 50%, at 1280, 390 and 390 touch, positions 2/4 and 3/4, each opening the .now h2 a href, with Back restoring the crate URL and .count. Example: '1280-mouse pos=2 / 4 via=ArrowDown point=\"2px above panel top\" at=(640.0,665.7) hit=div.motif (in current .sleeve) opened=/albums/14 expected=/albums/14 backCount=2 / 4 backUrl=/crates/4'. Also 9-point deadSpots sweeps across the visible art (1280 at both positions, 390 at 3/4): dead=[]."
+    },
+    {
+      "name": "2",
+      "status": "pass",
+      "evidence": "PASS AC3 with 12 of 12 samples ok at 1280. (a) scan found hit=p.edge (in non-current .sleeve) at y=465.5, click moved 2/4->3/4 with URL unchanged, 3-point sweep along the edge dead=[]. (b) Back button 2/4->1/4; 9-point sweeps of Back and Flip dead=[]. (c) ArrowUp 2->1 and 3->2. (d) wheel -120 on tape label 2->1 and 3->2; 3/4 was added because the clamp at 1/4 would hide a double step. (e) drag 80px from tape label: down 2->3, up 2->1, up 3->1, URL unchanged, no album opened."
+    }
+  ],
+  "branch": "shipyard/crate-sleeve-click-fix-2026-11-09T02-19-56",
+  "base": "ffb78fa828415e5968151ccc4f24d3fa4b6aadab",
+  "notes": [
+    "dev-T1 did not write its report file, citing a standing rule against report files; the harbormaster saved its final message as agents/dev-T1.md.",
+    "Hit testing during a backward flip: for about 20ms the sleeve is still the hit target over the panel and the click is ignored by the guard. So the backward no-wait samples assert count and URL but not the hit element, and the pointer cursor could show for that moment.",
+    "Backward no-wait clicks were asserted at 1280px mouse on the label centre only, not at 390px, not with touch, and not at the points just outside the panel sides, where the rect guard does not apply.",
+    "The window was measured in headless Chromium; 20ms is not a guaranteed bound on slower machines.",
+    "Harbormaster verified the final check three ways: current code exit 0; pre-fix-round source b7918c1 exit 1 with 6 of 104 AC1 samples failing; ffb78fa source exit 1 with 53 of 103 failing, 49 FAIL lines naming the tape label. Final npm test, typecheck and lint exit 0."
+  ]
+}

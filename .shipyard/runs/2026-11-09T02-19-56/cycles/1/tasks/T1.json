@@ -1,0 +1,7 @@
+{
+  "id": "T1",
+  "status": "done",
+  "commit": "f5f99b5",
+  "filesChanged": ["apps/web/src/components/crate/CrateBox.vue", "apps/web/src/components/crate/CrateBox.test.ts"],
+  "report": "agents/dev-T1.md"
+}
