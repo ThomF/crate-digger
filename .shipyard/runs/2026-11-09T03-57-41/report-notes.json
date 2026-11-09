@@ -1,0 +1,15 @@
+{
+  "plan_changes": [],
+  "notes": [
+    "Scope assumption, for the owner to confirm: the change covers /crates/:id only; /shelf keeps its toolbar even when another user's crate is the selected tab.",
+    "Assumption for the owner to confirm: admins also lose these actions on crates owned by other users.",
+    "Assumption for the owner to confirm: \"new crate stuff\" means the Edit crates link, which opens the New crate form on /crates.",
+    "dev-T1 added beyond the task: an OWN_EMPTY fixture and test, and enableAutoUnmount in crateActions.test.ts. It proved tests can fail via three temporary mutations, then reverted them."
+  ],
+  "observations": [
+    {
+      "what": "/shelf with another user's crate selected still shows both Edit crates and + Add a record at 1280 and 390 (Add has plain /albums/new, no crateId). This matches AC8 and the brief's scope assumption, but the owner's request could be read as covering it.",
+      "severity": "medium"
+    }
+  ]
+}

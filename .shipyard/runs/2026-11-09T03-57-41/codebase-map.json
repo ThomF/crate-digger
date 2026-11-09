@@ -1,0 +1,173 @@
+{
+  "commit": "1c455a7167dc77744104375e4f0264be6069f47d",
+  "testCommand": "npm test",
+  "structure": {
+    "layout": "npm workspaces monorepo (packages/*, apps/*), ESM, Node >=22.18, package name frisson",
+    "language": "TypeScript ~5.8.3; the API runs .ts directly via node",
+    "packages": {
+      "apps/web": "@frisson/web. Vue 3, Vue Router, Pinia SPA on Vite 6. Typecheck with vue-tsc. Sources in apps/web/src (components, views, stores, composables, utils, forms, router, App).",
+      "apps/api": "@frisson/api. Fastify 5 with zod type provider. SQLite via better-sqlite3 and drizzle-orm. Tests in apps/api/test.",
+      "packages/shared": "@frisson/shared. Zod schemas and sorting. Typecheck only."
+    },
+    "buildSystem": "Root scripts: dev, build, typecheck, test, lint (eslint .), format, format:check. Playwright ^1.65 is a root dev dependency."
+  },
+  "tests": {
+    "runner": "vitest ^3.2 in apps/web (happy-dom, @vue/test-utils) and apps/api",
+    "testCommand": "npm test",
+    "notes": "Run from the repo root. Single file: npm test -w apps/web -- src/views/CrateView.test.ts. Typecheck: npm run typecheck. Lint: npm run lint.",
+    "locations": "apps/api/test/*.test.ts; apps/web/src/**/*.test.ts colocated with source",
+    "baseline": "exit 0, 326 tests in 31 files, about 8s",
+    "browser": "No Playwright config or e2e script. .shipyard/checks/browser.mjs is a Playwright script printing PASS/FAIL per criterion. README documents DATA_DIR temp + SEED_DEMO_DATA=false for browser checks."
+  },
+  "conventions": {
+    "formatting": "Prettier: no semis, single quotes, width 100, trailing commas all. Editorconfig: lf, 2 spaces.",
+    "lint": "ESLint 9 flat config with eslint-plugin-vue flat/essential and @vue/eslint-config-typescript. Prettier owns style.",
+    "ci": ".github/workflows/ci.yml: npm ci, format:check, lint, typecheck, test, build, plus docker smoke test",
+    "webStructure": "src/api, stores (Pinia), views (*View.vue), components by feature (album/, crate/, forms/, profile/), composables (useXxx.ts), utils (plain functions)",
+    "naming": "Vue files PascalCase; composables useXxx.ts; tests *.test.ts next to source",
+    "git": "Conventional Commits with scope, e.g. fix(web): ...; ADRs for significant decisions"
+  },
+  "documentation": {
+    "files": [
+      "README.md",
+      "docs/SPEC.md",
+      "docs/DEPLOY.md",
+      "docs/adr/0001-0006",
+      ".github/pull_request_template.md"
+    ],
+    "gaps": "No CLAUDE.md, CONTRIBUTING or CHANGELOG. docs/SPEC.md repo tree is an early plan and differs from the actual files."
+  },
+  "relevant": {
+    "summary": "The per-crate add controls already check ownership. The remaining leak is the global toolbar, LibraryToolbar.vue. It shows 'Edit crates' and '+ Add a record' to any signed-in user, even on another user's crate. The same toolbar renders on /shelf and /list. The 'New crate' form lives only on /crates (CratesView) and is shown to every signed-in user on purpose.",
+    "web": {
+      "current_user_and_permission": [
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/stores/session.ts",
+          "lines": "10-16, 85-86",
+          "note": "Pinia session store. It holds user (PublicUser|null) and the computeds signedIn and isAdmin."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/utils/permissions.ts",
+          "lines": "8-15",
+          "note": "canEditCrate(user, crate) returns false if there is no user or crate, true for admins, otherwise true only when crate.ownerId === user.id. The comment says it only decides which controls to show."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/stores/library.ts",
+          "note": "Holds library.crates, crateById, selectedCrate and crateShelves. Each crate carries ownerId, ownerUsername and ownerDisplayName (see CrateView.vue:127). I did not open this file."
+        }
+      ],
+      "render_sites": [
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/components/LibraryToolbar.vue",
+          "lines": "6-9, 21-29",
+          "note": "Likely locus of the bug. The 'Edit crates' link (route 'crates') and the '+ Add a record' link (route 'album-new') are gated only by v-if=\"session.signedIn\" (line 21). The component has no canEdit check and no crate prop. It takes an optional addToCrateId prop, which only sets the ?crateId query (line 24). A comment at line 6 says 'anyone signed in may make a crate or add a record to one of theirs', so the global display is deliberate. Used by CrateView.vue:89 and LibraryView.vue:149."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/CrateView.vue",
+          "lines": "76, 89, 148-153",
+          "note": "Serves /shelf (name 'library') and /crates/:id (name 'crate'); both can show another user's crate. canEditThisCrate = canEditCrate(session.user, crate) (line 76). Line 89 passes add-to-crate-id only when editable, so the toolbar's Add a record button still renders on someone else's crate, just without the crate preselected. The 'Nothing in here yet. Add a record' link at 148-153 is already gated by canEditThisCrate. The crate is picked from the URL or the selection tab (30-32, 111-124). There is no other 'add' control in this file."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/LibraryView.vue",
+          "lines": "77-78, 149, 231-234, 250, 257, 294",
+          "note": "The /list view shows all crates. Per-crate 'add' links, drag, move tools and the 'Drag a record here' text are already gated by canEditCrate. The global LibraryToolbar at line 149 has the same ungated Edit crates and Add a record buttons."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/CratesView.vue",
+          "lines": "13-16, 111-117",
+          "note": "Route /crates, reached from the toolbar 'Edit crates' link. Lists only editable crates (line 16). The <h2>New crate</h2> plus CrateSettings :crate=null form (111-117) is always shown to anyone who reaches the page. It is not a view of another user's crate."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/components/crate/EmptyShelf.vue",
+          "lines": "12",
+          "note": "'Make your first crate' link, shown only when there are no crates."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/AlbumEditorView.vue",
+          "lines": "37, 62, 210",
+          "note": "Filters the crate picker with canEditCrate. Line 62 rejects the original album's crate if it is not editable. Line 210 links to 'Make a crate.' when none is editable."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/ProfileView.vue",
+          "lines": "22-24, 124, 158",
+          "note": "/u/:username lists that user's crates as links to the 'crate' route. It has no add or new-crate control; the only session-gated element is at line 124. Reaching another user's crate goes through CrateView."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/router.ts",
+          "lines": "24-25, 27, 35, 77, 121-122",
+          "note": "Routes: /shelf, /list, /crates, /crates/:id, /albums/new. A guard at 121-122 redirects to login with ?next. I did not read the guard's conditions."
+        }
+      ]
+    },
+    "api_enforcement": {
+      "summary": "Every write is already enforced server-side, so the fix is UI-only.",
+      "files": [
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/api/src/services/permissions.ts",
+          "lines": "15-63",
+          "note": "requireUser throws 401. canEditOwner (21-25) allows an admin or the owner, and ownerless crates are admin-only. assertCanEditCrate (28-40) throws 404 for a missing crate and 403 'You can only change crates you own'. assertCanEditAlbum (43-56) applies the same rule through the album's crate. requireAdmin is at 59-63."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/api/src/services/crates.ts",
+          "lines": "90-101, 114, 122, 137, 151",
+          "note": "Creating a crate (POST /api/crates) needs requireUser and sets ownerId to the creator (92, 101). Update and delete call assertCanEditCrate (114, 122). Reorder (137, 151) refuses a non-admin unless they own every crate on the shelf."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/api/src/services/albums.ts",
+          "lines": "118-120, 146, 157, 175, 179, 217, 237, 254",
+          "note": "Creating an album checks requireUser plus assertCanEditCrate on fields.crateId (118-120). Updates, moves, deletes and other writes call assertCanEditAlbum, and assertCanEditCrate on the destination crate."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/api/src/services/covers.ts",
+          "lines": "66, 95",
+          "note": "Cover writes call assertCanEditAlbum. The route is apps/api/src/routes/covers.ts:15."
+        }
+      ]
+    },
+    "tests": {
+      "web": [
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/editControls.test.ts",
+          "lines": "148-244",
+          "note": "Most relevant test file. Line 152 'list view offers move tools and add links only on crates the user owns' covers the per-crate controls. Lines 174-176 assert that Edit crates and + Add a record show for any signed-in user, which is the current behaviour a fix would change. Lines 184-189 cover signed-out users. Lines 226-228 check the owner's crate page gets the href /albums/new?crateId=1. Lines 236-238 check that on someone else's crate (/crates/2 as alice) the href is plain /albums/new, so the button is still present. The helper addRecord is at 219. The file sets up fixtures alice, admin, and crates with different owners, including a legacy ownerless one (line 28)."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/CrateView.test.ts",
+          "lines": "88-330",
+          "note": "Crate browser tests; ownerId is null in the fixture (line 18). It has a block 'the crate controls on /crates/:id' (288-326) with Flip, Pull, owner link and empty-crate cases. It has no assertion about add or new-crate visibility."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/web/src/views/MyProfileView.test.ts, ProfileView.test.ts, HomeView.test.ts, FollowingView.test.ts",
+          "note": "Only register the 'crate' route; not relevant to the add controls."
+        }
+      ],
+      "api": [
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/api/test/ownership.test.ts",
+          "note": "Covers ownerId on create (104-117), the owner-or-admin rules, 403 for non-owners, and admin overrides (222-237)."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/api/test/crates.test.ts",
+          "note": "Crate CRUD and validation (line 60 'validates new crates')."
+        },
+        {
+          "file": "/Users/thomasfuhriman/code/crate-digger/apps/api/test/helpers.ts",
+          "lines": "101-108",
+          "note": "Fixture helper that inserts a crate with a given ownerId."
+        }
+      ]
+    },
+    "shipyard_checks": {
+      "summary": "/Users/thomasfuhriman/code/crate-digger/.shipyard/checks/ holds only browser.mjs and three ac12-long-*.png screenshots. These are generic browser-check tooling and layout screenshots, with nothing about add-to-crate or ownership. I did not open browser.mjs. Past run reports are under /Users/thomasfuhriman/code/crate-digger/.shipyard/runs/. Earlier runs include survey-relevant.json files, which I did not read."
+    },
+    "docs": [
+      "/Users/thomasfuhriman/code/crate-digger/README.md:72 (signed-in users create crates and edit only their own)",
+      "/Users/thomasfuhriman/code/crate-digger/docs/SPEC.md:164"
+    ],
+    "notes": [
+      "The user's wording matches the global toolbar, which has no per-crate gating. The 'New crate' form is a separate page (/crates) reached through 'Edit crates'. It lists only the user's own crates and is not a view of someone else's crate.",
+      "The toolbar is also rendered on /list (LibraryView), where there is no single current crate. A fix that hides the toolbar actions on another user's crate would only change /shelf and /crates/:id, because CrateView passes the crate context.",
+      "I did not check whether any other component links to 'crates' or 'album-new'. The grep found only LibraryToolbar, LibraryView:233, CrateView:150 and EmptyShelf/AlbumEditorView."
+    ]
+  }
+}

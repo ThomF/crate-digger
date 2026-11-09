@@ -1,0 +1,64 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC1...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC2",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC2...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC3",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC3...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC4",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC4...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC5",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC5...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC6",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC6...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC7",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC7...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC8",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC8...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC9",
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC9...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "id": "AC10",
+      "verdict": "pass",
+      "evidence": "exit(typecheck)=0, exit(lint)=0, exit(format:check)=0, exit(test)=0"
+    },
+    {
+      "id": "AC11",
+      "verdict": "untested",
+      "evidence": "browser criterion, not in scope of this run"
+    },
+    {
+      "id": "AC12",
+      "verdict": "untested",
+      "evidence": "browser criterion, not in scope of this run"
+    }
+  ]
+}

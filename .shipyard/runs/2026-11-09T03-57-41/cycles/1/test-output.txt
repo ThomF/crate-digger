@@ -1,0 +1,121 @@
+=== npm run typecheck
+
+> typecheck
+> npm run typecheck --workspaces --if-present
+
+
+> typecheck
+> tsc --noEmit
+
+
+> typecheck
+> tsc --noEmit
+
+
+> typecheck
+> vue-tsc --noEmit
+
+=== exit(typecheck)=0
+=== npm run lint
+
+> lint
+> eslint .
+
+=== exit(lint)=0
+=== npm run format:check
+
+> format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+=== exit(format:check)=0
+=== npm test
+
+> test
+> npm run test --workspaces --if-present
+
+
+> test
+> vitest run
+
+
+ RUN  v3.2.7 /Users/thomasfuhriman/code/crate-digger/apps/api
+
+ ✓ test/demo-seed.test.ts (44 tests) 844ms
+ ✓ test/covers.test.ts (10 tests) 959ms
+ ✓ test/albums.test.ts (20 tests) 1290ms
+{"level":30,"time":1794197036007,"pid":96549,"hostname":"Thomass-Mac-mini.local","reqId":"req-1","req":{"method":"POST","url":"/api/auth/signup","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+ ✓ test/avatars.test.ts (15 tests) 1359ms
+{"level":30,"time":1794197036054,"pid":96549,"hostname":"Thomass-Mac-mini.local","reqId":"req-1","res":{"statusCode":201},"responseTime":46.21570800000018,"msg":"request completed"}
+{"level":30,"time":1794197036054,"pid":96549,"hostname":"Thomass-Mac-mini.local","reqId":"req-2","req":{"method":"POST","url":"/api/auth/logout","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1794197036054,"pid":96549,"hostname":"Thomass-Mac-mini.local","reqId":"req-2","res":{"statusCode":204},"responseTime":0.05308400000012625,"msg":"request completed"}
+ ✓ test/auth-accounts.test.ts (21 tests) 1811ms
+ ✓ test/ownership.test.ts (21 tests) 1954ms
+ ✓ test/passwords.test.ts (5 tests) 374ms
+ ✓ test/feed.test.ts (18 tests) 1969ms
+ ✓ test/profiles.test.ts (33 tests) 2277ms
+ ✓ test/follows.test.ts (26 tests) 2355ms
+ ✓ test/bootstrap.test.ts (7 tests) 783ms
+ ✓ test/crates.test.ts (15 tests) 925ms
+ ✓ test/shared-profile.test.ts (48 tests) 55ms
+ ✓ test/schema.test.ts (21 tests) 130ms
+ ✓ test/recommended.test.ts (11 tests) 679ms
+ ✓ test/sorting.test.ts (13 tests) 6ms
+ ✓ test/web.test.ts (15 tests) 157ms
+ ✓ test/news.test.ts (6 tests) 322ms
+ ✓ test/health.test.ts (1 test) 109ms
+ ✓ test/shared-auth.test.ts (6 tests) 6ms
+ ✓ test/migration.test.ts (4 tests) 38ms
+
+ Test Files  21 passed (21)
+      Tests  360 passed (360)
+   Start at  21:03:53
+   Duration  3.87s (transform 706ms, setup 0ms, collect 9.94s, tests 18.40s, environment 9ms, prepare 1.16s)
+
+
+> test
+> vitest run
+
+
+ RUN  v3.2.7 /Users/thomasfuhriman/code/crate-digger/apps/web
+
+ ✓ src/views/HomeView.test.ts (21 tests) 87ms
+ ✓ src/views/FollowingView.test.ts (19 tests) 106ms
+ ✓ src/App.test.ts (26 tests) 155ms
+ ✓ src/views/ProfileView.test.ts (30 tests) 192ms
+ ✓ src/views/EditProfileView.test.ts (10 tests) 176ms
+ ✓ src/router.test.ts (16 tests) 269ms
+ ✓ src/views/CrateView.test.ts (27 tests) 323ms
+ ✓ src/views/crateActions.test.ts (20 tests) 316ms
+ ✓ src/views/editControls.test.ts (10 tests) 295ms
+ ✓ src/components/profile/FollowButton.test.ts (14 tests) 73ms
+ ✓ src/views/MyProfileView.test.ts (5 tests) 30ms
+ ✓ src/components/forms/TrackEditor.test.ts (4 tests) 110ms
+ ✓ src/components/profile/LinksEditor.test.ts (7 tests) 100ms
+ ✓ src/components/album/RecordStage.test.ts (6 tests) 66ms
+ ✓ src/components/crate/CrateBox.test.ts (12 tests) 163ms
+ ✓ src/views/ownerLink.test.ts (4 tests) 27ms
+ ✓ src/views/AboutView.test.ts (7 tests) 18ms
+ ✓ src/composables/useAsyncSection.test.ts (10 tests) 6ms
+ ✓ src/viewTransitions.test.ts (5 tests) 23ms
+ ✓ src/components/forms/CoverUpload.test.ts (4 tests) 85ms
+ ✓ src/components/profile/VerifiedBadge.test.ts (1 test) 12ms
+ ✓ src/forms/albumForm.test.ts (21 tests) 10ms
+ ✓ src/stores/library.test.ts (5 tests) 11ms
+ ✓ src/stores/session.test.ts (8 tests) 16ms
+ ✓ src/components/album/TrackList.test.ts (2 tests) 34ms
+ ✓ src/composables/useCrateFlip.test.ts (13 tests) 6ms
+ ✓ src/composables/useAlbumSearch.test.ts (3 tests) 30ms
+ ✓ src/utils/tracks.test.ts (9 tests) 3ms
+ ✓ src/utils/crateLayout.test.ts (12 tests) 8ms
+ ✓ src/utils/redirect.test.ts (9 tests) 2ms
+ ✓ src/utils/permissions.test.ts (13 tests) 2ms
+ ✓ src/utils/initials.test.ts (4 tests) 1ms
+
+ Test Files  32 passed (32)
+      Tests  357 passed (357)
+   Start at  21:03:57
+   Duration  3.12s (transform 1.63s, setup 0ms, collect 7.00s, tests 2.75s, environment 7.62s, prepare 2.05s)
+
+=== exit(test)=0

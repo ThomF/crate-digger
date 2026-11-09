@@ -1,0 +1,123 @@
+{
+  "runId": "2026-11-09T03-57-41",
+  "target": "/Users/thomasfuhriman/code/crate-digger",
+  "request": "when I view someones crate that I didnt make it shows the add to crate and new crate stuff which shouldnt show if im in another users crate",
+  "branch": "shipyard/hide-crate-actions-others-2026-11-09T03-57-41",
+  "size": "standard",
+  "budgetTokens": null,
+  "stage": "done",
+  "cycle": 1,
+  "maxCycles": 3,
+  "fixRound": 0,
+  "maxFixRounds": 3,
+  "criteria": {
+    "AC1": "pass",
+    "AC2": "pass",
+    "AC3": "pass",
+    "AC4": "pass",
+    "AC5": "pass",
+    "AC6": "pass",
+    "AC7": "pass",
+    "AC8": "pass",
+    "AC9": "pass",
+    "AC10": "pass",
+    "AC11": "pass",
+    "AC12": "pass"
+  },
+  "tasks": {
+    "T1": "done"
+  },
+  "deaths": [],
+  "verdict": "shipped",
+  "baseCommit": "1c455a7167dc77744104375e4f0264be6069f47d",
+  "startedAt": "2026-11-09T03:57:47Z",
+  "endedAt": "2026-11-09T04:09:44Z",
+  "stageTimes": {
+    "intake": {
+      "start": "2026-11-09T03:57:47Z",
+      "end": "2026-11-09T03:59:35Z"
+    },
+    "survey": {
+      "start": "2026-11-09T03:57:47Z",
+      "end": "2026-11-09T03:59:03Z"
+    },
+    "plan": {
+      "start": "2026-11-09T03:59:35Z",
+      "end": "2026-11-09T04:01:28Z"
+    },
+    "build": {
+      "start": "2026-11-09T04:01:28Z",
+      "end": "2026-11-09T04:03:41Z"
+    },
+    "test": {
+      "start": "2026-11-09T04:03:41Z",
+      "end": "2026-11-09T04:08:56Z"
+    },
+    "report": {
+      "start": "2026-11-09T04:08:56Z",
+      "end": "2026-11-09T04:09:44Z"
+    }
+  },
+  "active": [],
+  "fastPaths": [
+    "survey-cache"
+  ],
+  "usage": [
+    {
+      "agent": "surveyor-relevant",
+      "role": "surveyor",
+      "model": "sonnet",
+      "tokens": 34163,
+      "toolUses": 19,
+      "durationMs": 47385
+    },
+    {
+      "agent": "intake",
+      "role": "intake",
+      "model": "opus",
+      "tokens": 47408,
+      "toolUses": 25,
+      "durationMs": 86622
+    },
+    {
+      "agent": "manager",
+      "role": "manager",
+      "model": "opus",
+      "tokens": 41366,
+      "toolUses": 13,
+      "durationMs": 98161
+    },
+    {
+      "agent": "dev-T1",
+      "role": "dev",
+      "model": "opus",
+      "tokens": 49374,
+      "toolUses": 24,
+      "durationMs": 119601
+    },
+    {
+      "agent": "tester",
+      "role": "tester",
+      "model": "sonnet",
+      "tokens": 19373,
+      "toolUses": 5,
+      "durationMs": 10864
+    },
+    {
+      "agent": "browser-tester",
+      "role": "browser-tester",
+      "model": "opus",
+      "tokens": 81025,
+      "toolUses": 14,
+      "durationMs": 141680
+    },
+    {
+      "agent": "reporter",
+      "role": "reporter",
+      "model": "sonnet",
+      "tokens": 15099,
+      "toolUses": 7,
+      "durationMs": 20522
+    }
+  ]
+}

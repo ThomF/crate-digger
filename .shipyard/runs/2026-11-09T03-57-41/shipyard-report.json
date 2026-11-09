@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "plan": "when I view someones crate that I didnt make it shows the add to crate and new crate stuff which shouldnt show if im in another users crate\n\nGoal: On the single-crate page (/crates/:id), stop showing the signed-in viewer the toolbar actions '+ Add a record' and 'Edit crates' (the route to the 'New crate' form) when the crate belongs to another user. Browsing someone else's crate becomes read-only in appearance, while the viewer's own crates keep these actions.",
+  "plan_changes": [],
+  "files_changed": [
+    {
+      "path": "apps/web/src/components/LibraryToolbar.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/utils/permissions.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/utils/permissions.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/CrateView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/crateActions.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/views/editControls.test.ts",
+      "status": "modified"
+    }
+  ],
+  "tests": [
+    {
+      "name": "0",
+      "status": "pass",
+      "evidence": "node .shipyard/checks/crate-actions.check.mjs printed PASS AC11 on 5dbda2e, exit 0 (output: /private/tmp/claude-501/-Users-thomasfuhriman--claude-spares-spare-HHQlXd/e7f4df03-71ce-4bf1-a487-340e940c3aa0/scratchpad/crate-actions.out). Temp DB, port 4327, users alice and bob confirmed role 'user' via /auth/me, signed in through the /login form. At 1280 and 390, full page loads of bob's non-empty and empty crates, at normal speed and with every API call delayed 500ms: neither 'Edit crates' nor 'Add a record' in body text, and a MutationObserver plus rAF recorder installed before app scripts logged none on that path. Control: the same recorder did log them on alice's crate. Crates and List visible; documentElement and body scrollWidth equal clientWidth (1280/1280, 390/390); no page errors. Screenshot other-390.png inspected by eye."
+    },
+    {
+      "name": "1",
+      "status": "pass",
+      "evidence": "Same run printed PASS AC12. At 1280 and 390, mouse clicks at 9 points across each target, no dead spots: '+ Add a record' on alice's second crate lands on /albums/new?crateId=2 with the picker value 2 (not the default first crate); 'Edit crates' lands on /crates with the 'New crate' heading visible; bob's crate card on /u/bob opens /crates/<id> with no action text and none recorded. Also via /shelf, owner link, profile card with no reload (store already loaded): no actions."
+    },
+    {
+      "name": "2",
+      "status": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC3...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "name": "3",
+      "status": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC4...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "name": "4",
+      "status": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC5...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "name": "5",
+      "status": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC6...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "name": "6",
+      "status": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC7...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "name": "7",
+      "status": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC8...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "name": "8",
+      "status": "pass",
+      "evidence": "apps/web/src/views/crateActions.test.ts test 'AC9...' asserts every clause; file passes (20 tests) in test-output.txt"
+    },
+    {
+      "name": "9",
+      "status": "pass",
+      "evidence": "exit(typecheck)=0, exit(lint)=0, exit(format:check)=0, exit(test)=0"
+    },
+    {
+      "name": "10",
+      "status": "fail",
+      "evidence": "verdict: untested. browser criterion, not in scope of this run"
+    },
+    {
+      "name": "11",
+      "status": "fail",
+      "evidence": "verdict: untested. browser criterion, not in scope of this run"
+    }
+  ],
+  "branch": "shipyard/hide-crate-actions-others-2026-11-09T03-57-41",
+  "base": "1c455a7167dc77744104375e4f0264be6069f47d",
+  "notes": [
+    "Scope assumption, for the owner to confirm: the change covers /crates/:id only; /shelf keeps its toolbar even when another user's crate is the selected tab.",
+    "Assumption for the owner to confirm: admins also lose these actions on crates owned by other users.",
+    "Assumption for the owner to confirm: \"new crate stuff\" means the Edit crates link, which opens the New crate form on /crates.",
+    "dev-T1 added beyond the task: an OWN_EMPTY fixture and test, and enableAutoUnmount in crateActions.test.ts. It proved tests can fail via three temporary mutations, then reverted them."
+  ]
+}

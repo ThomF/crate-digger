@@ -1,0 +1,20 @@
+{
+  "criteria": [
+    {
+      "id": "AC11",
+      "verdict": "pass",
+      "evidence": "node .shipyard/checks/crate-actions.check.mjs printed PASS AC11 on 5dbda2e, exit 0 (output: /private/tmp/claude-501/-Users-thomasfuhriman--claude-spares-spare-HHQlXd/e7f4df03-71ce-4bf1-a487-340e940c3aa0/scratchpad/crate-actions.out). Temp DB, port 4327, users alice and bob confirmed role 'user' via /auth/me, signed in through the /login form. At 1280 and 390, full page loads of bob's non-empty and empty crates, at normal speed and with every API call delayed 500ms: neither 'Edit crates' nor 'Add a record' in body text, and a MutationObserver plus rAF recorder installed before app scripts logged none on that path. Control: the same recorder did log them on alice's crate. Crates and List visible; documentElement and body scrollWidth equal clientWidth (1280/1280, 390/390); no page errors. Screenshot other-390.png inspected by eye."
+    },
+    {
+      "id": "AC12",
+      "verdict": "pass",
+      "evidence": "Same run printed PASS AC12. At 1280 and 390, mouse clicks at 9 points across each target, no dead spots: '+ Add a record' on alice's second crate lands on /albums/new?crateId=2 with the picker value 2 (not the default first crate); 'Edit crates' lands on /crates with the 'New crate' heading visible; bob's crate card on /u/bob opens /crates/<id> with no action text and none recorded. Also via /shelf, owner link, profile card with no reload (store already loaded): no actions."
+    }
+  ],
+  "observations": [
+    {
+      "what": "/shelf with another user's crate selected still shows both 'Edit crates' and '+ Add a record' at 1280 and 390. The Add link's href is /albums/new with no crateId, so it does not preselect that crate. This matches the brief's AC8 and its CONFIRM WITH OWNER assumption, but the owner's request might be read as covering it; a viewer reaches this state by clicking another user's tab.",
+      "severity": "medium"
+    }
+  ]
+}

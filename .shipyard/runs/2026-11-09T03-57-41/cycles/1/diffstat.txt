@@ -1,0 +1,7 @@
+ apps/web/src/components/LibraryToolbar.vue |   7 +-
+ apps/web/src/utils/permissions.test.ts     |  41 +++-
+ apps/web/src/utils/permissions.ts          |  14 ++
+ apps/web/src/views/CrateView.vue           |  24 +-
+ apps/web/src/views/crateActions.test.ts    | 355 +++++++++++++++++++++++++++++
+ apps/web/src/views/editControls.test.ts    |   2 +-
+ 6 files changed, 435 insertions(+), 8 deletions(-)

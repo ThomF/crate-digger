@@ -1,0 +1,6 @@
+apps/web/src/components/LibraryToolbar.vue
+apps/web/src/utils/permissions.test.ts
+apps/web/src/utils/permissions.ts
+apps/web/src/views/CrateView.vue
+apps/web/src/views/crateActions.test.ts
+apps/web/src/views/editControls.test.ts

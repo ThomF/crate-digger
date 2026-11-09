@@ -1,0 +1,92 @@
+{
+  "goal": "On the single-crate page (/crates/:id), stop showing the signed-in viewer the toolbar actions '+ Add a record' and 'Edit crates' (the route to the 'New crate' form) when the crate belongs to another user. Browsing someone else's crate becomes read-only in appearance, while the viewer's own crates keep these actions.",
+  "constraints": [
+    "Web client only. No API, schema or shared-type changes: Crate.ownerId and session.user already supply what is needed, and the API already rejects unauthorised writes.",
+    "Visibility rule on /crates/:id: the actions show only if the viewer is signed in and either crate.ownerId === user.id, or crate.ownerId is null and user.role is 'admin'. Admin status alone does not show them on a crate owned by another user.",
+    "The same rule governs the empty-crate 'Add a record' link in apps/web/src/views/CrateView.vue, which today uses canEditCrate and so still appears for an admin on another user's empty crate.",
+    "Do not change canEditCrate in apps/web/src/utils/permissions.ts. It still decides spin counting and edit access in other views, and admins must keep those abilities.",
+    "Unchanged: /shelf and /list toolbars, the per-crate 'add' links and tools on /list, the /albums/:id Edit button, /albums/new and /crates pages, spin counting, and the browsing controls and Crates/List nav on /crates/:id.",
+    "Hide the controls by not rendering them. Do not disable them or hide them with CSS.",
+    "The test in apps/web/src/views/editControls.test.ts titled 'a crate page on someone else's crate counts no spin and preselects nothing' encodes the old behaviour (it expects the Add link with href /albums/new). Update its Add link assertion and keep its spin and navigation assertions.",
+    "Browser checks go in .shipyard/checks/ using Playwright on a temp DB, following the setup in browser.mjs. Do not touch the owner's real DB."
+  ],
+  "assumptions": [
+    "CONFIRM WITH OWNER: 'add to crate' means '+ Add a record' and 'new crate stuff' means the 'Edit crates' link. No control on /crates/:id is literally labelled 'New crate'; that heading is on the /crates page, which 'Edit crates' opens.",
+    "CONFIRM WITH OWNER: the change covers /crates/:id only. /shelf shares CrateView and can also show another user's crate under a tab, but it keeps its toolbar. It is a browse-everything page, and apart from /list its toolbar is the only always-present route to making a crate, so hiding it would strand a new user whose selected crate is someone else's. Extending the rule to /shelf is a small change if the owner wants it.",
+    "CONFIRM WITH OWNER: admins also lose these actions on crates owned by other users. The request says 'someones crate that I didnt make', and if the owner signs in as the ADMIN_EMAIL admin, a canEditCrate-based fix would change nothing for them. Admins can still add via /shelf or /list and can still edit records from the album page.",
+    "Ownerless legacy crates are nobody's crate: admins keep the actions there and everyone else does not see them. Bootstrap normally assigns these crates to the earliest admin, so this case should be rare.",
+    "Signed-out visitors already see neither action, and this must stay true.",
+    "While the crate is loading, on the error state and on 'Crate not found', no crate is confirmed as the viewer's, so the actions stay hidden. On the viewer's own crate they appear once it loads.",
+    "No replacement content, such as a 'view only' note or a 'Make your own crate' link, is wanted."
+  ],
+  "risks": [
+    "Reusing canEditThisCrate for the toolbar passes for ordinary users but changes nothing for an admin, possibly including the owner. Tests must include the admin case.",
+    "The toolbar renders before the crate loads. A condition such as 'hide when known to be someone else's' would flash the actions while loading on another user's crate, so the condition must default to hidden.",
+    "CrateView is shared by /shelf and /crates/:id, and LibraryToolbar is shared with /list. A condition placed in the wrong component or left unscoped would also change those pages.",
+    "A new user with no crates who only ever reaches other users' crates through /crates/:id loses the shortcut there. They can still reach it from /shelf or /list via the Crates and List nav.",
+    "Hard navigation aside, CrateView is reused when moving between /crates/1 and /crates/2, so the condition must react to the route change.",
+    "browser.mjs rewrites tracked ac12-long PNGs on every run (known limit). Prefer a separate check file or avoid committing that churn."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "statement": "Component test: a non-admin user visiting /crates/<id> for a crate with a different non-null ownerId, once loaded, renders no 'Edit crates' link, no '+ Add a record' link, and no link whose href begins with /albums/new or equals /crates.",
+      "check": "unit"
+    },
+    {
+      "id": "AC2",
+      "statement": "Component test: a non-admin user visiting /crates/<id> for their own crate sees 'Edit crates' with href /crates and '+ Add a record' with href /albums/new?crateId=<id>.",
+      "check": "unit"
+    },
+    {
+      "id": "AC3",
+      "statement": "Component test: an admin visiting /crates/<id> for a crate owned by another user sees neither 'Edit crates' nor '+ Add a record'. On that crate with zero albums, no 'Add a record' link appears inside the 'Nothing in here yet.' section. Pulling out a record on a non-empty crate owned by another user still POSTs /api/albums/<id>/spins.",
+      "check": "unit"
+    },
+    {
+      "id": "AC4",
+      "statement": "Component test: an admin visiting /crates/<id> for their own crate, or for a crate with ownerId null, sees both actions, with '+ Add a record' pointing to /albums/new?crateId=<id>. A non-admin visiting a crate with ownerId null sees neither.",
+      "check": "unit"
+    },
+    {
+      "id": "AC5",
+      "statement": "Component test: a signed-out visitor at /crates/<id> sees neither action on any crate, and the Crates and List nav links remain.",
+      "check": "unit"
+    },
+    {
+      "id": "AC6",
+      "statement": "Component test: with a signed-in non-admin at /crates/<id>, neither action renders while the crate fetch is pending (fetch never resolves), on the error state after a failed load, or on 'Crate not found'.",
+      "check": "unit"
+    },
+    {
+      "id": "AC7",
+      "statement": "Component test: in one mounted session, a non-admin navigating with router.push from their own /crates/<id> to another user's /crates/<id> loses both actions, and navigating back regains both, with '+ Add a record' carrying the correct crateId.",
+      "check": "unit"
+    },
+    {
+      "id": "AC8",
+      "statement": "Component test: a non-admin signed in at /shelf with another user's crate selected, and at /list, still sees both 'Edit crates' and '+ Add a record'.",
+      "check": "unit"
+    },
+    {
+      "id": "AC9",
+      "statement": "Component test: on another user's non-empty /crates/<id>, '◀ Back', 'Flip ▶', 'Pull it out', the owner link and the Crates/List nav still render, and clicking 'Pull it out' opens /albums/<id> without a spin POST for a non-admin.",
+      "check": "unit"
+    },
+    {
+      "id": "AC10",
+      "statement": "`npm run typecheck`, `npm run lint`, `npm run format:check` and `npm test` all exit 0 from the repo root.",
+      "check": "command"
+    },
+    {
+      "id": "AC11",
+      "statement": "Real browser on a temp DB with two signed-up non-admin users, A and B, each owning a crate. Signed in as A with a full page load at widths 1280px and 390px: on B's /crates/<id>, the 'Edit crates' and '+ Add a record' text is absent from the page and no sampled moment after navigation shows it; the toolbar's Crates and List links are visible; and the page has no horizontal overflow.",
+      "check": "browser"
+    },
+    {
+      "id": "AC12",
+      "statement": "Same browser pass. Signed in as A on A's own /crates/<id>, a real click on '+ Add a record' lands on /albums/new?crateId=<A's id> with A's crate selected in the crate picker, and a real click on 'Edit crates' lands on /crates showing the 'New crate' heading. Reaching B's crate by clicking its link from B's profile page /u/<B> also shows neither action.",
+      "check": "browser"
+    }
+  ]
+}

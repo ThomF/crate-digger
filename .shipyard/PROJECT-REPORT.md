@@ -60,3 +60,13 @@
 - Known limits: backward no-wait samples cover 1280px mouse on the label centre only; touch drag unexercised; check rewrites tracked ac12-long PNGs on every run; Chromium only
 - Assumption to confirm: clicking the crate front or tape label does nothing
 - Merged and pushed to main at the owner's request
+
+## 2026-11-09T03-57-41: hide crate page actions on other users' crates
+- Verdict: shipped (12/12 criteria, real-browser checks on a temp DB), 1 cycle, 0 fix rounds, 1 task
+- Wall clock: 11m 57s; slowest stage: test (5m 15s)
+- Tokens: 287,808 across 7 agents (size standard, harbormaster's own tokens not included).
+- Deaths: none. Blockers: none
+- Fast paths: survey-cache
+- Owner to confirm: /shelf keeps both actions on another user's crate; admins lose them on other users' crates; "new crate stuff" read as the Edit crates link
+- Known limit: browser.mjs still rewrites tracked ac12-long PNGs on every checks run; the harbormaster restored them
+- Not merged or pushed
