@@ -56,6 +56,7 @@
 - Fast paths: direct-fix, scoped-retest. Survey cache rejected (manifest changed), refreshed
 - Harbormaster overruled the tester on AC1: it had asserted (a) on forward flips only
 - Lesson: check hit testing in both flip directions and in the first frames after a flip, not only at rest. Run a new check against the unfixed source to prove it can fail
-- Known limits: invisible offset-13 sleeve catches clicks above the stack in crates of 14+ (confirmed, not fixed); backward no-wait samples cover 1280px mouse on the label centre only; touch drag unexercised; check rewrites tracked ac12-long PNGs on every run; Chromium only
+- Follow-up 679b6bd, at the owner's request and outside the circuit: invisible offset-13 sleeve no longer catches clicks; check gained LONG-STACK
+- Known limits: backward no-wait samples cover 1280px mouse on the label centre only; touch drag unexercised; check rewrites tracked ac12-long PNGs on every run; Chromium only
 - Assumption to confirm: clicking the crate front or tape label does nothing
 - Not merged or pushed

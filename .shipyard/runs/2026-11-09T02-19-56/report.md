@@ -159,3 +159,11 @@ The harbormaster's own tokens are not included: no figure was available.
 |---|---|---|---|---|
 | sonnet | 2 | 1 | 0.50 | 46,027 |
 | opus | 1 | 1 | 1.00 | 55,558 |
+
+## Addendum: offset-13 sleeve fixed after the run
+
+At the owner's request, observation 1 was fixed in 679b6bd, by the harbormaster directly and outside the circuit. No tester agent re-verified it; the harbormaster ran the checks. The pointer-events rule in `CrateBox.vue` is now `pose.opacity === 0`, covering both flipped sleeves and the faded sleeve past the back of the stack.
+
+The browser check gained a LONG-STACK section: 16 records, 1280 and 390 mouse, positions 1 and 3. On the source before 679b6bd it exits 1 with 4 of 12 samples failing (clicks jumped to 14/16 and 16/16). On the fixed source it exits 0, with PASS AC12, AC1, AC2, AC3 and LONG-STACK. `npm test`, typecheck, lint and format:check exit 0.
+
+A click in that roughly 5px band now reaches the crate owner's link, which the invisible sleeve had been covering. The check asserts the hit on that link but does not click it.

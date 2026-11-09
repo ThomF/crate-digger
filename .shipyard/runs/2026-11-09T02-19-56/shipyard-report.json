@@ -5,6 +5,10 @@
     {
       "change": "AC1(a) enforced for backward flips as well as forward, with a fix round added.",
       "why": "The browser tester asserted forward flips only and flagged it. The criterion says a flip, and the backward case opens the album, so the harbormaster failed AC1 instead of narrowing it."
+    },
+    {
+      "change": "After the run, at the owner's request, the pointer-events rule became pose.opacity === 0 (679b6bd), fixing the offset-13 sleeve. Unit test and a LONG-STACK browser section added.",
+      "why": "The owner chose to fix the confirmed observation on this branch."
     }
   ],
   "files_changed": [
@@ -41,6 +45,7 @@
     "Hit testing during a backward flip: for about 20ms the sleeve is still the hit target over the panel and the click is ignored by the guard. So the backward no-wait samples assert count and URL but not the hit element, and the pointer cursor could show for that moment.",
     "Backward no-wait clicks were asserted at 1280px mouse on the label centre only, not at 390px, not with touch, and not at the points just outside the panel sides, where the rect guard does not apply.",
     "The window was measured in headless Chromium; 20ms is not a guaranteed bound on slower machines.",
-    "Harbormaster verified the final check three ways: current code exit 0; pre-fix-round source b7918c1 exit 1 with 6 of 104 AC1 samples failing; ffb78fa source exit 1 with 53 of 103 failing, 49 FAIL lines naming the tape label. Final npm test, typecheck and lint exit 0."
+    "Harbormaster verified the final check three ways: current code exit 0; pre-fix-round source b7918c1 exit 1 with 6 of 104 AC1 samples failing; ffb78fa source exit 1 with 53 of 103 failing, 49 FAIL lines naming the tape label. Final npm test, typecheck and lint exit 0.",
+    "With the fix, a click in the band above a long stack reaches the crate owner's link, which the invisible sleeve had been covering. The LONG-STACK check asserts the hit on that link but does not click it. The band is about 5px tall."
   ]
 }
