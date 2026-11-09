@@ -1,4 +1,4 @@
-import Fastify from 'fastify'
+import Fastify, { type RouteOptions } from 'fastify'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import { authPlugin } from './plugins/auth.ts'
 import { avatarsPlugin } from './plugins/avatars.ts'
@@ -7,6 +7,7 @@ import { dbPlugin } from './plugins/db.ts'
 import { errorHandlerPlugin } from './plugins/error-handler.ts'
 import { uploadsPlugin } from './plugins/uploads.ts'
 import { webPlugin } from './plugins/web.ts'
+import { adminRoutes } from './routes/admin.ts'
 import { albumRoutes } from './routes/albums.ts'
 import { authRoutes } from './routes/auth.ts'
 import { avatarRoutes } from './routes/avatars.ts'
@@ -33,6 +34,8 @@ export type AppOptions = {
   }
   /** The built web app to serve (production). Defaults to WEB_DIR; unset in development. */
   webDir?: string
+  /** Called for every route as it is registered, so tests can collect the real route table. */
+  onRoute?: (route: RouteOptions) => void
 }
 
 // Builds the app without starting it. Tests call this and use app.inject()
@@ -45,6 +48,7 @@ export async function buildApp(opts: AppOptions = {}) {
     // when the API can't be reached except through the proxy, so it's opt-in.
     trustProxy: process.env.TRUST_PROXY === 'true',
   })
+  if (opts.onRoute) app.addHook('onRoute', opts.onRoute)
 
   // Route schemas are Zod schemas: validate requests with them, and check responses too.
   app.setValidatorCompiler(validatorCompiler)
@@ -71,6 +75,7 @@ export async function buildApp(opts: AppOptions = {}) {
   await app.register(avatarRoutes, { prefix: '/api' })
   await app.register(followRoutes, { prefix: '/api' })
   await app.register(newsRoutes, { prefix: '/api' })
+  await app.register(adminRoutes, { prefix: '/api' })
 
   // Last, so API, cover and avatar routes always win over the web app's catch-all.
   await app.register(webPlugin, { dir: opts.webDir ?? process.env.WEB_DIR })

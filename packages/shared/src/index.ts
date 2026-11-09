@@ -326,13 +326,102 @@ export const crateCard = z.object({
   ownerDisplayName: z.string(),
 })
 
-// Data classification: PUBLIC. Fictional demo news shown on Home.
+// Data classification: PUBLIC. Demo or admin-written news shown on Home.
 export const newsItem = z.object({
   id: z.number().int(),
   title: z.string(),
   summary: z.string(),
   source: z.string(),
   publishedAt: z.iso.datetime(),
+})
+
+// ── Admin ───────────────────────────────────────────────────────────────
+
+/** How many rows of each kind exist. Suggested crates are those with a recommended rank. */
+export const adminOverview = z.object({
+  users: z.number().int(),
+  crates: z.number().int(),
+  suggestedCrates: z.number().int(),
+  albums: z.number().int(),
+  news: z.number().int(),
+})
+
+// Data classification: CONFIDENTIAL (PII: email). Admins only. Never carries a password hash
+// or a demo seed key.
+export const adminUser = z.object({
+  id: z.number().int(),
+  email: z.string(),
+  username: z.string(),
+  displayName: z.string(),
+  role: z.enum(USER_ROLES),
+  verified: z.boolean(),
+  /** A fictional demo collector. */
+  isDemo: z.boolean(),
+  createdAt: z.iso.datetime(),
+  crateCount: z.number().int(),
+})
+
+// Data classification: INTERNAL. Admins only. The owner fields are null on an ownerless crate.
+export const adminCrate = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  label: z.string().nullable(),
+  color: z.string(),
+  albumCount: z.number().int(),
+  ownerUsername: z.string().nullable(),
+  ownerDisplayName: z.string().nullable(),
+  /** Non-null means suggested: lower ranks come first in Home's Recommended crates. */
+  recommendedRank: z.number().int().nullable(),
+  isDemo: z.boolean(),
+  createdAt: z.iso.datetime(),
+})
+
+// Data classification: PUBLIC content plus an admin-only isDemo flag. Never carries the seed key.
+export const adminNewsItem = newsItem.extend({ isDemo: z.boolean() })
+
+export const adminCreateCrateInput = createCrateInput.extend({
+  suggested: z.boolean().default(false),
+})
+
+export const adminSetSuggestedInput = z.strictObject({ suggested: z.boolean() })
+
+export const adminNewsInput = z.object({
+  title: requiredText(200),
+  summary: requiredText(2000),
+  source: requiredText(100),
+  /** Defaults to now on the server when left out. */
+  publishedAt: z.iso.datetime().optional(),
+})
+
+export const adminUpdateNewsInput = adminNewsInput
+  .partial()
+  .refine((body) => Object.keys(body).length > 0, 'Send at least one field to update')
+
+export const adminImportAlbum = createAlbumInput.omit({ crateId: true })
+
+export const adminImportCrate = adminCreateCrateInput.extend({
+  albums: z.array(adminImportAlbum).default([]),
+})
+
+export const adminImportInput = z
+  .object({
+    crates: z.array(adminImportCrate).default([]),
+    news: z.array(adminNewsInput).default([]),
+  })
+  .refine(
+    (body) => body.crates.length > 0 || body.news.length > 0,
+    'Send at least one crate or news item',
+  )
+
+/** The empty body of an admin 204 response. */
+export const adminNoContent = z.null()
+
+/** How many rows a bulk import created. */
+export const adminImportResult = z.object({
+  crates: z.number().int(),
+  albums: z.number().int(),
+  tracks: z.number().int(),
+  news: z.number().int(),
 })
 
 // ── Errors ──────────────────────────────────────────────────────────────
@@ -381,3 +470,18 @@ export type SetVerifiedInput = z.infer<typeof setVerifiedInput>
 export type CollectorSummary = z.infer<typeof collectorSummary>
 export type CrateCard = z.infer<typeof crateCard>
 export type NewsItem = z.infer<typeof newsItem>
+export type AdminOverview = z.infer<typeof adminOverview>
+export type AdminUser = z.infer<typeof adminUser>
+export type AdminCrate = z.infer<typeof adminCrate>
+export type AdminNewsItem = z.infer<typeof adminNewsItem>
+export type AdminImportResult = z.infer<typeof adminImportResult>
+/** What the API sees after validation (defaults filled in). */
+export type AdminCreateCrateInput = z.infer<typeof adminCreateCrateInput>
+export type AdminNewsInput = z.infer<typeof adminNewsInput>
+export type AdminUpdateNewsInput = z.infer<typeof adminUpdateNewsInput>
+export type AdminImportInput = z.infer<typeof adminImportInput>
+/** What a client sends (defaulted fields may be left out). */
+export type AdminCreateCrateRequest = z.input<typeof adminCreateCrateInput>
+export type AdminNewsRequest = z.input<typeof adminNewsInput>
+export type AdminUpdateNewsRequest = z.input<typeof adminUpdateNewsInput>
+export type AdminImportRequest = z.input<typeof adminImportInput>
