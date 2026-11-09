@@ -27,14 +27,31 @@ function derive(plain: string, salt: Buffer, keyLength: number, options: ScryptO
   })
 }
 
+// Salts, derives and formats, with no policy check. Keep this unexported: every caller outside
+// this module has to go through hashPassword, or the fixed dev admin path below.
+async function hashWithFreshSalt(plain: string): Promise<string> {
+  const salt = randomBytes(SALT_BYTES)
+  const key = await derive(plain, salt, KEY_LENGTH, SCRYPT_OPTIONS)
+  return [PREFIX, N, r, p, salt.toString('base64'), key.toString('base64')].join('$')
+}
+
 /** Hashes a password with a fresh random salt. Throws 400 for passwords under 8 characters. */
 export async function hashPassword(plain: string): Promise<string> {
   if (typeof plain !== 'string' || plain.length < MIN_PASSWORD_LENGTH) {
     throw new HttpError(400, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
   }
-  const salt = randomBytes(SALT_BYTES)
-  const key = await derive(plain, salt, KEY_LENGTH, SCRYPT_OPTIONS)
-  return [PREFIX, N, r, p, salt.toString('base64'), key.toString('base64')].join('$')
+  return hashWithFreshSalt(plain)
+}
+
+// The documented local-only dev admin password (see docs/adr/0007-dev-admin-login.md).
+const DEV_ADMIN_PASSWORD = 'admin'
+
+/**
+ * Hashes the fixed dev admin password, the one exception to the length policy. It takes no
+ * argument, so it cannot weaken the policy for any other password.
+ */
+export function hashDevAdminPassword(): Promise<string> {
+  return hashWithFreshSalt(DEV_ADMIN_PASSWORD)
 }
 
 function parse(stored: string) {

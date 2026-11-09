@@ -7,6 +7,7 @@
     "start": "node src/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check:dev-admin": "node scripts/check-dev-admin.ts",
     "db:generate": "drizzle-kit generate",
     "db:seed": "node src/db/seed.ts",
     "db:studio": "drizzle-kit studio",

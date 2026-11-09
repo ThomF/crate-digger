@@ -138,6 +138,31 @@ at `/data`); nothing to move. Before `docker compose up -d --build`:
 - `ADMIN_EMAIL` and `ADMIN_PASSWORD` are only used to create the first admin when none exists.
   Changing them later does not change or add an admin. There is no in-app password change yet.
 
+### The dev admin login must stay out of production
+
+Development starts add an admin, `admin@frisson.com` with the password `admin`
+(see [ADR 0007](adr/0007-dev-admin-login.md)). **Production admins come only from `ADMIN_EMAIL` and
+`ADMIN_PASSWORD`.** The step is skipped when `NODE_ENV=production`, and `SEED_DEV_ADMIN=true` cannot
+override that.
+
+- **Always set `NODE_ENV=production`.** The Dockerfile and Compose already do. The guard fails open:
+  if you start the app any other way on an internet-facing host with `NODE_ENV` unset, anyone can log
+  in as that admin.
+- **Don't carry a dev database into production.** A dev database restored through `db:backup` and
+  `db:restore`, or a copied file, brings the working `admin` / `admin` row with it. Remove that row
+  or use a clean production database. The production guard only stops the row being added, not one
+  that is already there.
+- **Earliest admin.** With no earlier admin and no `ADMIN_EMAIL`, the dev admin becomes the earliest
+  admin and receives every ownerless crate on the next start.
+
+## Admin panel
+
+Admins manage users' badges, suggested crates and news at `/admin`.
+
+- Run `db:backup` before a bulk import (see [Backups](#backups)). An import is all-or-nothing, but
+  once it succeeds there is no undo.
+- Demo rows deleted from the panel return on restart while seeding is on.
+
 ## Backups
 
 Everything worth keeping is in the `/data` volume. Back up the database with SQLite's online

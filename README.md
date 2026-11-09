@@ -42,6 +42,7 @@ A dev start adds fictional demo content to your database (see [Database](#databa
 | `/profile/edit`                          | Signed in: edit your profile                              |
 | `/albums/:id`, `/albums/new`, `.../edit` | One album; adding and editing need a signed-in user       |
 | `/login`, `/signup`                      | Log in or make an account                                 |
+| `/admin`                                 | Admins only: users, suggested crates, news, bulk import   |
 
 The masthead links to Home, Following, Profile and About. Signed-out visitors who open a signed-in
 page are sent to log in first.
@@ -56,6 +57,11 @@ page are sent to log in first.
 | `npm run typecheck` | TypeScript / vue-tsc in every app |
 | `npm run format`    | Prettier — format everything      |
 | `npm run build`     | Production build of the web app   |
+
+`npm run check:dev-admin -w apps/api` starts the real API on temporary databases and checks the
+[local admin login](#local-admin-login): existing rows stay identical across two starts, the login
+works, and a production start creates nothing. It prints PASS or FAIL per step and exits non-zero on
+any failure.
 
 ### Browser checks
 
@@ -79,6 +85,30 @@ creates one. Changing them later does not change an existing admin. Try it local
 `ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=pick-something npm run dev`, or leave them out and
 just sign up.
 
+### Local admin login
+
+Outside production, each API start also makes sure `admin@frisson.com` with the password `admin`
+exists, so you can log in as an admin straight away. This includes your own `data/crate.db` the next
+time `npm run dev` starts or restarts. The step only ever inserts that one row:
+
+- If an admin already has that email, nothing happens. If an ordinary account has it, the account is
+  not promoted and a warning is logged.
+- If the username `admin` is taken, the account gets `admin-2` (or the next free one).
+- With no earlier admin and no `ADMIN_EMAIL`, it becomes the earliest admin, so ownerless crates
+  are handed to it on the next start.
+
+It never runs with `NODE_ENV=production`, even with `SEED_DEV_ADMIN=true`. Set `SEED_DEV_ADMIN=false`
+to turn it off elsewhere. It is the only account allowed a password under 8 characters. See
+[ADR 0007](docs/adr/0007-dev-admin-login.md) and the warnings in [docs/DEPLOY.md](docs/DEPLOY.md).
+
+### Admin panel
+
+Admins get an Admin link in the account menu, which opens `/admin`. It shows overview counts and lists
+users, with a control for the verified badge. It also manages which crates are suggested (the
+Recommended section on Home), adds and edits news, and bulk imports crates, albums and news in one
+all-or-nothing request. Anyone else who opens `/admin` is sent to Home, and every `/api/admin/*` route
+checks for an admin on the server. Demo rows deleted here return on the next start while seeding is on.
+
 ### Environment variables
 
 | Variable                       | What it does                                                                                   |
@@ -91,6 +121,7 @@ just sign up.
 | `AVATARS_DIR`                  | Override the avatars folder (default `DATA_DIR/avatars`)                                       |
 | `DOMAIN`                       | Compose only: the domain Caddy serves and gets a certificate for                               |
 | `SEED_DEMO_DATA`               | `true` adds fictional demo content, `false` never; unset or empty adds it except in production |
+| `SEED_DEV_ADMIN`               | `false` skips the local admin login; it never runs in production, even when set to `true`      |
 
 `SESSION_SECRET` is no longer used.
 

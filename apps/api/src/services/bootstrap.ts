@@ -23,7 +23,7 @@ export type BootstrapResult = {
 
 const silent: BootstrapLog = { info: () => {}, warn: () => {} }
 
-function freeAdminUsername(db: Db): string {
+export function freeAdminUsername(db: Db): string {
   if (!findUserByUsername(db, 'admin')) return 'admin'
   for (let n = 2; ; n++) {
     const candidate = `admin-${n}`
