@@ -110,6 +110,22 @@ describe('CrateBox', () => {
     )
   })
 
+  it('keeps the faded sleeve past the back of the stack from catching clicks', () => {
+    const many = Array.from({ length: 16 }, (_, i): AlbumSummary => ({
+      ...albums[0]!,
+      id: i + 1,
+      title: `Record ${i + 1}`,
+    }))
+    const wrapper = mount(CrateBox, { props: { crate, albums: many, index: 0 } })
+
+    const sleeves = wrapper.findAll('.sleeve').map((s) => (s.element as HTMLElement).style)
+    expect(sleeves).toHaveLength(14) // the current one, 12 visible behind it, 1 faded
+    expect(sleeves[13]!.opacity).toBe('0')
+    expect(sleeves[13]!.pointerEvents).toBe('none')
+    expect(sleeves[12]!.opacity).toBe('1')
+    expect(sleeves[12]!.pointerEvents).not.toBe('none')
+  })
+
   it('names the crate and explains the controls for screen readers', () => {
     const wrapper = mountCrate()
 

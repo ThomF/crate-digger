@@ -12,6 +12,8 @@ const PORT = 4311
 const BASE = `http://127.0.0.1:${PORT}`
 const tmp = mkdtempSync(join(tmpdir(), 'ac12-'))
 const LONG = 'Long-Named-Crate-'.padEnd(80, 'x')
+const LONG_STACK_SIZE = 16
+let longStackId = null
 const failures = []
 let api = null
 
@@ -91,6 +93,12 @@ async function setup() {
     for (let a = 1; a <= 4; a++) {
       await post('/albums', { crateId: c.id, title: `Album ${i}-${a}`, artist: `Artist ${a}` }, cookie)
     }
+  }
+  // Enough records that a faded sleeve is drawn past the back of the visible stack.
+  const { json: long } = await post('/crates', { name: 'Long stack' }, cookie)
+  longStackId = long.id
+  for (let a = 1; a <= LONG_STACK_SIZE; a++) {
+    await post('/albums', { crateId: long.id, title: `Long ${a}`, artist: `Artist ${a}` }, cookie)
   }
   const db = new DatabaseSync(join(tmp, 'data', 'crate.db'))
   db.exec('PRAGMA busy_timeout = 5000')
@@ -287,7 +295,7 @@ async function partC(browser, ids) {
 }
 
 // ── Crate sleeve click fix: AC1, AC2, AC3. Real mouse and touch input, one line per sample. ──
-const AC_IDS = ['AC1', 'AC2', 'AC3']
+const AC_IDS = ['AC1', 'AC2', 'AC3', 'LONG-STACK']
 const acState = Object.fromEntries(AC_IDS.map((id) => [id, { fails: [], samples: 0, done: false }]))
 const MOUSE_1280 = { viewport: { width: 1280, height: 900 } }
 const MOUSE_390 = { viewport: { width: 390, height: 800 } }
@@ -724,6 +732,67 @@ async function ac3(browser, ids) {
   await ctx.close()
 }
 
+// The faded sleeve 13 back peeks above the visible stack. Nothing there may catch a click,
+// while the topmost visible edge must still flip to its record.
+async function longStack(browser) {
+  const url = `${BASE}/crates/${longStackId}`
+  const of = `/ ${LONG_STACK_SIZE}`
+  for (const [tag, opts] of [['1280-mouse', MOUSE_1280], ['390-mouse', MOUSE_390]]) {
+    const ctx = await browser.newContext(opts)
+    const page = await ctx.newPage()
+    for (const pos of [1, 3]) {
+      await openCrate(page, url)
+      await page.locator('.scene').focus()
+      for (let i = 1; i < pos; i++) await page.keyboard.press('ArrowDown')
+      await settle(page)
+      const g = await page.evaluate(() => {
+        const box = (s) => s.getBoundingClientRect()
+        const sleeves = [...document.querySelectorAll('.sleeve')]
+        const backs = sleeves.filter((s) => !s.classList.contains('current') && box(s).top < document.querySelector('.sleeve.current').getBoundingClientRect().top)
+        const faded = backs.filter((s) => getComputedStyle(s).opacity === '0')
+        const visible = backs.filter((s) => getComputedStyle(s).opacity !== '0')
+        const cur = box(document.querySelector('.sleeve.current'))
+        return {
+          fadedTop: faded.length ? Math.min(...faded.map((s) => box(s).top)) : null,
+          visibleTop: visible.length ? Math.min(...visible.map((s) => box(s).top)) : null,
+          xs: [0.4, 0.5, 0.6].map((f) => cur.left + cur.width * f),
+        }
+      })
+      const band = g.fadedTop !== null && g.visibleTop !== null && g.fadedTop < g.visibleTop
+      sample('LONG-STACK', band, `${tag} pos=${pos} ${of} faded sleeve peeks above the stack: fadedTop=${g.fadedTop} visibleTop=${g.visibleTop}`)
+      if (!band) continue
+      const y = (g.fadedTop + g.visibleTop) / 2
+      for (const x of g.xs) {
+        const hit = await hitInfo(page, x, y)
+        const before = await countNow(page)
+        // The crate owner's link sits behind this band. It is visible, so following it is
+        // right: assert the hit and leave the page where it is.
+        if (hit.name.startsWith('a.')) {
+          sample('LONG-STACK', !hit.inSleeve, `${tag} pos=${pos} ${of} point="above visible stack" at=${xy(x, y)} hit=${hit.name} (visible link, not clicked) count=${before}`)
+          continue
+        }
+        await page.mouse.click(x, y)
+        await sleep(150)
+        const after = await countNow(page)
+        sample('LONG-STACK', !hit.inSleeve && after === before && page.url() === url, `${tag} pos=${pos} ${of} point="above visible stack" at=${xy(x, y)} hit=${hit.name} count=${before}->${after} url=${short(page)}`)
+        if (after !== before || page.url() !== url) break
+      }
+      await openCrate(page, url)
+      await page.locator('.scene').focus()
+      for (let i = 1; i < pos; i++) await page.keyboard.press('ArrowDown')
+      await settle(page)
+      const x = g.xs[1]
+      const edgeY = g.visibleTop + 2
+      const edge = await hitInfo(page, x, edgeY)
+      await page.mouse.click(x, edgeY)
+      await settle(page)
+      const landed = await countNow(page)
+      sample('LONG-STACK', landed === `${pos + 12} ${of}` && page.url() === url, `${tag} pos=${pos} ${of} point="topmost visible edge" at=${xy(x, edgeY)} hit=${edge.name} count=${pos} ${of}->${landed} url=${short(page)}`)
+    }
+    await ctx.close()
+  }
+}
+
 async function runAc(id, statement, fn) {
   console.log(`(${id}) ${statement}`)
   const started = Date.now()
@@ -748,6 +817,7 @@ try {
   await runAc('AC1', 'crate front does nothing after a flip', () => ac1(browser, ids))
   await runAc('AC2', 'visible art opens the record on show after a flip', () => ac2(browser, ids))
   await runAc('AC3', 'flip controls still work', () => ac3(browser, ids))
+  await runAc('LONG-STACK', 'no invisible sleeve catches clicks above a long stack', () => longStack(browser))
 } catch (err) {
   console.log(`  FAIL script error: ${err.stack ?? err}`)
   failures.push('script error')
