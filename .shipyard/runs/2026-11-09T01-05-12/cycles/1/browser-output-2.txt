@@ -1,0 +1,79 @@
+building web into temp dir
+(node:90110) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+seeded 12 crates, 80-char name length 80
+(a) width 1280
+  ok   1280px: card "Long-Named-Crate-xxx" lands on /crates/1 (url http://127.0.0.1:4311/crates/1)
+  ok   1280px: no visible .tab
+  ok   1280px: no .tab nodes and no Crates group at all
+  ok   1280px: exactly one h1 equal to name (got ["Long-Named-Crate-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"])
+  ok   1280px: scrollWidth 1280 <= clientWidth 1280 (80-char crate)
+  OBS 1280px 80-char: panel x=469,811 label x=469,811 h1 x=240,1040 label scrollW/clientW=317/317 labelOutsidePanel=false
+  ok   1280px: card "Crate 5" lands on /crates/6 (url http://127.0.0.1:4311/crates/6)
+  ok   1280px: no visible .tab
+  ok   1280px: no .tab nodes and no Crates group at all
+  ok   1280px: exactly one h1 equal to name (got ["Crate 5"])
+  ok   1280px: scrollWidth 1280 <= clientWidth 1280 (normal crate)
+(a) width 390
+  ok   390px: card "Long-Named-Crate-xxx" lands on /crates/1 (url http://127.0.0.1:4311/crates/1)
+  ok   390px: no visible .tab
+  ok   390px: no .tab nodes and no Crates group at all
+  ok   390px: exactly one h1 equal to name (got ["Long-Named-Crate-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"])
+  ok   390px: scrollWidth 390 <= clientWidth 390 (80-char crate)
+  OBS 390px 80-char: panel x=38,352 label x=39,351 h1 x=16,374 label scrollW/clientW=291/291 labelOutsidePanel=false
+  ok   390px: card "Crate 5" lands on /crates/6 (url http://127.0.0.1:4311/crates/6)
+  ok   390px: no visible .tab
+  ok   390px: no .tab nodes and no Crates group at all
+  ok   390px: exactly one h1 equal to name (got ["Crate 5"])
+  ok   390px: scrollWidth 390 <= clientWidth 390 (normal crate)
+(a) width 320
+  ok   320px: card "Long-Named-Crate-xxx" lands on /crates/1 (url http://127.0.0.1:4311/crates/1)
+  ok   320px: no visible .tab
+  ok   320px: no .tab nodes and no Crates group at all
+  ok   320px: exactly one h1 equal to name (got ["Long-Named-Crate-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"])
+  ok   320px: scrollWidth 320 <= clientWidth 320 (80-char crate)
+  OBS 320px 80-char: panel x=31,289 label x=32,288 h1 x=16,304 label scrollW/clientW=238/238 labelOutsidePanel=false
+  ok   320px: card "Crate 5" lands on /crates/6 (url http://127.0.0.1:4311/crates/6)
+  ok   320px: no visible .tab
+  ok   320px: no .tab nodes and no Crates group at all
+  ok   320px: exactly one h1 equal to name (got ["Crate 5"])
+  ok   320px: scrollWidth 320 <= clientWidth 320 (normal crate)
+(b) wheel / arrows / drag at 1280
+  ok   starts at "1 / 4" (got "1 / 4")
+  ok   mouse wheel advances .count to "2 / 4" (got "2 / 4")
+  ok   ArrowDown advances .count to "3 / 4" (got "3 / 4")
+  ok   ArrowRight advances .count to "4 / 4" (got "4 / 4")
+  ok   pointer drag on art flips (.count "1 / 4" -> "4 / 4")
+  ok   pointer drag did not open the album (url http://127.0.0.1:4311/crates/4)
+(b2) front-sleeve clicks
+  [1280] art top 466.5 panel top 667.7 visible height 201.2 expect /albums/13
+  ok   1280 25% (y=516.8, hit div.motif) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   1280 25%: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  ok   1280 50% (y=567.1, hit p.sticker) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   1280 50%: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  ok   1280 75% (y=617.4, hit div.motif) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   1280 75%: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  ok   1280 just above panel (y=665.7, hit div.motif) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   1280 just above panel: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  OBS 1280 click 10px below panel top (y=677.7): hit div.panel.front, url http://127.0.0.1:4311/crates/4, count 1 / 4
+  [390] art top 443.3 panel top 627.4 visible height 184.1 expect /albums/13
+  ok   390 25% (y=489.3, hit div.motif) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   390 25%: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  ok   390 50% (y=535.4, hit p.sticker) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   390 50%: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  ok   390 75% (y=581.4, hit div.motif) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   390 75%: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  ok   390 just above panel (y=625.4, hit div.motif) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   390 just above panel: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  OBS 390 click 10px below panel top (y=637.4): hit div.panel.front, url http://127.0.0.1:4311/crates/4, count 1 / 4
+  [390-touch] art top 443.3 panel top 627.4 visible height 184.1 expect /albums/13
+  ok   390-touch tap mid-art (y=535.4, hit p.sticker) opens /albums/13 (url http://127.0.0.1:4311/albums/13)
+  ok   390-touch tap mid-art: Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+(c) toolbar Crates link and /shelf
+  ok   toolbar Crates opens /shelf (url http://127.0.0.1:4311/shelf)
+  ok   all 12 crates are visible tabs (got 12)
+  ok   clicked tab has aria-pressed=true
+  ok   crate switched: .now h2 "Album 2-1" -> "Album 11-1"
+  ok   URL stays /shelf (url http://127.0.0.1:4311/shelf)
+  ok   tabs still all visible
+PASS AC12

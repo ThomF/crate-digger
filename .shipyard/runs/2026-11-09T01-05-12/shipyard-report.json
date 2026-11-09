@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "plan": "I want update the crate view. currently it uses the old system which shows all crates in the db as a choice. this should only show the crate you are on and not all the choices to view other crates as this is viewing the one crate.\n\nGoal: On the single-crate page (/crates/:id, reached from crate cards on Home, Following and Profile), show only that crate: remove the picker of every crate in the DB, and show the crate's name as the page heading because the tabs were its only readable label. All other crate view behaviour stays the same. /shelf stays the one place to choose between crates.",
+  "plan_changes": [
+    {
+      "change": "Owner confirmed /shelf keeps its crate tabs; only /crates/:id drops them. Tab clicks on /shelf stay on /shelf.",
+      "why": "The request names the crate view only; /shelf is the sole way to browse crates. Asked before planning."
+    },
+    {
+      "change": "Playwright added as a dev dependency.",
+      "why": "AC12 needs a real browser and the repo had none. Owner approved."
+    },
+    {
+      "change": "AC12(b) reversed from pass to fail by the harbormaster, and a one-rule CSS fix added to CrateBox.vue.",
+      "why": "browser.mjs clicked only a 5px strip of the sleeve, so its pass did not show a user can click the record. The exploratory pass measured the real behaviour. The bug predates this run (same at 24dcabd), but the contract says clicking the front sleeve opens the album."
+    }
+  ],
+  "files_changed": [
+    {
+      "path": "README.md",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/components/crate/CrateBox.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/router.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/CrateView.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/CrateView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/editControls.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "docs/SPEC.md",
+      "status": "modified"
+    },
+    {
+      "path": "package-lock.json",
+      "status": "modified"
+    },
+    {
+      "path": "package.json",
+      "status": "modified"
+    }
+  ],
+  "tests": [
+    {
+      "name": "AC1: In apps/web/src/views/CrateView.test.ts, visiting /crates/2 with three crates loaded (Guitars, Beats & Bass, Dub) renders zero `button.tab` elements and no `[role=\"group\"][aria-label=\"Crates\"]`, and the wrapper text contains neither 'Guitars' nor 'Dub'.",
+      "status": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts '/crates/:id shows no picker and no other crate': visits /crates/2, asserts 0 button.tab, no group[aria-label=Crates], text lacks Guitars and Dub. npm test passes."
+    },
+    {
+      "name": "AC2: On /crates/:id the view renders exactly one h1 whose text equals the crate's label when it has one and its name when label is null. Unit tests cover both cases.",
+      "status": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts describe 'the heading on /crates/:id': 'is the label when the crate has one' (one h1 = BEATS) and 'is the name when the label is null' (one h1 = Beats & Bass); also 'is not added to /shelf'."
+    },
+    {
+      "name": "AC3: Pushing /crates/3 while on /crates/2 updates the h1 to crate 3's name and `.now h2` to crate 3's first album, and sets library.selectedCrate.id to 3, with zero `button.tab` before and after.",
+      "status": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts 'follows the URL when it changes under the view': zero tabs before/after push, h1 Dub, .now h2 Echoes, library.selectedCrate.id 3."
+    },
+    {
+      "name": "AC4: CrateView tests still assert these missing-crate outcomes: /crates/999999 shows 'Crate not found' with a link to /shelf and no `.now`; an id unknown to a loaded store triggers exactly one extra /api/crates fetch and then shows that crate if it now exists (checked by its h1), or 'Crate not found' if not; a failed reload shows the alert with Try again and does not show 'Crate not found'.",
+      "status": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts: 'a missing id shows Crate not found...' (text, no .now, link /shelf), 'reloads once and then shows the crate' (2 fetches, h1 Brand New), 'ends at Crate not found after exactly one reload, with no loop', 'shows the error with Try again when the reload fails, without looping' (alert, no Crate not found)."
+    },
+    {
+      "name": "AC5: Visiting /shelf renders `button.tab` elements for every crate in store order (Guitars, Beats & Bass, Dub) with the first having aria-pressed=\"true\". Visiting /crates/3 and then pushing /shelf leaves Dub with aria-pressed=\"true\".",
+      "status": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts '/shelf shows the first crate and every tab' (3 tabs in order, Guitars pressed) and 'going back to /shelf stays in the crate you were looking at' (Dub pressed)."
+    },
+    {
+      "name": "AC6: Clicking the Dub tab on /shelf leaves the current route's fullPath as /shelf, calls neither router.push nor router.replace, sets aria-pressed=\"true\" on Dub, changes `.now h2` to Dub's first album, and still renders all three tabs.",
+      "status": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts 'a tab click on /shelf switches crate and stays on /shelf': fullPath /shelf, push/replace spies not called, Dub pressed, .now h2 Echoes, 3 tabs."
+    },
+    {
+      "name": "AC7: CrateView tests on /crates/:id, with a crate holding at least 2 albums, assert: clicking 'Flip ▶' changes `.count` from '1 / N' to '2 / N'; clicking '◀ Back' returns it to '1 / N'; 'Pull it out' navigates to /albums/<current id>; pressing ArrowDown on the `.scene` element advances `.count`; the owner link points to /u/<ownerUsername>; a crate with no albums shows 'Nothing in here yet.'",
+      "status": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts describe 'the crate controls on /crates/:id' (3 albums): Flip and Back 1/3->2/3->1/3; Pull it out after Flip -> /albums/22 (current id); ArrowDown on .scene -> 2/3; owner link /u/alice; empty crate 'Nothing in here yet.'"
+    },
+    {
+      "name": "AC8: `git diff --name-only 24dcabd -- apps/api packages apps/web/src/stores/library.ts apps/web/src/views/CratesView.vue apps/web/src/views/AlbumView.vue apps/web/src/views/AlbumEditorView.vue` prints nothing, showing that reorder, crate editing, album editing and spin code are untouched.",
+      "status": "pass",
+      "evidence": "git diff --name-only 24dcabd -- <listed paths> printed nothing."
+    },
+    {
+      "name": "AC9: Tests in apps/web/src/views/editControls.test.ts or CrateView.test.ts visit /crates/:id as a signed-in user and assert: on the user's own crate, 'Pull it out' sends POST /api/albums/<id>/spins and '+ Add a record' links to /albums/new?crateId=<id>; on another user's crate, 'Pull it out' sends no POST and the '+ Add a record' href has no crateId.",
+      "status": "pass",
+      "evidence": "apps/web/src/views/editControls.test.ts added 'a crate page counts spins and preselects the crate for the owner' (POST /api/albums/10/spins, href /albums/new?crateId=1) and \"a crate page on someone else's crate counts no spin and preselects nothing\" (no POST, href /albums/new)."
+    },
+    {
+      "name": "AC10: `npm test`, `npm run typecheck` and `npm run lint` each exit 0 from the repo root.",
+      "status": "pass",
+      "evidence": "npm test exit 0 (api 21 files/360 tests, web 31 files/326 tests); npm run typecheck exit 0; npm run lint exit 0, run with .shipyard/checks/browser.mjs present."
+    },
+    {
+      "name": "AC11: In README.md the Pages table row for `/crates/:id` does not contain the words 'crate browser' and says it shows one crate. In docs/SPEC.md the 'Where the crate view lives' line states that the crate picker appears only at `/shelf`.",
+      "status": "pass",
+      "evidence": "README.md row: '/crates/:id | Shows one crate, with no crate picker (public link)' (no 'crate browser'; the phrase remains only on the /shelf row). docs/SPEC.md line 'The crate picker appears only at /shelf' present."
+    },
+    {
+      "name": "AC12: In one real-browser pass against a temp copy of the DB with 11 or more crates, including one crate with an 80-character name. (a) At 1280, 390 and 320 px wide, clicking a crate card on Home lands on /crates/:id with no element matching `.tab` visible and the h1 showing that crate's name. For the 80-character crate at each width, document.documentElement.scrollWidth <= clientWidth. (b) At 1280 px, the mouse wheel and arrow keys each advance `.count`, clicking the front sleeve opens /albums/<id>, and browser Back returns to the same /crates/:id. (c) The toolbar Crates link opens /shelf with all crates as tabs, and clicking a tab switches crate while the URL stays /shelf and the tabs stay visible.",
+      "status": "pass",
+      "evidence": "browser-output-2.txt ends PASS AC12 (exit 0), npm run lint clean. Parts (a),(c) unchanged and pass. Sleeve clicks use real page.mouse clicks from a fresh visit after a 900ms settle at 25%, 50%, 75% of visible art and 2px above the front panel top: all open /albums/13 at 1280 (art 466.5-667.7) and 390 (443.3-627.4); touch tap (hasTouch, mobile) at mid-art also opens it. Back returns to /crates/4 every time. Drag on art flips (1 / 4 -> 4 / 4) and URL stays /crates/4. Wheel and ArrowDown/Right/Up still advance .count. Crate front panel: 10px below its top, elementFromPoint is div.panel.front and a click does nothing (stays on crate, 1 / 4); clicks work down to the panel top and stop there."
+    }
+  ],
+  "branch": "shipyard/single-crate-view-2026-11-09T01-05-12",
+  "base": "24dcabdb441dd3529b9c9622c1adc25388ac2fe5",
+  "notes": [
+    "T1: no real-browser run by the dev; an 80-character label may overflow the crate panel vertically.",
+    "T2: npm ci not run; browser-free npm install is assumed from Playwright docs and from the download appearing only on the install command.",
+    "T2: agents/dev-T2.md is a short note, not a full report.",
+    "Exploratory pass did not test Firefox, Safari, the edit crate flow, a Following card, the Try again state, or login through the UI.",
+    "Crate names are capped at 60 characters by the API, so AC12 wrote the 80-character name directly into the temp DB."
+  ]
+}

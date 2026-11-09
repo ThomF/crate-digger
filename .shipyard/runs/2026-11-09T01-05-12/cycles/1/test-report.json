@@ -1,0 +1,72 @@
+{
+  "criteria": {
+    "AC1": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts '/crates/:id shows no picker and no other crate': visits /crates/2, asserts 0 button.tab, no group[aria-label=Crates], text lacks Guitars and Dub. npm test passes."
+    },
+    "AC2": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts describe 'the heading on /crates/:id': 'is the label when the crate has one' (one h1 = BEATS) and 'is the name when the label is null' (one h1 = Beats & Bass); also 'is not added to /shelf'."
+    },
+    "AC3": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts 'follows the URL when it changes under the view': zero tabs before/after push, h1 Dub, .now h2 Echoes, library.selectedCrate.id 3."
+    },
+    "AC4": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts: 'a missing id shows Crate not found...' (text, no .now, link /shelf), 'reloads once and then shows the crate' (2 fetches, h1 Brand New), 'ends at Crate not found after exactly one reload, with no loop', 'shows the error with Try again when the reload fails, without looping' (alert, no Crate not found)."
+    },
+    "AC5": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts '/shelf shows the first crate and every tab' (3 tabs in order, Guitars pressed) and 'going back to /shelf stays in the crate you were looking at' (Dub pressed)."
+    },
+    "AC6": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts 'a tab click on /shelf switches crate and stays on /shelf': fullPath /shelf, push/replace spies not called, Dub pressed, .now h2 Echoes, 3 tabs."
+    },
+    "AC7": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/CrateView.test.ts describe 'the crate controls on /crates/:id' (3 albums): Flip and Back 1/3->2/3->1/3; Pull it out after Flip -> /albums/22 (current id); ArrowDown on .scene -> 2/3; owner link /u/alice; empty crate 'Nothing in here yet.'"
+    },
+    "AC8": {
+      "verdict": "pass",
+      "evidence": "git diff --name-only 24dcabd -- <listed paths> printed nothing."
+    },
+    "AC9": {
+      "verdict": "pass",
+      "evidence": "apps/web/src/views/editControls.test.ts added 'a crate page counts spins and preselects the crate for the owner' (POST /api/albums/10/spins, href /albums/new?crateId=1) and \"a crate page on someone else's crate counts no spin and preselects nothing\" (no POST, href /albums/new)."
+    },
+    "AC10": {
+      "verdict": "pass",
+      "evidence": "npm test exit 0 (api 21 files/360 tests, web 31 files/326 tests); npm run typecheck exit 0; npm run lint exit 0, run with .shipyard/checks/browser.mjs present."
+    },
+    "AC11": {
+      "verdict": "pass",
+      "evidence": "README.md row: '/crates/:id | Shows one crate, with no crate picker (public link)' (no 'crate browser'; the phrase remains only on the /shelf row). docs/SPEC.md line 'The crate picker appears only at /shelf' present."
+    },
+    "AC12": {
+      "verdict": "pass",
+      "evidence": "browser-output-2.txt ends PASS AC12 (exit 0), npm run lint clean. Parts (a),(c) unchanged and pass. Sleeve clicks use real page.mouse clicks from a fresh visit after a 900ms settle at 25%, 50%, 75% of visible art and 2px above the front panel top: all open /albums/13 at 1280 (art 466.5-667.7) and 390 (443.3-627.4); touch tap (hasTouch, mobile) at mid-art also opens it. Back returns to /crates/4 every time. Drag on art flips (1 / 4 -> 4 / 4) and URL stays /crates/4. Wheel and ArrowDown/Right/Up still advance .count. Crate front panel: 10px below its top, elementFromPoint is div.panel.front and a click does nothing (stays on crate, 1 / 4); clicks work down to the panel top and stop there."
+    }
+  },
+  "observations": [
+    {
+      "what": "80-char crate name does not overflow the crate panel at 1280, 390 or 320: front panel x 469-811 / 38-352 / 31-289 with the label inside it each time; h1 wraps within the viewport. The API caps names at 60 chars (createCrateInput), so 80 chars was written straight into the temp DB; unreachable through the API.",
+      "severity": "low"
+    },
+    {
+      "what": "Front sleeve click target is small: the centre of the sleeve's bounding box is covered by the crate (elementFromPoint returns .crate), and only a strip about 16px tall at the top of the sleeve opens the album. A Playwright centre click on .sleeve.current does nothing. The script clicks the middle of that hit strip. CrateBox sleeve code is unchanged apart from label CSS, so probably already so before this change; not verified on the base.",
+      "severity": "low"
+    },
+    {
+      "what": "CrateView.test.ts top describe is still named 'crate browser'. Cosmetic only.",
+      "severity": "low"
+    },
+    {
+      "what": "On /shelf, a crate chosen by tab is not in the URL, so reload returns to the first crate. This is the documented trade-off in the brief.",
+      "severity": "low"
+    },
+    "low: a 144px vertical drag jumped the count 1 / 4 to 4 / 4 (very fast flip), seen earlier too.",
+    "Not tested this round: invisible flipped sleeve catching clicks on the crate front (earlier Medium finding); the click-below-panel probe was only run at rest, not after a flip."
+  ]
+}

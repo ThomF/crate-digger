@@ -1,0 +1,57 @@
+building web into temp dir
+(node:83978) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+seeded 12 crates, 80-char name length 80
+(a) width 1280
+  ok   1280px: card "Long-Named-Crate-xxx" lands on /crates/1 (url http://127.0.0.1:4311/crates/1)
+  ok   1280px: no visible .tab
+  ok   1280px: no .tab nodes and no Crates group at all
+  ok   1280px: exactly one h1 equal to name (got ["Long-Named-Crate-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"])
+  ok   1280px: scrollWidth 1280 <= clientWidth 1280 (80-char crate)
+  OBS 1280px 80-char: panel x=469,811 label x=469,811 h1 x=240,1040 label scrollW/clientW=317/317 labelOutsidePanel=false
+  ok   1280px: card "Crate 5" lands on /crates/6 (url http://127.0.0.1:4311/crates/6)
+  ok   1280px: no visible .tab
+  ok   1280px: no .tab nodes and no Crates group at all
+  ok   1280px: exactly one h1 equal to name (got ["Crate 5"])
+  ok   1280px: scrollWidth 1280 <= clientWidth 1280 (normal crate)
+(a) width 390
+  ok   390px: card "Long-Named-Crate-xxx" lands on /crates/1 (url http://127.0.0.1:4311/crates/1)
+  ok   390px: no visible .tab
+  ok   390px: no .tab nodes and no Crates group at all
+  ok   390px: exactly one h1 equal to name (got ["Long-Named-Crate-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"])
+  ok   390px: scrollWidth 390 <= clientWidth 390 (80-char crate)
+  OBS 390px 80-char: panel x=38,352 label x=39,351 h1 x=16,374 label scrollW/clientW=291/291 labelOutsidePanel=false
+  ok   390px: card "Crate 5" lands on /crates/6 (url http://127.0.0.1:4311/crates/6)
+  ok   390px: no visible .tab
+  ok   390px: no .tab nodes and no Crates group at all
+  ok   390px: exactly one h1 equal to name (got ["Crate 5"])
+  ok   390px: scrollWidth 390 <= clientWidth 390 (normal crate)
+(a) width 320
+  ok   320px: card "Long-Named-Crate-xxx" lands on /crates/1 (url http://127.0.0.1:4311/crates/1)
+  ok   320px: no visible .tab
+  ok   320px: no .tab nodes and no Crates group at all
+  ok   320px: exactly one h1 equal to name (got ["Long-Named-Crate-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"])
+  ok   320px: scrollWidth 320 <= clientWidth 320 (80-char crate)
+  OBS 320px 80-char: panel x=31,289 label x=32,288 h1 x=16,304 label scrollW/clientW=238/238 labelOutsidePanel=false
+  ok   320px: card "Crate 5" lands on /crates/6 (url http://127.0.0.1:4311/crates/6)
+  ok   320px: no visible .tab
+  ok   320px: no .tab nodes and no Crates group at all
+  ok   320px: exactly one h1 equal to name (got ["Crate 5"])
+  ok   320px: scrollWidth 320 <= clientWidth 320 (normal crate)
+(b) 1280 interactions
+  ok   starts at "1 / 4" (got "1 / 4")
+  ok   mouse wheel advances .count to "2 / 4" (got "2 / 4")
+  ok   ArrowDown advances .count to "3 / 4" (got "3 / 4")
+  ok   ArrowRight advances .count to "4 / 4" (got "4 / 4")
+  clickable part of front sleeve: {"x":639.9925384521484,"y":438.52801513671875,"from":430.52801513671875,"to":446.52801513671875,"boxTop":430.52801513671875,"boxBottom":694.1611328125}
+  ok   front sleeve click opens /albums/15 (url http://127.0.0.1:4311/albums/15)
+  ok   browser Back returns to http://127.0.0.1:4311/crates/4 (url http://127.0.0.1:4311/crates/4)
+  ok   after Back one h1 "Crate 3" (got ["Crate 3"]), tabs 0
+(c) toolbar Crates link and /shelf
+  ok   toolbar Crates opens /shelf (url http://127.0.0.1:4311/shelf)
+  ok   all 12 crates are visible tabs (got 12)
+  ok   clicked tab has aria-pressed=true
+  ok   crate switched: .now h2 "Album 2-1" -> "Album 11-1"
+  ok   URL stays /shelf (url http://127.0.0.1:4311/shelf)
+  ok   tabs still all visible
+PASS AC12

@@ -1,0 +1,46 @@
+{
+  "goal": "On the single-crate page (/crates/:id, reached from crate cards on Home, Following and Profile), show only that crate: remove the picker of every crate in the DB, and show the crate's name as the page heading because the tabs were its only readable label. All other crate view behaviour stays the same. /shelf stays the one place to choose between crates.",
+  "constraints": [
+    "Web-only change, expected in apps/web/src/views/CrateView.vue and its tests, plus README.md and docs/SPEC.md. No API, shared package, schema or store changes.",
+    "CrateView stays shared by /shelf and /crates/:id. The picker renders only when the crateId prop is undefined.",
+    "Keep the existing /crates/:id behaviour: selecting the crate in the store so /shelf remembers it, one forced reload for an unknown id, Crate not found, and the error state with Try again.",
+    "Keep LibraryToolbar as it is on /crates/:id, including the Crates link to /shelf. It is one navigation link, not a list of crates.",
+    "Existing tests may only be changed where they assert tabs on /crates/:id or a URL change from a tab click. Each must be replaced with an equivalent assertion on the new behaviour, not just deleted. These are the deep-link, reload, tab-click, 'follows the URL' and related cases in apps/web/src/views/CrateView.test.ts.",
+    "Base for diff checks is commit 24dcabd, the tip of the four-page work, which is not merged to main. Do not diff against main.",
+    "Do not merge or push."
+  ],
+  "assumptions": [
+    "'The crate view' means /crates/:id, the page that views one crate. The request does not mention /shelf, which shares the same component.",
+    "/shelf keeps its picker. Home, the toolbar, NotFound, Album, the album editor and the Crates manage page all link to it, and it is the only public way to browse all crates (Home's link is labelled 'Browse all crates'). Removing it would need a replacement index page, which was not requested. If the owner wants the picker gone everywhere, that is a larger, different scope.",
+    "A tab click on /shelf now switches crate in place and stays on /shelf. Today it does router.replace to /crates/:id, which would now make the picker vanish on the first click. Trade-off: a crate chosen on /shelf no longer changes the URL, so the address bar is not shareable from there, and a reload returns to the first crate.",
+    "The heading is an h1 showing label ?? name, the same text the tab showed. Other views also render their own h1.",
+    "The page title stays 'Crates · Frisson'. Per-crate titles were not requested.",
+    "'← Back to the crates' on the album page, and the album editor's save, cancel and back links, keep going to /shelf, with the crate last viewed preselected. Browser Back still returns to /crates/:id. Pointing them at the album's own crate was not requested.",
+    "Reorder and crate editing live on /crates (CratesView), not on the crate view, so the no-regression requirement for them is met by leaving that code untouched.",
+    "Crate deep links stay public, and any visitor can open any crate by URL. This changes the display only, not access."
+  ],
+  "risks": [
+    "A user who pulls a record from /crates/:id and clicks '← Back to the crates' lands on /shelf and sees the picker again, which may feel like the old system is still there. This is the most likely follow-up request.",
+    "The in-place tab click on /shelf reverses behaviour pinned by existing tests and removes the shareable URL from /shelf.",
+    "The README and SPEC call /crates/:id 'the crate browser', and the router comment 'Crate tabs change the URL' becomes stale.",
+    "Without the tabs, a long crate name in the new heading could overflow at narrow widths, since the tabs had their own overflow-wrap rule.",
+    "CrateView.test.ts uses pressedTab on /crates/:id in many cases, so a careless rewrite could silently lose coverage of the reload and not-found logic.",
+    "CratesView has no view test file, so reorder and edit regressions there are guarded only by leaving the file unchanged (AC8) and by API tests.",
+    "The known limit 'crate picker stacks at 320/390 with 11+ crates' is resolved on /crates/:id but remains on /shelf, out of scope.",
+    "Starting the API on this branch applies demo data to the owner's DB unless SEED_DEMO_DATA=false, so browser checks should use a temp copy of the DB."
+  ],
+  "acceptanceCriteria": [
+    {"id": "AC1", "statement": "In apps/web/src/views/CrateView.test.ts, visiting /crates/2 with three crates loaded (Guitars, Beats & Bass, Dub) renders zero `button.tab` elements and no `[role=\"group\"][aria-label=\"Crates\"]`, and the wrapper text contains neither 'Guitars' nor 'Dub'.", "check": "unit"},
+    {"id": "AC2", "statement": "On /crates/:id the view renders exactly one h1 whose text equals the crate's label when it has one and its name when label is null. Unit tests cover both cases.", "check": "unit"},
+    {"id": "AC3", "statement": "Pushing /crates/3 while on /crates/2 updates the h1 to crate 3's name and `.now h2` to crate 3's first album, and sets library.selectedCrate.id to 3, with zero `button.tab` before and after.", "check": "unit"},
+    {"id": "AC4", "statement": "CrateView tests still assert these missing-crate outcomes: /crates/999999 shows 'Crate not found' with a link to /shelf and no `.now`; an id unknown to a loaded store triggers exactly one extra /api/crates fetch and then shows that crate if it now exists (checked by its h1), or 'Crate not found' if not; a failed reload shows the alert with Try again and does not show 'Crate not found'.", "check": "unit"},
+    {"id": "AC5", "statement": "Visiting /shelf renders `button.tab` elements for every crate in store order (Guitars, Beats & Bass, Dub) with the first having aria-pressed=\"true\". Visiting /crates/3 and then pushing /shelf leaves Dub with aria-pressed=\"true\".", "check": "unit"},
+    {"id": "AC6", "statement": "Clicking the Dub tab on /shelf leaves the current route's fullPath as /shelf, calls neither router.push nor router.replace, sets aria-pressed=\"true\" on Dub, changes `.now h2` to Dub's first album, and still renders all three tabs.", "check": "unit"},
+    {"id": "AC7", "statement": "CrateView tests on /crates/:id, with a crate holding at least 2 albums, assert: clicking 'Flip ▶' changes `.count` from '1 / N' to '2 / N'; clicking '◀ Back' returns it to '1 / N'; 'Pull it out' navigates to /albums/<current id>; pressing ArrowDown on the `.scene` element advances `.count`; the owner link points to /u/<ownerUsername>; a crate with no albums shows 'Nothing in here yet.'", "check": "unit"},
+    {"id": "AC8", "statement": "`git diff --name-only 24dcabd -- apps/api packages apps/web/src/stores/library.ts apps/web/src/views/CratesView.vue apps/web/src/views/AlbumView.vue apps/web/src/views/AlbumEditorView.vue` prints nothing, showing that reorder, crate editing, album editing and spin code are untouched.", "check": "command"},
+    {"id": "AC9", "statement": "Tests in apps/web/src/views/editControls.test.ts or CrateView.test.ts visit /crates/:id as a signed-in user and assert: on the user's own crate, 'Pull it out' sends POST /api/albums/<id>/spins and '+ Add a record' links to /albums/new?crateId=<id>; on another user's crate, 'Pull it out' sends no POST and the '+ Add a record' href has no crateId.", "check": "unit"},
+    {"id": "AC10", "statement": "`npm test`, `npm run typecheck` and `npm run lint` each exit 0 from the repo root.", "check": "command"},
+    {"id": "AC11", "statement": "In README.md the Pages table row for `/crates/:id` does not contain the words 'crate browser' and says it shows one crate. In docs/SPEC.md the 'Where the crate view lives' line states that the crate picker appears only at `/shelf`.", "check": "command"},
+    {"id": "AC12", "statement": "In one real-browser pass against a temp copy of the DB with 11 or more crates, including one crate with an 80-character name. (a) At 1280, 390 and 320 px wide, clicking a crate card on Home lands on /crates/:id with no element matching `.tab` visible and the h1 showing that crate's name. For the 80-character crate at each width, document.documentElement.scrollWidth <= clientWidth. (b) At 1280 px, the mouse wheel and arrow keys each advance `.count`, clicking the front sleeve opens /albums/<id>, and browser Back returns to the same /crates/:id. (c) The toolbar Crates link opens /shelf with all crates as tabs, and clicking a tab switches crate while the URL stays /shelf and the tabs stay visible.", "check": "browser"}
+  ]
+}

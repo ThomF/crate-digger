@@ -36,3 +36,14 @@
 - Known limits: recommendations are a curated demo flag with no AI; news is fictional seed data; demo names checked from model knowledge only; AC27 smoke not re-run after the fix; one unreproduced missed click on a card; crate picker stacks at 320/390 with 11+ crates
 - db:seed is manual and destructive. Demo data applies at API start instead, and the owner's DB gets it on the next start on this branch unless SEED_DEMO_DATA=false
 - Not merged or pushed
+
+## 2026-11-09T01-05-12: single-crate view, no picker on /crates/:id
+- Verdict: shipped (12/12 criteria, real-browser checks on a temp DB), 1 cycle, 1 fix round (AC12(b), sleeve click reached only a 5px strip; pre-existing bug), 2 tasks plus the fix
+- Wall clock: 24m 43s; slowest stage: test (14m 11s)
+- Tokens: 529,927 across 12 agents (size standard, harbormaster's own tokens not included).
+- Deaths: none. Blockers: none
+- Fast paths: direct-fix, scoped-retest. Survey cache rejected (106 files changed), refreshed
+- Owner decisions: /shelf keeps its tabs; Playwright added as a root dev dependency. Tab clicks on /shelf no longer change the URL
+- Lesson: a click check on one strip proves nothing; .shipyard/checks/browser.mjs now samples the visible art with real mouse and touch input
+- Known limits: invisible flipped sleeve catches clicks on the crate front; phone swipe on the crate never scrolls; "Back to the crates" returns to /shelf; Firefox and Safari untested
+- Not merged or pushed. Branch sits on the unmerged four-page branch

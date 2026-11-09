@@ -1,0 +1,92 @@
+{
+  "commit": "24dcabdb441dd3529b9c9622c1adc25388ac2fe5",
+  "structure": {
+    "kind": "npm workspaces monorepo (root package 'frisson', ESM, node >=22.18)",
+    "language": "TypeScript; API runs .ts natively with no compile step",
+    "workspaces": {
+      "apps/api": "Fastify 5, fastify-type-provider-zod, Drizzle + better-sqlite3, sharp. Sources apps/api/src, tests apps/api/test.",
+      "apps/web": "Vue 3, Vite 6, Pinia, vue-router, vue-tsc. Dev port 5173, proxies /api, /covers, /avatars to 127.0.0.1:3000.",
+      "packages/shared": "@frisson/shared: zod 4 schemas and sorting helpers, raw .ts exports."
+    },
+    "scripts": "root: dev, build, typecheck, test, lint, format, format:check"
+  },
+  "tests": {
+    "runner": "Vitest 3 in apps/api and apps/web; web uses happy-dom + @vue/test-utils",
+    "command": "npm test",
+    "single_workspace": "npm test -w apps/web",
+    "other_checks": "npm run typecheck; npm run lint",
+    "locations": "apps/api/test/*.test.ts; apps/web/src/**/*.test.ts (colocated)",
+    "browser_tooling": "None: no Playwright, Cypress or Puppeteer installed.",
+    "baseline": "exit 0, 316 tests, 8s on the base commit"
+  },
+  "conventions": {
+    "lint_format": "ESLint 9 flat config (vue essential, vue-ts recommended); Prettier: no semis, single quotes, width 100, trailing commas",
+    "git": "Conventional Commits with scope, e.g. feat(web): ...",
+    "web": "views/*View.vue per route; components grouped by feature; composables/useX.ts; relative imports with explicit .ts; <script setup lang=\"ts\">; tests colocated as *.test.ts",
+    "errors": "api/client.ts throws ApiRequestError; errorMessage(err) gives user-safe text; useAsyncSection for independent sections, templates branch on status with role=status/alert notes",
+    "habits": "Comments explain why; '// Data classification: PUBLIC ...' at file top; user text rendered only with {{ }}; accessibility emphasised; views set document.title in onMounted ('Home · Frisson')"
+  },
+  "documentation": {
+    "files": ["README.md", "docs/SPEC.md", "docs/DEPLOY.md", "docs/adr/0001..0006"],
+    "absent": "No CLAUDE.md or CONTRIBUTING.md",
+    "intent": [
+      "Self-hosted manually curated music collection shown as 90s record crates; flip sleeves, pull one out, spin it. No external music APIs.",
+      "Anyone can browse; signed-in users create crates and edit their own; admins edit everything.",
+      "Shared Zod package is the API/web contract.",
+      "ADR 0006: following, Home, About, /shelf for the crate browser, demo content flagged and tagged.",
+      "Accessibility includes reduced motion and keyboard use."
+    ]
+  },
+  "relevant": {
+    "summary": "CrateView.vue serves both /shelf (name 'library', no id, shows store's selectedCrate, default first crate) and /crates/:id (name 'crate', public deep link, crateId prop). The 'old system' picker is the .tabs button group inside CrateView. Selection is in-memory Pinia state plus the URL. No per-crate API fetch: the store loads all crates and albums.",
+    "crate_view": {
+      "file": "apps/web/src/views/CrateView.vue",
+      "lines": {
+        "crateId prop": "18",
+        "onMounted library load": "24-27",
+        "crate computed (crateId -> crateById, else selectedCrate)": "30-32",
+        "watch syncs crateId into selectCrate": "35-41",
+        "stale-id reload-once": "43-60",
+        "chooseCrate (selectCrate + router.replace to 'crate')": "62-65",
+        "albums computed": "66-68",
+        "position in/set": "70-77",
+        "open() spins if canEditCrate then pushes album route": "82-89",
+        "LibraryToolbar add-to-crate-id": "93",
+        "loading/error": "95-102",
+        "not-found with 'Browse all crates' link to library": "104-107",
+        "EmptyShelf": "109",
+        "PICKER div.tabs v-for library.crates": "112-125",
+        "OwnerLink": "128",
+        "CrateBox": "130",
+        "now-playing, Add a record": "133-156",
+        "back/pull/flip controls": "158-166",
+        "hint": "168-170",
+        "tabs CSS": "175-199"
+      }
+    },
+    "router": "apps/web/src/router.ts: 14-18 shared CrateView comment and inCrateBrowser helper, 24 /shelf 'library', 27-29 /crates 'crates' guarded manage page, 33-38 /crates/:id(\\d+) 'crate', 112-113 scrollBehavior comment about crate tabs changing the URL",
+    "store": "apps/web/src/stores/library.ts: crates/albums 22-23, crateShelves 28-36, selectedCrateId/positions 41-42, selectedCrate falls back to crates[0] 44-46, selectCrate 48, positionIn/setPosition 52-58, crateById 60, load 65+, delete resets selection 132",
+    "dependents": {
+      "LibraryToolbar": "apps/web/src/components/LibraryToolbar.vue:11-28 (Crates/List tabs, Edit crates, Add record with crateId; Crates active on library and crate routes)",
+      "CratesView": "apps/web/src/views/CratesView.vue (manage page; back link to library at 63)",
+      "AlbumEditorView": "apps/web/src/views/AlbumEditorView.vue (?crateId=; back/after-save to library at 179,187,192)",
+      "AlbumView": "apps/web/src/views/AlbumView.vue:76 back link to library, not the specific crate",
+      "LibraryView": "apps/web/src/views/LibraryView.vue (list view, crate filters)",
+      "NotFoundView": "apps/web/src/views/NotFoundView.vue:8 link to library",
+      "components": "components/crate/CrateBox.vue, OwnerLink.vue, EmptyShelf.vue; utils/permissions.ts canEditCrate"
+    },
+    "links_in": {
+      "crate route": ["HomeView.vue:88-95", "FollowingView.vue:80-87", "ProfileView.vue:157-164"],
+      "library route": ["HomeView.vue:109 'Browse all crates'", "CrateView.vue:106", "LibraryToolbar.vue:18", "AlbumView.vue:76", "AlbumEditorView.vue:179,187,192", "CratesView.vue:63", "NotFoundView.vue:8"],
+      "main nav": "App.vue:30-33 has Home, Following, Profile, About; no direct shelf link"
+    },
+    "docs": ["docs/SPEC.md:114-115", "README.md:20,37,38", "docs/DEPLOY.md:102", "docs/adr/0006-following-home-and-demo-content.md:9,18,21,78"],
+    "tests": {
+      "apps/web/src/views/CrateView.test.ts": "helpers pressedTab/tab 79-80; no-tab empty state 103; /shelf shows first crate and every tab 191-199; tab click on /shelf 202; tab click on /crates/:id 217; back to /shelf 234; recovers after missing id 241; toolbar Crates active 249-256",
+      "apps/web/src/views/editControls.test.ts": "visits /shelf at 192, 205",
+      "apps/web/src/router.test.ts": "route names 80; scrollBehavior between /crates/5 and /shelf 100-109",
+      "others": ["stores/library.test.ts", "views/HomeView.test.ts", "views/FollowingView.test.ts", "views/ProfileView.test.ts", "App.test.ts", "components/crate/CrateBox.test.ts"]
+    },
+    "open_question": "Whether /shelf (no id) keeps the picker or also drops it."
+  }
+}

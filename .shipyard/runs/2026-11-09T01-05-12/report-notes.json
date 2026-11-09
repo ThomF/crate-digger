@@ -1,0 +1,57 @@
+{
+  "plan_changes": [
+    {
+      "change": "Owner confirmed /shelf keeps its crate tabs; only /crates/:id drops them. Tab clicks on /shelf stay on /shelf.",
+      "why": "The request names the crate view only; /shelf is the sole way to browse crates. Asked before planning."
+    },
+    {
+      "change": "Playwright added as a dev dependency.",
+      "why": "AC12 needs a real browser and the repo had none. Owner approved."
+    },
+    {
+      "change": "AC12(b) reversed from pass to fail by the harbormaster, and a one-rule CSS fix added to CrateBox.vue.",
+      "why": "browser.mjs clicked only a 5px strip of the sleeve, so its pass did not show a user can click the record. The exploratory pass measured the real behaviour. The bug predates this run (same at 24dcabd), but the contract says clicking the front sleeve opens the album."
+    }
+  ],
+  "notes": [
+    "T1: no real-browser run by the dev; an 80-character label may overflow the crate panel vertically.",
+    "T2: npm ci not run; browser-free npm install is assumed from Playwright docs and from the download appearing only on the install command.",
+    "T2: agents/dev-T2.md is a short note, not a full report.",
+    "Exploratory pass did not test Firefox, Safari, the edit crate flow, a Following card, the Try again state, or login through the UI.",
+    "Crate names are capped at 60 characters by the API, so AC12 wrote the 80-character name directly into the temp DB."
+  ],
+  "observations": [
+    {
+      "what": "After a flip, the invisible previous sleeve (opacity 0) sits over the lower crate panel, so clicking the crate tape label moves back one record. Pre-existing.",
+      "severity": "medium"
+    },
+    {
+      "what": "On a phone the crate traps scrolling: .scene is full width with touch-action none, so a swipe on it never scrolls, and Pull it out is below the fold at 390x740. A 150px swipe also jumps from 1/4 to 4/4. Pre-existing CSS.",
+      "severity": "medium"
+    },
+    {
+      "what": "Empty crate: \"Empty crate\" text is nearly unreadable on the dark panel, panels float apart, and the flip hint still shows.",
+      "severity": "low"
+    },
+    {
+      "what": "When a crate has a label, the crate page shows the label twice (h1 and tape) and never its name, e.g. \"Thrift Bin Psych\" appears only on the Home card. This follows the spec (label ?? name).",
+      "severity": "low"
+    },
+    {
+      "what": "\"Back to the crates\" on the album page goes to /shelf, so the picker returns after visiting a /crates/:id record. Known follow-up.",
+      "severity": "low"
+    },
+    {
+      "what": "/crates/9999 has no h1 and keeps the title \"Crates · Frisson\"; /shelf and /list have no h1.",
+      "severity": "low"
+    },
+    {
+      "what": "/shelf at phone width with 10 crates: the tabs fill the viewport and the crate starts off screen. Known limit.",
+      "severity": "low"
+    },
+    {
+      "what": "After Back from an album, focus is on body rather than the crate.",
+      "severity": "low"
+    }
+  ]
+}

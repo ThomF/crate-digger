@@ -1,0 +1,5 @@
+{ "criteria": { "AC12": { "verdict": "pass", "evidence": "browser-output-2.txt ends PASS AC12 (exit 0), npm run lint clean. Parts (a),(c) unchanged and pass. Sleeve clicks use real page.mouse clicks from a fresh visit after a 900ms settle at 25%, 50%, 75% of visible art and 2px above the front panel top: all open /albums/13 at 1280 (art 466.5-667.7) and 390 (443.3-627.4); touch tap (hasTouch, mobile) at mid-art also opens it. Back returns to /crates/4 every time. Drag on art flips (1 / 4 -> 4 / 4) and URL stays /crates/4. Wheel and ArrowDown/Right/Up still advance .count. Crate front panel: 10px below its top, elementFromPoint is div.panel.front and a click does nothing (stays on crate, 1 / 4); clicks work down to the panel top and stop there." } },
+  "observations": [
+    "low: a 144px vertical drag jumped the count 1 / 4 to 4 / 4 (very fast flip), seen earlier too.",
+    "Not tested this round: invisible flipped sleeve catching clicks on the crate front (earlier Medium finding); the click-below-panel probe was only run at rest, not after a flip."
+  ] }

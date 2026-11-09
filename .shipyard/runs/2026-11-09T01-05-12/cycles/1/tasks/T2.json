@@ -1,0 +1,1 @@
+{"id":"T2","status":"done","report":"agents/dev-T2.md","summary":"README and SPEC updated, playwright ^1.65.0 (Apache-2.0) added to root devDependencies, chromium installed. npm ci not tested."}

@@ -1,0 +1,87 @@
+
+> test
+> npm run test --workspaces --if-present
+
+
+> test
+> vitest run
+
+
+ RUN  v3.2.7 /Users/thomasfuhriman/code/crate-digger/apps/api
+
+ ✓ test/crates.test.ts (15 tests) 1079ms
+ ✓ test/demo-seed.test.ts (44 tests) 1131ms
+ ✓ test/avatars.test.ts (15 tests) 1347ms
+{"level":30,"time":1794187165132,"pid":84223,"hostname":"Thomass-Mac-mini.local","reqId":"req-1","req":{"method":"POST","url":"/api/auth/signup","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1794187165180,"pid":84223,"hostname":"Thomass-Mac-mini.local","reqId":"req-1","res":{"statusCode":201},"responseTime":46.83987500000012,"msg":"request completed"}
+{"level":30,"time":1794187165180,"pid":84223,"hostname":"Thomass-Mac-mini.local","reqId":"req-2","req":{"method":"POST","url":"/api/auth/logout","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1794187165180,"pid":84223,"hostname":"Thomass-Mac-mini.local","reqId":"req-2","res":{"statusCode":204},"responseTime":0.05254100000001927,"msg":"request completed"}
+ ✓ test/albums.test.ts (20 tests) 1483ms
+ ✓ test/auth-accounts.test.ts (21 tests) 1825ms
+ ✓ test/feed.test.ts (18 tests) 2083ms
+   ✓ GET /api/me/feed > returns 401 signed out  327ms
+ ✓ test/ownership.test.ts (21 tests) 2152ms
+ ✓ test/passwords.test.ts (5 tests) 423ms
+ ✓ test/profiles.test.ts (33 tests) 2529ms
+ ✓ test/follows.test.ts (26 tests) 2552ms
+ ✓ test/recommended.test.ts (11 tests) 619ms
+ ✓ test/bootstrap.test.ts (7 tests) 780ms
+ ✓ test/shared-profile.test.ts (48 tests) 29ms
+ ✓ test/news.test.ts (6 tests) 297ms
+ ✓ test/schema.test.ts (21 tests) 154ms
+ ✓ test/covers.test.ts (10 tests) 1031ms
+ ✓ test/sorting.test.ts (13 tests) 3ms
+ ✓ test/shared-auth.test.ts (6 tests) 9ms
+ ✓ test/health.test.ts (1 test) 155ms
+ ✓ test/web.test.ts (15 tests) 207ms
+ ✓ test/migration.test.ts (4 tests) 73ms
+
+ Test Files  21 passed (21)
+      Tests  360 passed (360)
+   Start at  18:19:22
+   Duration  4.21s (transform 771ms, setup 0ms, collect 10.42s, tests 19.96s, environment 2ms, prepare 1.19s)
+
+
+> test
+> vitest run
+
+
+ RUN  v3.2.7 /Users/thomasfuhriman/code/crate-digger/apps/web
+
+ ✓ src/components/profile/LinksEditor.test.ts (7 tests) 50ms
+ ✓ src/views/HomeView.test.ts (21 tests) 119ms
+ ✓ src/views/EditProfileView.test.ts (10 tests) 161ms
+ ✓ src/views/FollowingView.test.ts (19 tests) 146ms
+ ✓ src/App.test.ts (26 tests) 203ms
+ ✓ src/views/ProfileView.test.ts (30 tests) 207ms
+ ✓ src/views/CrateView.test.ts (27 tests) 266ms
+ ✓ src/router.test.ts (16 tests) 332ms
+ ✓ src/views/editControls.test.ts (10 tests) 330ms
+ ✓ src/components/crate/CrateBox.test.ts (9 tests) 85ms
+ ✓ src/views/AboutView.test.ts (7 tests) 57ms
+ ✓ src/components/album/TrackList.test.ts (2 tests) 36ms
+ ✓ src/views/MyProfileView.test.ts (5 tests) 53ms
+ ✓ src/components/album/RecordStage.test.ts (6 tests) 110ms
+ ✓ src/components/forms/TrackEditor.test.ts (4 tests) 96ms
+ ✓ src/stores/session.test.ts (8 tests) 9ms
+ ✓ src/viewTransitions.test.ts (5 tests) 57ms
+ ✓ src/components/forms/CoverUpload.test.ts (4 tests) 90ms
+ ✓ src/components/profile/VerifiedBadge.test.ts (1 test) 20ms
+ ✓ src/views/ownerLink.test.ts (4 tests) 16ms
+ ✓ src/stores/library.test.ts (5 tests) 8ms
+ ✓ src/components/profile/FollowButton.test.ts (14 tests) 91ms
+ ✓ src/composables/useCrateFlip.test.ts (13 tests) 29ms
+ ✓ src/forms/albumForm.test.ts (21 tests) 27ms
+ ✓ src/utils/redirect.test.ts (9 tests) 3ms
+ ✓ src/composables/useAlbumSearch.test.ts (3 tests) 13ms
+ ✓ src/utils/tracks.test.ts (9 tests) 2ms
+ ✓ src/composables/useAsyncSection.test.ts (10 tests) 4ms
+ ✓ src/utils/permissions.test.ts (5 tests) 1ms
+ ✓ src/utils/initials.test.ts (4 tests) 2ms
+ ✓ src/utils/crateLayout.test.ts (12 tests) 2ms
+
+ Test Files  31 passed (31)
+      Tests  326 passed (326)
+   Start at  18:19:27
+   Duration  2.96s (transform 1.66s, setup 0ms, collect 6.50s, tests 2.63s, environment 7.31s, prepare 2.05s)
+

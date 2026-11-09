@@ -1,0 +1,1 @@
+{"id":"T1","status":"done","commit":"2e015fc","report":"agents/dev-T1.md","summary":"h1 replaces tabs on /crates/:id, /shelf tab clicks no longer touch the router, long names wrap. npm test, typecheck, lint, format:check exit 0. No real-browser run."}
