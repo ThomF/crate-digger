@@ -109,7 +109,7 @@ export const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
-  // Crate tabs change the URL; they shouldn't also jump the page back to the top.
+  // Moving between /shelf and /crates/:id shouldn't jump the page back to the top.
   scrollBehavior: (to, from) => (inCrateBrowser(to) && inCrateBrowser(from) ? false : { top: 0 }),
 })
 

@@ -242,6 +242,9 @@ defineExpose({ focus: () => scene.value?.focus() })
   font-size: clamp(0.7rem, 3.5vw, 0.95rem);
   transform: rotate(-1.5deg);
   box-shadow: 1px 1px 0 rgb(0 0 0 / 0.2);
+  /* Crate names have no length cap, and nothing above this clips the panel. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .back {

@@ -216,6 +216,33 @@ describe('per-crate edit controls', () => {
     expect(posts).toHaveLength(0)
   })
 
+  const addRecord = (wrapper: Awaited<ReturnType<typeof visit>>['wrapper']) =>
+    wrapper.findAll('a.btn').find((a) => a.text().includes('+ Add a record'))!
+  const postedUrls = () =>
+    fetchMock.mock.calls
+      .filter(([, init]) => (init as RequestInit | undefined)?.method === 'POST')
+      .map(([url]) => url)
+
+  it('a crate page counts spins and preselects the crate for the owner', async () => {
+    const { wrapper, router } = await visit('/crates/1', alice)
+    expect(addRecord(wrapper).attributes('href')).toBe('/albums/new?crateId=1')
+
+    await wrapper.get('button.pull').trigger('click')
+    await flushPromises()
+    expect(postedUrls()).toEqual(['/api/albums/10/spins'])
+    expect(router.currentRoute.value.fullPath).toBe('/albums/10')
+  })
+
+  it("a crate page on someone else's crate counts no spin and preselects nothing", async () => {
+    const { wrapper, router } = await visit('/crates/2', alice)
+    expect(addRecord(wrapper).attributes('href')).toBe('/albums/new')
+
+    await wrapper.get('button.pull').trigger('click')
+    await flushPromises()
+    expect(postedUrls()).toEqual([])
+    expect(router.currentRoute.value.fullPath).toBe('/albums/20') // the pull itself still opened it
+  })
+
   it('album view shows Edit only on records in a crate the user can edit', async () => {
     expect((await visit('/albums/10', alice)).wrapper.find('a.btn').text()).toBe('Edit')
     expect((await visit('/albums/20', alice)).wrapper.find('a.btn').exists()).toBe(false)

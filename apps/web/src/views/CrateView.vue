@@ -59,10 +59,6 @@ watch(
   { immediate: true },
 )
 
-function chooseCrate(id: number) {
-  library.selectCrate(id)
-  router.replace({ name: 'crate', params: { id } })
-}
 const albums = computed(
   () => library.crateShelves.find((s) => s.crate.id === crate.value?.id)?.albums ?? [],
 )
@@ -109,8 +105,10 @@ async function open(album: AlbumSummary) {
   <EmptyShelf v-else-if="!crate" />
 
   <template v-else>
-    <!-- Crate picker: tape labels along the top. Toggle buttons (aria-pressed). -->
-    <div class="tabs" role="group" aria-label="Crates">
+    <!-- Crate picker, on /shelf only: tape labels along the top. Toggle buttons (aria-pressed).
+         Tabs change the selection and not the URL: going to /crates/:id would hide the picker
+         on the first click. -->
+    <div v-if="crateId === undefined" class="tabs" role="group" aria-label="Crates">
       <button
         v-for="c in library.crates"
         :key="c.id"
@@ -118,11 +116,12 @@ async function open(album: AlbumSummary) {
         class="tab"
         :aria-pressed="c.id === crate.id"
         :style="{ '--tab-color': c.color }"
-        @click="chooseCrate(c.id)"
+        @click="library.selectCrate(c.id)"
       >
         {{ c.label ?? c.name }}
       </button>
     </div>
+    <h1 v-else class="crate-name">{{ crate.label ?? crate.name }}</h1>
 
     <!-- Whose crate this is, linking to /u/<ownerUsername>. Nothing for ownerless crates. -->
     <OwnerLink :username="crate.ownerUsername" :display-name="crate.ownerDisplayName" />
@@ -172,6 +171,16 @@ async function open(album: AlbumSummary) {
 </template>
 
 <style scoped>
+.crate-name {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  /* Long crate names wrap rather than widening the page. */
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;

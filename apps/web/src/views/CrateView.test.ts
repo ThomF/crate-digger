@@ -38,12 +38,15 @@ const albums = [album(10, 1, 'Riffs'), album(20, 2, 'Breaks'), album(30, 3, 'Ech
 
 const Blank = defineComponent({ render: () => null })
 
-async function visit(path: string, options: { crateList?: Crate[] } = {}) {
+async function visit(
+  path: string,
+  options: { crateList?: Crate[]; albumList?: AlbumSummary[] } = {},
+) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
       if (url === '/api/crates') return Response.json(options.crateList ?? crates)
-      if (url === '/api/albums') return Response.json(albums)
+      if (url === '/api/albums') return Response.json(options.albumList ?? albums)
       return new Response('{}', { status: 500 })
     }),
   )
@@ -78,6 +81,9 @@ async function visit(path: string, options: { crateList?: Crate[] } = {}) {
 type Wrapper = Awaited<ReturnType<typeof visit>>['wrapper']
 const pressedTab = (w: Wrapper) => w.get('button.tab[aria-pressed="true"]').text()
 const tab = (w: Wrapper, label: string) => w.findAll('button.tab').find((b) => b.text() === label)!
+const heading = (w: Wrapper) => w.get('h1').text()
+const control = (w: Wrapper, label: string) =>
+  w.findAll('.controls button').find((b) => b.text() === label)!
 
 describe('crate browser', () => {
   beforeEach(() => {
@@ -92,7 +98,7 @@ describe('crate browser', () => {
 
   it('a deep link selects that crate and shows its albums', async () => {
     const { wrapper, library } = await visit('/crates/2')
-    expect(pressedTab(wrapper)).toBe('Beats & Bass')
+    expect(heading(wrapper)).toBe('Beats & Bass')
     expect(wrapper.get('.now h2').text()).toBe('Breaks')
     expect(library.selectedCrate?.id).toBe(2)
   })
@@ -125,7 +131,7 @@ describe('crate browser', () => {
 
       expect(crateFetches()).toBe(2)
       expect(wrapper.text()).not.toContain('Crate not found')
-      expect(pressedTab(wrapper)).toBe('Brand New')
+      expect(heading(wrapper)).toBe('Brand New')
     })
 
     it('shows the loading note, not Crate not found, during the reload', async () => {
@@ -199,36 +205,38 @@ describe('crate browser', () => {
     expect(router.currentRoute.value.fullPath).toBe('/shelf')
   })
 
-  it('a tab click on /shelf moves to that crate URL without a new history entry', async () => {
-    const { wrapper, router, library } = await visit('/shelf')
+  it('a tab click on /shelf switches crate and stays on /shelf', async () => {
+    const { wrapper, router } = await visit('/shelf')
     const replace = vi.spyOn(router, 'replace')
     const push = vi.spyOn(router, 'push')
     await tab(wrapper, 'Dub').trigger('click')
-    // The store changes straight away, before the navigation settles.
-    expect(library.selectedCrate?.id).toBe(3)
     await flushPromises()
-    expect(replace).toHaveBeenCalledWith({ name: 'crate', params: { id: 3 } })
+    expect(router.currentRoute.value.fullPath).toBe('/shelf')
     expect(push).not.toHaveBeenCalled()
-    expect(router.currentRoute.value.fullPath).toBe('/crates/3')
-    expect(pressedTab(wrapper)).toBe('Dub')
+    expect(replace).not.toHaveBeenCalled()
+    expect(tab(wrapper, 'Dub').attributes('aria-pressed')).toBe('true')
     expect(wrapper.get('.now h2').text()).toBe('Echoes')
+    expect(wrapper.findAll('button.tab')).toHaveLength(3)
   })
 
-  it('a tab click on /crates/:id updates the URL and the crate', async () => {
-    const { wrapper, router } = await visit('/crates/2')
-    await tab(wrapper, 'Guitars').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/crates/1')
-    expect(pressedTab(wrapper)).toBe('Guitars')
-    expect(wrapper.get('.now h2').text()).toBe('Riffs')
+  it('/crates/:id shows no picker and no other crate', async () => {
+    const { wrapper } = await visit('/crates/2')
+    expect(wrapper.findAll('button.tab')).toHaveLength(0)
+    expect(wrapper.find('[role="group"][aria-label="Crates"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Guitars')
+    expect(wrapper.text()).not.toContain('Dub')
   })
 
   it('follows the URL when it changes under the view', async () => {
     const { wrapper, router, library } = await visit('/crates/2')
+    expect(wrapper.findAll('button.tab')).toHaveLength(0)
+    expect(heading(wrapper)).toBe('Beats & Bass')
     await router.push('/crates/3')
     await flushPromises()
-    expect(pressedTab(wrapper)).toBe('Dub')
+    expect(heading(wrapper)).toBe('Dub')
+    expect(wrapper.get('.now h2').text()).toBe('Echoes')
     expect(library.selectedCrate?.id).toBe(3)
+    expect(wrapper.findAll('button.tab')).toHaveLength(0)
   })
 
   it('going back to /shelf stays in the crate you were looking at', async () => {
@@ -254,5 +262,70 @@ describe('crate browser', () => {
       ['List', false],
     ])
     expect(links[0]!.attributes('href')).toBe('/shelf')
+  })
+
+  describe('the heading on /crates/:id', () => {
+    it('is the label when the crate has one', async () => {
+      const { wrapper } = await visit('/crates/2', {
+        crateList: [crate(1, 'Guitars'), { ...crate(2, 'Beats & Bass'), label: 'BEATS' }],
+      })
+      expect(wrapper.findAll('h1')).toHaveLength(1)
+      expect(heading(wrapper)).toBe('BEATS')
+    })
+
+    it('is the name when the label is null', async () => {
+      const { wrapper } = await visit('/crates/2')
+      expect(wrapper.findAll('h1')).toHaveLength(1)
+      expect(heading(wrapper)).toBe('Beats & Bass')
+    })
+
+    it('is not added to /shelf', async () => {
+      const { wrapper } = await visit('/shelf')
+      expect(wrapper.find('h1').exists()).toBe(false)
+    })
+  })
+
+  describe('the crate controls on /crates/:id', () => {
+    const albumList = [
+      { ...album(21, 2, 'Side A'), position: 0 },
+      { ...album(22, 2, 'Side B'), position: 1 },
+      { ...album(23, 2, 'Side C'), position: 2 },
+    ]
+    const count = (w: Wrapper) => w.get('.count').text()
+
+    it('Flip and Back move through the records', async () => {
+      const { wrapper } = await visit('/crates/2', { albumList })
+      expect(count(wrapper)).toBe('1 / 3')
+      await control(wrapper, 'Flip ▶').trigger('click')
+      expect(count(wrapper)).toBe('2 / 3')
+      await control(wrapper, '◀ Back').trigger('click')
+      expect(count(wrapper)).toBe('1 / 3')
+    })
+
+    it('Pull it out opens the current record', async () => {
+      const { wrapper, router } = await visit('/crates/2', { albumList })
+      await control(wrapper, 'Flip ▶').trigger('click')
+      await wrapper.get('button.pull').trigger('click')
+      await flushPromises()
+      expect(router.currentRoute.value.fullPath).toBe('/albums/22')
+    })
+
+    it('ArrowDown on the scene flips forward', async () => {
+      const { wrapper } = await visit('/crates/2', { albumList })
+      await wrapper.get('.scene').trigger('keydown', { key: 'ArrowDown' })
+      expect(count(wrapper)).toBe('2 / 3')
+    })
+
+    it('links to the owner', async () => {
+      const { wrapper } = await visit('/crates/2', {
+        crateList: [{ ...crate(2, 'Beats & Bass'), ownerUsername: 'alice' }],
+      })
+      expect(wrapper.get('p.owner a').attributes('href')).toBe('/u/alice')
+    })
+
+    it('says so when the crate has no albums', async () => {
+      const { wrapper } = await visit('/crates/2', { albumList: [] })
+      expect(wrapper.text()).toContain('Nothing in here yet.')
+    })
   })
 })
