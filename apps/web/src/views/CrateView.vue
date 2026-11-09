@@ -5,7 +5,7 @@ import type { AlbumSummary } from '@frisson/shared'
 import { spinAlbum } from '../api/albums.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
-import { canEditCrate } from '../utils/permissions.ts'
+import { canEditCrate, showsCrateActions } from '../utils/permissions.ts'
 import CrateBox from '../components/crate/CrateBox.vue'
 import OwnerLink from '../components/crate/OwnerLink.vue'
 import EmptyShelf from '../components/crate/EmptyShelf.vue'
@@ -75,6 +75,21 @@ const index = computed({
 const current = computed(() => albums.value[index.value])
 const canEditThisCrate = computed(() => canEditCrate(session.user, crate.value))
 
+// On /crates/:id the toolbar actions default to hidden until the crate is confirmed as one the
+// viewer manages. The status check matters: the store keeps its crates during a forced reload and
+// after a failed one, so `crate` can be set while the body shows the loading or error state.
+// /shelf keeps its toolbar.
+const hideToolbarActions = computed(
+  () =>
+    props.crateId !== undefined &&
+    !(library.status === 'ready' && showsCrateActions(session.user, crate.value)),
+)
+const canAddFromEmptyCrate = computed(() =>
+  props.crateId === undefined
+    ? canEditThisCrate.value
+    : showsCrateActions(session.user, crate.value),
+)
+
 async function open(album: AlbumSummary) {
   // Count the spin *before* opening the album, so the album page loads the new total
   // instead of showing one less. Only spins of your own records count (admins: any).
@@ -86,7 +101,10 @@ async function open(album: AlbumSummary) {
 </script>
 
 <template>
-  <LibraryToolbar :add-to-crate-id="canEditThisCrate ? crate?.id : undefined" />
+  <LibraryToolbar
+    :hide-actions="hideToolbarActions"
+    :add-to-crate-id="canEditThisCrate ? crate?.id : undefined"
+  />
 
   <p v-if="library.status === 'loading' || library.status === 'idle'" class="status-note">
     Flipping through the crates…
@@ -146,7 +164,7 @@ async function open(album: AlbumSummary) {
       <p v-else class="count">
         Nothing in here yet.
         <RouterLink
-          v-if="canEditThisCrate"
+          v-if="canAddFromEmptyCrate"
           :to="{ name: 'album-new', query: { crateId: crate.id } }"
         >
           Add a record

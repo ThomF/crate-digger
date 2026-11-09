@@ -3,9 +3,10 @@ import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useSessionStore } from '../stores/session.ts'
 
-// Global actions: anyone signed in may make a crate or add a record to one of theirs.
+// Global actions: make a crate or add a record to one of yours. They show to anyone signed in
+// unless the page sets hideActions; the Crates/List nav always shows.
 // addToCrateId preselects a crate, so only pass one the user can edit.
-defineProps<{ addToCrateId?: number }>()
+defineProps<{ addToCrateId?: number; hideActions?: boolean }>()
 const session = useSessionStore()
 const route = useRoute()
 // One crate's own URL (/crates/:id) is still the crate browser, so Crates stays lit there.
@@ -18,7 +19,7 @@ const onCrates = computed(() => route.name === 'library' || route.name === 'crat
       <RouterLink :to="{ name: 'library' }" :class="{ active: onCrates }">Crates</RouterLink>
       <RouterLink :to="{ name: 'list' }" exact-active-class="active">List</RouterLink>
     </nav>
-    <div v-if="session.signedIn" class="end">
+    <div v-if="session.signedIn && !hideActions" class="end">
       <RouterLink :to="{ name: 'crates' }" class="manage">Edit crates</RouterLink>
       <RouterLink
         :to="{ name: 'album-new', query: addToCrateId ? { crateId: addToCrateId } : {} }"

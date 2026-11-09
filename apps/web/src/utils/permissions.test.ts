@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PublicUser } from '@frisson/shared'
-import { canEditCrate } from './permissions.ts'
+import { canEditCrate, showsCrateActions } from './permissions.ts'
 
 const alice: PublicUser = {
   id: 1,
@@ -37,5 +37,44 @@ describe('canEditCrate', () => {
     expect(canEditCrate(admin, { ownerId: null })).toBe(true)
     expect(canEditCrate(alice, { ownerId: null })).toBe(false)
     expect(canEditCrate(alice, null)).toBe(false)
+  })
+})
+
+describe('showsCrateActions', () => {
+  it('is false with no user', () => {
+    expect(showsCrateActions(null, { ownerId: 1 })).toBe(false)
+    expect(showsCrateActions(null, { ownerId: null })).toBe(false)
+  })
+
+  it('is false with no crate', () => {
+    expect(showsCrateActions(alice, null)).toBe(false)
+    expect(showsCrateActions(alice, undefined)).toBe(false)
+    expect(showsCrateActions(admin, null)).toBe(false)
+    expect(showsCrateActions(admin, undefined)).toBe(false)
+  })
+
+  it('is true for the owner', () => {
+    expect(showsCrateActions(alice, { ownerId: 1 })).toBe(true)
+  })
+
+  it('is false for a non-owner', () => {
+    expect(showsCrateActions(bob, { ownerId: 1 })).toBe(false)
+  })
+
+  it("is false for an admin on another user's crate, who can still edit it", () => {
+    expect(showsCrateActions(admin, { ownerId: 1 })).toBe(false)
+    expect(canEditCrate(admin, { ownerId: 1 })).toBe(true)
+  })
+
+  it('is true for an admin on their own crate', () => {
+    expect(showsCrateActions(admin, { ownerId: admin.id })).toBe(true)
+  })
+
+  it('is true for an admin on an ownerless crate', () => {
+    expect(showsCrateActions(admin, { ownerId: null })).toBe(true)
+  })
+
+  it('is false for a non-admin on an ownerless crate', () => {
+    expect(showsCrateActions(alice, { ownerId: null })).toBe(false)
   })
 })

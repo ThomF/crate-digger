@@ -235,7 +235,7 @@ describe('per-crate edit controls', () => {
 
   it("a crate page on someone else's crate counts no spin and preselects nothing", async () => {
     const { wrapper, router } = await visit('/crates/2', alice)
-    expect(addRecord(wrapper).attributes('href')).toBe('/albums/new')
+    expect(wrapper.find('a[href^="/albums/new"]').exists()).toBe(false)
 
     await wrapper.get('button.pull').trigger('click')
     await flushPromises()
