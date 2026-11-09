@@ -102,6 +102,10 @@ defineExpose({ focus: () => scene.value?.focus() })
           '--shade': pose.shade,
           // Only the front sleeve gets a name, so it alone lifts out to the album page.
           'view-transition-name': offset === 0 ? sleeveTransitionName(album.id) : 'none',
+          // Flipped sleeves (offset < 0) are invisible but tipped forward of the front
+          // panel, so they would catch clicks aimed at it and flip back. They stay drawn
+          // for the flip-out animation, just not clickable. Inline so it beats `.crate > *`.
+          pointerEvents: offset < 0 ? 'none' : undefined,
         }"
         aria-hidden="true"
         @click="onSleeveClick(offset, album)"

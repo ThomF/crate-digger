@@ -81,6 +81,22 @@ describe('CrateBox', () => {
     expect(wrapper.emitted('open')).toBeUndefined()
   })
 
+  it('keeps flipped sleeves drawn for the flip-out animation, without catching clicks', () => {
+    const wrapper = mountCrate(2)
+
+    const flipped = wrapper.findAll('.sleeve').filter((s) => !s.classes().includes('current'))
+    expect(flipped).toHaveLength(2)
+    for (const sleeve of flipped) {
+      const style = (sleeve.element as HTMLElement).style
+      expect(style.transform).toBe('translateZ(40px) rotateX(-55deg)')
+      expect(style.opacity).toBe('0')
+      expect(style.pointerEvents).toBe('none')
+    }
+    expect((wrapper.get('.sleeve.current').element as HTMLElement).style.pointerEvents).not.toBe(
+      'none',
+    )
+  })
+
   it('names the crate and explains the controls for screen readers', () => {
     const wrapper = mountCrate()
 
