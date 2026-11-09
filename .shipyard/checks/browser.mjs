@@ -477,12 +477,34 @@ async function ac1(browser, ids) {
     await settle(page)
   }
 
-  // Recorded, not asserted: the same no-wait click straight after flipping BACK.
-  await reach(page, url, 3, 'ArrowDown')
-  await press(page, 'ArrowUp')
-  await page.mouse.click(L.cx, L.cy)
-  await sleep(150)
-  console.log(`  OBS AC1 1280-mouse tape label click with no wait after ArrowUp from 3 / 4: count ${await countNow(page)}, url ${short(page)}`)
+  // Backward flip: ArrowUp then a label-centre click after 0, 10 and 20ms. Only the record the ArrowUp moved to may show.
+  for (const from of [3, 2]) {
+    for (const delay of [0, 10, 20]) {
+      const want = `${from - 1} / 4`
+      await reach(page, url, from, 'ArrowDown')
+      await settle(page)
+      await page.evaluate(() => {
+        window.__lastClick = null
+        if (window.__hook) return
+        window.__hook = true
+        document.addEventListener('click', (e) => {
+          const s = e.target.closest?.('.sleeve')
+          window.__lastClick = `${e.target.tagName.toLowerCase()}.${String(e.target.className).split(' ').join('.')}${s ? ' (in .sleeve)' : ''}`
+        }, true)
+      })
+      await press(page, 'ArrowUp')
+      if (delay) await sleep(delay)
+      await page.mouse.click(L.cx, L.cy)
+      await sleep(150)
+      const after = await countNow(page)
+      const hit = await page.evaluate(() => window.__lastClick)
+      // The click may land on the sleeve mid-flip; the criterion is that it does nothing.
+      const ok = after === want && page.url() === url
+      sample('AC1', ok, `(a) 1280-mouse pos=${from} / 4 via=ArrowUp point="tape label centre, ${delay}ms after" at=${xy(L.cx, L.cy)} hit=${hit} count=${from} / 4->${after} (expect ${want}) url=${short(page)}`)
+      if (page.url() !== url) await openCrate(page, url)
+      await settle(page)
+    }
+  }
 
   // (b) Position survives a trip to the album, so flipped sleeves exist with no flip on this visit.
   await reach(page, url, 3, 'ArrowDown')
