@@ -59,4 +59,4 @@
 - Follow-up 679b6bd, at the owner's request and outside the circuit: invisible offset-13 sleeve no longer catches clicks; check gained LONG-STACK
 - Known limits: backward no-wait samples cover 1280px mouse on the label centre only; touch drag unexercised; check rewrites tracked ac12-long PNGs on every run; Chromium only
 - Assumption to confirm: clicking the crate front or tape label does nothing
-- Not merged or pushed
+- Merged and pushed to main at the owner's request
