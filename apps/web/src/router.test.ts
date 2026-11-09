@@ -108,4 +108,26 @@ describe('router profile routes', () => {
     expect(run('/crates/5', '/')).toEqual({ top: 0 })
     expect(run('/about', '/shelf')).toEqual({ top: 0 })
   })
+
+  it('sends a signed-out visitor from /admin to login with next', async () => {
+    await router.push('/admin')
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.next).toBe('/admin')
+  })
+
+  it('sends a role=user visitor from /admin to home', async () => {
+    setActivePinia(createPinia())
+    vi.mocked(api.me).mockResolvedValue(alice)
+    await router.push('/admin')
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(router.currentRoute.value.fullPath).toBe('/')
+  })
+
+  it('lets an admin open /admin', async () => {
+    setActivePinia(createPinia())
+    vi.mocked(api.me).mockResolvedValue({ ...alice, role: 'admin' })
+    await router.push('/admin')
+    expect(router.currentRoute.value.name).toBe('admin')
+    expect(router.currentRoute.value.fullPath).toBe('/admin')
+  })
 })

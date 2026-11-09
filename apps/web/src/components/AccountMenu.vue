@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // The signed-in account control in the masthead: a round avatar button that opens a
-// small paper dropdown with the user's name, View profile, Edit profile and Log out.
+// small paper dropdown with the user's name, View profile, Edit profile, Admin (for admins)
+// and Log out.
 // Data classification: CONFIDENTIAL (PII). Shows the signed-in user's name and username.
 import { computed, onMounted, onUnmounted, ref, useId, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
@@ -106,6 +107,15 @@ async function logOut() {
       </RouterLink>
       <RouterLink role="menuitem" class="menu-item" :to="{ name: 'profile-edit' }" @click="close">
         Edit profile
+      </RouterLink>
+      <RouterLink
+        v-if="session.isAdmin"
+        role="menuitem"
+        class="menu-item"
+        :to="{ name: 'admin' }"
+        @click="close"
+      >
+        Admin
       </RouterLink>
       <button type="button" role="menuitem" class="menu-item" @click="logOut">Log out</button>
     </div>

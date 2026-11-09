@@ -8,6 +8,8 @@ declare module 'vue-router' {
   interface RouteMeta {
     /** Only for signed-in visitors. */
     requiresAuth?: boolean
+    /** Only for admins. Goes with requiresAuth, so a signed-out visitor is sent to log in. */
+    requiresAdmin?: boolean
   }
 }
 
@@ -107,6 +109,12 @@ export const router = createRouter({
       component: () => import('./views/EditProfileView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('./views/AdminView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
   // Moving between /shelf and /crates/:id shouldn't jump the page back to the top.
@@ -118,6 +126,8 @@ export const router = createRouter({
 router.beforeEach(async (to) => {
   const session = useSessionStore()
   await session.load()
-  if (!to.meta.requiresAuth || session.signedIn) return
-  return { name: 'login', query: { next: to.fullPath } }
+  if (to.meta.requiresAuth && !session.signedIn) {
+    return { name: 'login', query: { next: to.fullPath } }
+  }
+  if (to.meta.requiresAdmin && !session.isAdmin) return { name: 'home' }
 })
