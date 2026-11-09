@@ -15,6 +15,7 @@ import type {
 import type { Db } from '../db/client.ts'
 import { albums, crates, newsItems, tracks, users } from '../db/schema.ts'
 import { HttpError, notFound } from '../errors.ts'
+import { ADMIN_NEWS_KEY_PREFIX, isDemoNewsKey } from './news.ts'
 
 // Everything behind /api/admin/*. The route plugin's onRequest hook has already called
 // requireAdmin, so nothing here decides who may do what.
@@ -26,7 +27,6 @@ import { HttpError, notFound } from '../errors.ts'
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 
 /** Seed keys of admin-written news start with this; demo news uses 'news:'. */
-const ADMIN_NEWS_KEY_PREFIX = 'admin:'
 
 function countRows(db: Db, table: typeof users | typeof crates | typeof albums | typeof newsItems) {
   return db.select({ value: count() }).from(table).get()?.value ?? 0
@@ -200,7 +200,7 @@ function toAdminNewsItem({ seedKey, publishedAt, ...row }: AdminNewsRow): AdminN
   return {
     ...row,
     publishedAt: publishedAt.toISOString(),
-    isDemo: !seedKey.startsWith(ADMIN_NEWS_KEY_PREFIX),
+    isDemo: isDemoNewsKey(seedKey),
   }
 }
 

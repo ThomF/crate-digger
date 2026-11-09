@@ -156,8 +156,9 @@ export const follows = sqliteTable(
   ],
 )
 
-// Data classification: PUBLIC. Fictional demo news shown on Home. seed_key is the stable key
-// the demo seeding step matches on, so a row is never inserted twice.
+// Data classification: PUBLIC. Demo or admin-written news shown on Home. seed_key is the stable
+// key the demo seeding step matches on, so a row is never inserted twice. Admin-written rows use
+// an admin: prefix, which is how the two are told apart.
 export const newsItems = sqliteTable('news_items', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   seedKey: text('seed_key').notNull().unique(),

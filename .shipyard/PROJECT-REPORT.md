@@ -82,4 +82,5 @@
 - The owner dev server applied the dev admin to data/crate.db during the build (0 ownerless crates, nothing reassigned). It is now the sole admin there, so ADMIN_EMAIL will not create another
 - Known limits: Home tags all news Demo, including admin-written; server.ts try/catch failure path untested; stale refresh can overwrite a verify; bulk import not de-duplicated; guard fails open if NODE_ENV is unset; Chromium only
 - Lesson: a dev server on the working copy runs insert-at-start steps on the real DB as soon as they are written. Testers can be fast and shallow, so spot-check evidence against the tests
-- Not merged or pushed
+- Follow-up at the owner's request, outside the circuit: public news and recommended crates carry isDemo, Home tags demo items only, the recommended note and About copy no longer call everything demo. Check: .shipyard/checks/demo-tags.check.mjs
+- Merged and pushed to main at the owner's request

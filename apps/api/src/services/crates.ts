@@ -1,9 +1,9 @@
 import { and, asc, count, eq, inArray, isNotNull, isNull, max, ne, or } from 'drizzle-orm'
 import type {
   Crate,
-  CrateCard,
   CreateCrateInput,
   PublicUser,
+  RecommendedCrateCard,
   UpdateCrateInput,
 } from '@frisson/shared'
 import type { Db } from '../db/client.ts'
@@ -43,9 +43,10 @@ export function listCrates(db: Db): Crate[] {
 /**
  * The crates Home recommends: those given a rank, lowest rank first. Ownerless crates are left
  * out, since a card has to name its owner.
- * Data classification: PUBLIC. Owner username and display name only; no owner id, no demo key.
+ * Data classification: PUBLIC. Owner username and display name only; no owner id. The demo key
+ * is reduced to isDemo.
  */
-export function listRecommendedCrates(db: Db): CrateCard[] {
+export function listRecommendedCrates(db: Db): RecommendedCrateCard[] {
   const rows = db
     .select({
       id: crates.id,
@@ -57,6 +58,7 @@ export function listRecommendedCrates(db: Db): CrateCard[] {
       createdAt: crates.createdAt,
       ownerUsername: users.username,
       ownerDisplayName: users.displayName,
+      demoSeedKey: crates.demoSeedKey,
     })
     .from(crates)
     .innerJoin(users, eq(users.id, crates.ownerId))
@@ -65,7 +67,11 @@ export function listRecommendedCrates(db: Db): CrateCard[] {
     .groupBy(crates.id)
     .orderBy(asc(crates.recommendedRank), asc(crates.id))
     .all()
-  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }))
+  return rows.map(({ demoSeedKey, createdAt, ...row }) => ({
+    ...row,
+    createdAt: createdAt.toISOString(),
+    isDemo: demoSeedKey !== null,
+  }))
 }
 
 export function getCrate(db: Db, id: number): Crate {

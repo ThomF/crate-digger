@@ -326,13 +326,19 @@ export const crateCard = z.object({
   ownerDisplayName: z.string(),
 })
 
-// Data classification: PUBLIC. Demo or admin-written news shown on Home.
+// Data classification: PUBLIC. A crate on Home's recommended list. isDemo is a boolean, never the
+// demo seed key, so Home can label demo crates apart from ones an admin suggested.
+export const recommendedCrateCard = crateCard.extend({ isDemo: z.boolean() })
+
+// Data classification: PUBLIC. Demo or admin-written news shown on Home. isDemo is a boolean,
+// never the seed key.
 export const newsItem = z.object({
   id: z.number().int(),
   title: z.string(),
   summary: z.string(),
   source: z.string(),
   publishedAt: z.iso.datetime(),
+  isDemo: z.boolean(),
 })
 
 // ── Admin ───────────────────────────────────────────────────────────────
@@ -376,8 +382,8 @@ export const adminCrate = z.object({
   createdAt: z.iso.datetime(),
 })
 
-// Data classification: PUBLIC content plus an admin-only isDemo flag. Never carries the seed key.
-export const adminNewsItem = newsItem.extend({ isDemo: z.boolean() })
+// Data classification: PUBLIC. The same shape as the public item. Never carries the seed key.
+export const adminNewsItem = newsItem
 
 export const adminCreateCrateInput = createCrateInput.extend({
   suggested: z.boolean().default(false),
@@ -469,6 +475,7 @@ export type UpdateProfileRequest = z.input<typeof updateProfileInput>
 export type SetVerifiedInput = z.infer<typeof setVerifiedInput>
 export type CollectorSummary = z.infer<typeof collectorSummary>
 export type CrateCard = z.infer<typeof crateCard>
+export type RecommendedCrateCard = z.infer<typeof recommendedCrateCard>
 export type NewsItem = z.infer<typeof newsItem>
 export type AdminOverview = z.infer<typeof adminOverview>
 export type AdminUser = z.infer<typeof adminUser>

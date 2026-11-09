@@ -15,9 +15,9 @@ describe('AboutView', () => {
     expect(mount(AboutView).text()).toContain(word)
   })
 
-  it('states that news, recommendations and demo collectors are demo data', () => {
+  it('states that anything marked Demo is demo data', () => {
     expect(mount(AboutView).text()).toContain(
-      'The news, recommendations and demo collectors are demo data.',
+      'Anything marked Demo, including the demo collectors, is demo data.',
     )
   })
 

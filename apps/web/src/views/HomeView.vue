@@ -58,7 +58,7 @@ onMounted(() => {
           <p class="meta">
             <span>{{ item.source }}</span>
             <time :datetime="item.publishedAt">{{ formatDate(item.publishedAt) }}</time>
-            <DemoTag />
+            <DemoTag v-if="item.isDemo" />
           </p>
         </article>
       </template>
@@ -70,7 +70,7 @@ onMounted(() => {
          never to upper-case this section with CSS, and the other copy avoids the letters 'ai'. -->
     <section class="recommended" aria-labelledby="home-recommended-heading">
       <h2 id="home-recommended-heading">Recommended crates</h2>
-      <p class="note">Curated demo picks. No AI model is involved yet.</p>
+      <p class="note">Curated picks. No AI model is involved yet.</p>
 
       <p v-if="recommended.status.value === 'loading'" class="status-note" role="status">
         Pulling the picks…
@@ -97,6 +97,7 @@ onMounted(() => {
             <p class="owner">
               {{ crate.ownerDisplayName }}
               <span class="handle">@{{ crate.ownerUsername }}</span>
+              <DemoTag v-if="crate.isDemo" />
             </p>
           </div>
         </li>

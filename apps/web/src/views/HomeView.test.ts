@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import type { CrateCard, NewsItem } from '@frisson/shared'
+import type { NewsItem, RecommendedCrateCard } from '@frisson/shared'
 import { ApiRequestError } from '../api/client.ts'
 import { listRecommendedCrates } from '../api/crates.ts'
 import { listNews } from '../api/news.ts'
@@ -14,7 +14,7 @@ vi.mock('../api/crates.ts', () => ({ listRecommendedCrates: vi.fn() }))
 const listNewsMock = vi.mocked(listNews)
 const listRecommendedMock = vi.mocked(listRecommendedCrates)
 
-const NOTE = 'Curated demo picks. No AI model is involved yet.'
+const NOTE = 'Curated picks. No AI model is involved yet.'
 
 const news: NewsItem[] = [
   {
@@ -23,6 +23,7 @@ const news: NewsItem[] = [
     summary: 'A long shuttered plant is running again.',
     source: 'The Wax Gazette',
     publishedAt: '2026-10-27T09:00:00.000Z',
+    isDemo: true,
   },
   {
     id: 2,
@@ -30,10 +31,11 @@ const news: NewsItem[] = [
     summary: 'The fair has a new home this winter.',
     source: 'Dollar Bin Weekly',
     publishedAt: '2026-10-20T09:00:00.000Z',
+    isDemo: false,
   },
 ]
 
-const crates: CrateCard[] = [
+const crates: RecommendedCrateCard[] = [
   {
     id: 7,
     name: 'Lamplit Dub Hours',
@@ -43,6 +45,7 @@ const crates: CrateCard[] = [
     createdAt: '2026-05-01T10:00:00.000Z',
     ownerUsername: 'demo-odessa',
     ownerDisplayName: 'Odessa Quillfern',
+    isDemo: true,
   },
   {
     id: 8,
@@ -53,6 +56,7 @@ const crates: CrateCard[] = [
     createdAt: '2026-05-02T10:00:00.000Z',
     ownerUsername: 'demo-tomasz',
     ownerDisplayName: 'Tomasz Brindlewick',
+    isDemo: false,
   },
 ]
 
@@ -107,6 +111,23 @@ describe('HomeView', () => {
     expect(first.get('time').attributes('datetime')).toBe('2026-10-27T09:00:00.000Z')
     expect(first.get('time').text()).toBe('Oct 27, 2026')
     expect(newsSection(wrapper).find('a').exists()).toBe(false)
+  })
+
+  it('labels only demo news as Demo, never admin-written news', async () => {
+    const wrapper = await mountHome()
+    await flushPromises()
+    const [demo, written] = newsSection(wrapper).findAll('article')
+    expect(demo!.find('.demo-tag').exists()).toBe(true)
+    expect(written!.find('.demo-tag').exists()).toBe(false)
+  })
+
+  it('labels only demo crates as Demo, and does not call the whole list demo', async () => {
+    const wrapper = await mountHome()
+    await flushPromises()
+    const [demo, suggested] = recommendedSection(wrapper).findAll('.crate-card')
+    expect(demo!.find('.demo-tag').exists()).toBe(true)
+    expect(suggested!.find('.demo-tag').exists()).toBe(false)
+    expect(recommendedSection(wrapper).get('.note').text().toLowerCase()).not.toContain('demo')
   })
 
   it('shows one card per crate, linked, with name, count and owner', async () => {
@@ -169,7 +190,7 @@ describe('HomeView', () => {
   })
 
   it.each([
-    ['loading', () => new Promise<CrateCard[]>(() => {})],
+    ['loading', () => new Promise<RecommendedCrateCard[]>(() => {})],
     ['error', () => Promise.reject(new Error('boom'))],
     ['empty', () => Promise.resolve([])],
   ])('keeps the note and a single AI while %s', async (_state, impl) => {

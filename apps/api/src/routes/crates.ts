@@ -1,7 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import {
   crate,
-  crateCard,
+  recommendedCrateCard,
   crateOrderInput,
   createCrateInput,
   idParams,
@@ -24,8 +24,10 @@ export const crateRoutes: FastifyPluginAsyncZod = async (app) => {
   )
 
   // Declared ahead of /crates/:id, so 'recommended' is never read as an id.
-  app.get('/crates/recommended', { schema: { response: { 200: crateCard.array() } } }, async () =>
-    listRecommendedCrates(app.db),
+  app.get(
+    '/crates/recommended',
+    { schema: { response: { 200: recommendedCrateCard.array() } } },
+    async () => listRecommendedCrates(app.db),
   )
 
   app.get('/crates/:id', { schema: { params: idParams, response: { 200: crate } } }, async (req) =>

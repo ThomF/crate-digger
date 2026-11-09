@@ -61,10 +61,16 @@ describe('GET /api/news', () => {
       expect(times).toEqual([...times].sort((a, b) => b - a))
     })
 
+    it('marks seeded news as demo', () => {
+      expect(items.length).toBeGreaterThan(0)
+      for (const item of items) expect(item.isDemo).toBe(true)
+    })
+
     it('exposes exactly the contract keys, so never the seed key', () => {
       for (const item of items) {
         expect(Object.keys(item).sort()).toEqual([
           'id',
+          'isDemo',
           'publishedAt',
           'source',
           'summary',

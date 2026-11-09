@@ -41,8 +41,8 @@ onMounted(() => {
     <section>
       <h2>What's real here</h2>
       <p>
-        The news, recommendations and demo collectors are demo data. They are made up, to show how
-        the app feels with people in it. Recommendations are curated by hand and no AI model is
+        Anything marked Demo, including the demo collectors, is demo data. It is made up, to show
+        how the app feels with people in it. Recommendations are curated by hand and no AI model is
         involved. In production, demo data is only added if the person running the app turns it on.
       </p>
     </section>

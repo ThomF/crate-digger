@@ -275,6 +275,7 @@ describe('shared profile schemas', () => {
       summary: 'Text',
       source: 'Source',
       publishedAt: '2026-11-08T12:00:00.000Z',
+      isDemo: false,
     }
 
     it('accepts an item and strips unknown keys', () => {

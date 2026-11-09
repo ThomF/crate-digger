@@ -243,6 +243,13 @@ describe('POST /api/admin/crates', () => {
     const after = await recommended()
     expect(after).toHaveLength(before.length + 1)
     expect(after.at(-1)?.id).toBe(created.id)
+
+    // Home labels demo crates only, so an admin's pick must not read as demo.
+    const cards = (await app.inject({ url: '/api/crates/recommended' })).json<
+      { id: number; isDemo: boolean }[]
+    >()
+    expect(cards.find((card) => card.id === created.id)?.isDemo).toBe(false)
+    expect(cards.filter((card) => card.id !== created.id).every((card) => card.isDemo)).toBe(true)
   })
 
   it('is not suggested unless asked, and starts ranks at 1', async () => {
@@ -360,6 +367,7 @@ describe('admin news', () => {
       id: created.id,
       ...NEWS,
       publishedAt: created.publishedAt,
+      isDemo: false,
     })
     expectNoSecretKeys(list)
     expect(publicRes.body).not.toContain('admin:')
