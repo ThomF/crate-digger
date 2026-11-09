@@ -56,8 +56,26 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-function onSleeveClick(offset: number, album: AlbumSummary) {
+const frontPanel = useTemplateRef<HTMLElement>('frontPanel')
+
+/** True when a click landed within the drawn crate front (an empty rect never counts). */
+function insideFrontPanel(event: MouseEvent): boolean {
+  const rect = frontPanel.value?.getBoundingClientRect()
+  if (!rect || rect.width === 0 || rect.height === 0) return false
+  return (
+    event.clientX >= rect.left &&
+    event.clientX <= rect.right &&
+    event.clientY >= rect.top &&
+    event.clientY <= rect.bottom
+  )
+}
+
+function onSleeveClick(event: MouseEvent, offset: number, album: AlbumSummary) {
   if (flip.dragged.value) return // that was the end of a drag, not a click
+  // The crate front is drawn over the art, so a click inside it is never on visible art.
+  // After a backward flip the new current sleeve is still tipping up in front of the
+  // panel and is the hit target there; without this, clicking the label opens the record.
+  if (offset === 0 && insideFrontPanel(event)) return
   if (offset === 0) emit('open', album)
   else flip.goTo(index.value + offset) // clicking a record further back flips to it
 }
@@ -108,7 +126,7 @@ defineExpose({ focus: () => scene.value?.focus() })
           pointerEvents: offset < 0 ? 'none' : undefined,
         }"
         aria-hidden="true"
-        @click="onSleeveClick(offset, album)"
+        @click="onSleeveClick($event, offset, album)"
       >
         <span v-if="divider" class="divider-tab" :style="{ left: tabOffset(divider) }">
           {{ divider }}
@@ -116,7 +134,7 @@ defineExpose({ focus: () => scene.value?.focus() })
         <SleeveArt :album="album" />
       </div>
 
-      <div class="panel front" aria-hidden="true">
+      <div ref="frontPanel" class="panel front" aria-hidden="true">
         <span class="crate-label">{{ crate.label ?? crate.name }}</span>
       </div>
     </div>

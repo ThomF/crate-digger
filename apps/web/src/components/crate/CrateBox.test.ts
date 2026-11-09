@@ -71,6 +71,19 @@ describe('CrateBox', () => {
     ])
   })
 
+  it('ignores a click on the current sleeve that lands inside the crate front', async () => {
+    const wrapper = mountCrate(0)
+    const panel = wrapper.get('.panel.front').element
+    panel.getBoundingClientRect = () =>
+      ({ left: 100, right: 300, top: 200, bottom: 260, width: 200, height: 60 }) as DOMRect
+
+    await wrapper.get('.sleeve.current').trigger('click', { clientX: 200, clientY: 230 })
+    expect(wrapper.emitted('open')).toBeUndefined()
+
+    await wrapper.get('.sleeve.current').trigger('click', { clientX: 200, clientY: 198 })
+    expect(wrapper.emitted('open')).toHaveLength(1)
+  })
+
   it('flips to a record further back when you click its edge', async () => {
     const wrapper = mountCrate(0)
 
