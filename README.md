@@ -34,8 +34,8 @@ A dev start adds fictional demo content to your database (see [Database](#databa
 | `/following`                             | Signed in: who you follow, their crates, suggested people |
 | `/profile`                               | Signed in: your own profile                               |
 | `/about`                                 | What Frisson is and which content is made up              |
-| `/shelf`                                 | The crate browser: flip through every crate               |
-| `/crates/:id`                            | The crate browser, opened on one crate (public link)      |
+| `/shelf`                                 | The crate browser: choose a crate and flip through it     |
+| `/crates/:id`                            | Shows one crate, with no crate picker (public link)       |
 | `/list`                                  | Search and rearrange the collection                       |
 | `/crates`                                | Signed in: add, rename and sort crates                    |
 | `/u/:username`                           | Anyone's public profile, with a follow button             |
@@ -56,6 +56,15 @@ page are sent to log in first.
 | `npm run typecheck` | TypeScript / vue-tsc in every app |
 | `npm run format`    | Prettier — format everything      |
 | `npm run build`     | Production build of the web app   |
+
+### Browser checks
+
+Playwright is a dev dependency. After `npm install`, run `npx playwright install chromium` once.
+The browser binaries go outside the repo, in Playwright's default cache (`~/Library/Caches/ms-playwright`
+on macOS, `~/.cache/ms-playwright` on Linux); set `PLAYWRIGHT_BROWSERS_PATH` to move them.
+
+Run browser checks against a temp copy of the database: start the API with `DATA_DIR=<temp dir>` and
+`SEED_DEMO_DATA=false`. Otherwise starting the API adds demo content to your own database.
 
 ## Accounts
 

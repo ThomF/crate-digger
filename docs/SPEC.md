@@ -111,7 +111,9 @@ GET    /api/crates/recommended        ranked crates, lowest rank first; public
   message when it has nothing to show. Its note says no AI model is involved.
 - **Following:** who you follow, crates from those people, and suggested collectors.
 - **About:** what Frisson is and which content is made up. Fictional content carries a `Demo` tag.
-- **Where the crate view lives:** at `/shelf`, and at `/crates/:id` for one crate.
+- **Where the crate view lives:** at `/shelf`, and at `/crates/:id` for one crate. The crate
+  picker appears only at `/shelf`; `/crates/:id` shows just that crate, with its name as the
+  heading, and choosing a crate on `/shelf` does not change the URL.
 - **Crate view:** a wood/cardboard box in CSS 3D (`perspective`, `rotateX`). Sleeves stand
   upright showing only the top edge and spine. Scroll wheel, arrow keys or drag flips the
   front sleeve forward to reveal the next. Lettered dividers (A–Z or genre) poke up between
