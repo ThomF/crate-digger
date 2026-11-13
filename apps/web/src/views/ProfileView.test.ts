@@ -190,6 +190,74 @@ describe('ProfileView', () => {
     expect(source).toMatch(/\.crate-link:focus-visible::after \{\s*outline: 3px solid/)
   })
 
+  describe('favorites', () => {
+    const fav = {
+      id: 9,
+      name: 'Dub',
+      color: '#112233',
+      label: 'DUBS',
+      albumCount: 3,
+      ownerUsername: 'bob',
+      ownerDisplayName: 'Bob Marley',
+    }
+
+    it('puts a Favorites heading in its own section after Crates', async () => {
+      getProfileMock.mockResolvedValue({ ...base, favorites: [fav] })
+      const wrapper = await mountProfile()
+      const headings = wrapper.findAll('h2').map((h) => h.text())
+      expect(headings.indexOf('Favorites')).toBeGreaterThan(headings.indexOf('Crates'))
+      const crates = wrapper.get('section.crates')
+      const favorites = wrapper.get('section.favorites')
+      expect(favorites.get('h2').text()).toBe('Favorites')
+      expect(crates.element.contains(favorites.element)).toBe(false)
+      expect(favorites.element.contains(crates.element)).toBe(false)
+      expect(
+        crates.element.compareDocumentPosition(favorites.element) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    })
+
+    it('links each favorite to its crate and shows the owner as plain text', async () => {
+      getProfileMock.mockResolvedValue({ ...base, favorites: [fav] })
+      const wrapper = await mountProfile()
+      const card = wrapper.get('section.favorites li.crate')
+      expect(card.findAll('a')).toHaveLength(1)
+      expect(card.get('a').attributes('href')).toBe('/crates/9')
+      expect(card.get('a').attributes('aria-label')).toBe('DUBS: Dub')
+      expect(card.get('.owner').text()).toBe('by Bob Marley')
+      expect(card.get('.owner').element.closest('a')).toBeNull()
+      expect(card.get('.count').text()).toBe('3 records')
+    })
+
+    it('lists a favorite only under Favorites, not under Crates', async () => {
+      getProfileMock.mockResolvedValue({ ...base, favorites: [fav] })
+      const wrapper = await mountProfile()
+      expect(wrapper.findAll('section.crates li.crate')).toHaveLength(2)
+      expect(wrapper.get('section.crates').text()).not.toContain('Dub')
+      expect(wrapper.findAll('section.favorites li.crate')).toHaveLength(1)
+      expect(wrapper.get('section.favorites').text()).toContain('Dub')
+    })
+
+    it('says "No favorites yet." when there are none', async () => {
+      getProfileMock.mockResolvedValue(base)
+      const wrapper = await mountProfile()
+      expect(wrapper.get('section.favorites .status-note').text()).toBe('No favorites yet.')
+      expect(wrapper.find('section.favorites li').exists()).toBe(false)
+    })
+
+    it('renders an ownerless favorite without an owner line', async () => {
+      getProfileMock.mockResolvedValue({
+        ...base,
+        favorites: [{ ...fav, label: null, ownerUsername: null, ownerDisplayName: null }],
+      })
+      const wrapper = await mountProfile()
+      const card = wrapper.get('section.favorites li.crate')
+      expect(card.find('.owner').exists()).toBe(false)
+      expect(card.text()).not.toContain('by ')
+      expect(card.get('a').attributes('href')).toBe('/crates/9')
+    })
+  })
+
   it('has no verified badge when verified is false', async () => {
     getProfileMock.mockResolvedValue({ ...base, verified: false })
     const wrapper = await mountProfile()

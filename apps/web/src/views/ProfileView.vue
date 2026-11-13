@@ -167,6 +167,27 @@ watch(() => props.username, load, { immediate: true })
       </ul>
       <p v-else class="status-note">No crates yet.</p>
     </section>
+
+    <section class="favorites">
+      <h2>Favorites</h2>
+      <ul v-if="profile.favorites.length">
+        <li v-for="fav in profile.favorites" :key="fav.id" class="crate">
+          <span class="swatch" :style="{ background: fav.color }" aria-hidden="true"></span>
+          <RouterLink
+            :to="{ name: 'crate', params: { id: fav.id } }"
+            class="crate-link"
+            :aria-label="crateLinkName(fav)"
+          >
+            <span class="name">{{ fav.label ?? fav.name }}</span>
+            <span v-if="fav.label" class="sub">{{ fav.name }}</span>
+          </RouterLink>
+          <!-- Plain text on purpose: the stretched link covers the card, so a link here is unreachable. -->
+          <span v-if="fav.ownerDisplayName" class="owner">by {{ fav.ownerDisplayName }}</span>
+          <span class="count">{{ albumCount(fav.albumCount) }}</span>
+        </li>
+      </ul>
+      <p v-else class="status-note">No favorites yet.</p>
+    </section>
   </article>
 </template>
 
@@ -351,6 +372,12 @@ ul {
 .sub {
   color: var(--ink-soft);
   overflow-wrap: anywhere;
+}
+
+.owner {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .count {
