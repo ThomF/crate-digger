@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "plan": "new feature for profiles Favorites: allows to favorite any crate that isnt yours, these show separate of your created ones.\n\nGoal: Let a signed-in user favorite any crate they do not own, from that crate's page (/crates/:id), and show their favorited crates on their profile in a Favorites section, separate from the Crates they created.",
+  "plan_changes": [],
+  "files_changed": [
+    {
+      "path": "README.md",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/drizzle/0006_crate_favorites.sql",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/drizzle/meta/0006_snapshot.json",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/drizzle/meta/_journal.json",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/scripts/check-dev-admin.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/app.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/db/schema.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/routes/crates.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/routes/favorites.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/services/crates.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/src/services/favorites.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/src/services/profiles.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/demo-seed.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/dev-admin.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/favorites.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/api/test/migration.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/profiles.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/api/test/shared-profile.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/api/crates.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/api/favorites.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/crate/FavoriteButton.test.ts",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/components/crate/FavoriteButton.vue",
+      "status": "added"
+    },
+    {
+      "path": "apps/web/src/stores/session.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/CrateView.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/CrateView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/EditProfileView.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/MyProfileView.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/ProfileView.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/ProfileView.vue",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/crateActions.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "apps/web/src/views/editControls.test.ts",
+      "status": "modified"
+    },
+    {
+      "path": "docs/DEPLOY.md",
+      "status": "modified"
+    },
+    {
+      "path": "docs/SPEC.md",
+      "status": "modified"
+    },
+    {
+      "path": "docs/adr/0008-public-crate-favorites.md",
+      "status": "added"
+    },
+    {
+      "path": "packages/shared/src/index.ts",
+      "status": "modified"
+    }
+  ],
+  "tests": [
+    {
+      "name": "AC1: A migration test applies all migrations to an empty DB and to a DB at migration 0005 that holds existing users and crates. In both cases a favorites table exists with a unique (user_id, crate_id) index and ON DELETE CASCADE on both foreign keys, and every pre-existing user and crate row is still there.",
+      "status": "pass",
+      "evidence": "migration.test.ts migration 0006 tests (fresh DB, 0005 DB with rows, structure) pass: 7 tests."
+    },
+    {
+      "name": "AC2: PUT /api/crates/:id/favorite by a signed-in user on a crate they do not own returns 204. Repeating it returns 204 and leaves exactly one row. DELETE /api/crates/:id/favorite returns 204 and removes the row, and repeating the DELETE returns 204.",
+      "status": "pass",
+      "evidence": "favorites.test.ts AC2 PUT/DELETE idempotent 204 tests pass."
+    },
+    {
+      "name": "AC3: PUT /api/crates/:id/favorite returns 400 on the caller's own crate and writes no row. It returns 401 when signed out, including with a non-numeric id. It returns 404 for a crate id that does not exist.",
+      "status": "pass",
+      "evidence": "favorites.test.ts AC3: 400 own, 401 signed out non-numeric, 404 unknown pass."
+    },
+    {
+      "name": "AC4: GET /api/crates/:id includes a boolean viewerFavorited. It is true for the user who favorited the crate, false for another signed-in user, and false when signed out.",
+      "status": "pass",
+      "evidence": "favorites.test.ts viewerFavorited true/false/signed-out passes."
+    },
+    {
+      "name": "AC5: GET /api/users/:username returns a favorites array of that user's favorited crates, newest first, each with only id, name, label, color, albumCount, ownerUsername and ownerDisplayName. The existing crates array still contains only crates that user owns, and a favorited crate does not appear in it. The response, favorites included, contains no email, role, numeric user id or demo key.",
+      "status": "pass",
+      "evidence": "favorites.test.ts AC5 newest-first, owned-only crates, no private fields pass."
+    },
+    {
+      "name": "AC6: Deleting a favorited (empty) crate, or deleting the user who favorited it, removes the matching favorite rows. The other user's profile favorites array no longer lists that crate.",
+      "status": "pass",
+      "evidence": "favorites.test.ts cascades: crate delete and user delete remove rows; passes."
+    },
+    {
+      "name": "AC7: A ProfileView component test renders a 'Favorites' heading in its own section after the 'Crates' section. Each favorite links to /crates/:id and shows its owner's display name. With no favorites the section shows 'No favorites yet.'",
+      "status": "pass",
+      "evidence": "ProfileView.test.ts 'favorites' describe: heading after Crates in separate section, href /crates/9, owner name, 'No favorites yet.' All 35 pass."
+    },
+    {
+      "name": "AC8: A CrateView component test renders a button named 'Favorite' with aria-pressed matching viewerFavorited when the viewer is signed in and does not own the crate, including when the viewer is an admin. The button is absent on the viewer's own crate and when signed out. Clicking it calls PUT, or DELETE when pressed, and flips aria-pressed only after the request succeeds.",
+      "status": "pass",
+      "evidence": "CrateView.test.ts 'AC8' describe plus FavoriteButton.test.ts cover presence, absence, PUT/DELETE, aria-pressed after success; 40 and 7 pass."
+    },
+    {
+      "name": "AC9: In a real browser on a temp DB copy, user A opens user B's crate at /crates/:id and clicks Favorite, which becomes pressed. On /profile the crate is listed under Favorites, not under Crates. Clicking that card opens the crate page. Clicking Favorite again unpresses it, and after a reload of /profile the crate is gone from Favorites.",
+      "status": "pass",
+      "evidence": "favorites.check.mjs on temp DB (port 4917): user alf opened bea's /crates/:id. The Favorite button flipped aria-pressed at all 9 click points and was left pressed. On /profile the crate was under Favorites and not under Crates. All 9 click points on the favorite card opened /crates/:id. Clicking Favorite again unpressed it, and after reloading /profile the crate was gone and 'No favorites yet.' showed. Output: PASS AC9."
+    },
+    {
+      "name": "AC10: In a real browser on a temp DB copy, user A's own crate page shows no Favorite button. At 390px and 1280px widths, /u/<A> with at least two favorites shows the Crates and Favorites sections without horizontal page overflow, and a click at the centre of each favorite card opens that crate.",
+      "status": "pass",
+      "evidence": "alf's own crate page showed no Favorite button after 1.5s, while another user's crate showed one. With 2 favorites on /u/alf at 390px and 1280px: Crates and Favorites were both visible, scrollWidth <= clientWidth, a centre click on each favorite card opened its crate, and the full 3x3 click grid had no dead spots on the favorite cards or the own-crate card. Output: PASS AC10."
+    },
+    {
+      "name": "AC11: npm run typecheck, npm run lint and npm test all exit 0 from the repo root, and the existing tests still pass.",
+      "status": "pass",
+      "evidence": "test-output.txt: 427 web tests pass, API files pass, typecheck and eslint ran with no errors."
+    }
+  ],
+  "branch": "shipyard/profile-crate-favorites-2026-11-13T21-41-52",
+  "base": "2b94aaff3fdebbf8b37b88006c7986833d348d54",
+  "notes": [
+    "Intake assumed favorites are public on profiles (like Crates); owner to confirm, cheap to flip.",
+    "dev-T1: none\n```",
+    "dev-T3 returned no handoff (message: Placeholder); its tests for AC7 are not named, and it did not report running the suite.",
+    "dev-T2: 390px layout not checked in a browser. CrateView logs console.warn when the favorite-state fetch fails (the button stays hidden).\n```"
+  ]
+}

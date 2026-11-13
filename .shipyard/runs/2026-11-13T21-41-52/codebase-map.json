@@ -1,0 +1,78 @@
+{
+  "commit": "2b94aaff3fdebbf8b37b88006c7986833d348d54",
+  "structure": {
+    "summary": "npm workspaces monorepo 'frisson', ESM, Node >=22.18, API runs TS directly via node src/server.ts. Workspaces apps/api (Fastify 5 + drizzle-orm + better-sqlite3 + zod), apps/web (Vue 3.5 + vue-router + pinia, Vite 6), packages/shared (zod schemas, exports ./src/index.ts, ./src/sorting.ts; tests live in apps/api/test).",
+    "apiScripts": "dev, start, typecheck, test, db:generate, db:seed, db:backup, db:restore",
+    "webScripts": "dev, build, typecheck (vue-tsc), test"
+  },
+  "tests": {
+    "framework": "vitest ^3.2 in apps/api and apps/web",
+    "apiTests": "apps/api/test/*.test.ts (crates, ownership, follows, profiles, schema, migration, ...)",
+    "webTests": "apps/web/src/**/*.test.ts colocated (views/ProfileView, MyProfileView, CrateView, crateActions, components/profile/*, stores/*)",
+    "typecheck": "npm run typecheck",
+    "lint": "npm run lint",
+    "browserChecks": "Playwright scripts in .shipyard/checks/<name>.check.mjs importing {startApp, until, deadSpots} from ./lib.mjs; each starts its own API on a temp DB (DATA_DIR tmp, SEED_DEMO_DATA=false, NODE_ENV=development) on a non-default port, prints PASS/FAIL lines. Run with node from repo root.",
+    "baseline": "npm test exit 0, ~14s, 2026-11-13"
+  },
+  "testCommand": "npm test (from repo root). Single file: npm test -w apps/web -- src/views/X.test.ts. Full set: npm test && npm run typecheck && npm run lint.",
+  "conventions": {
+    "formatting": "Prettier: no semicolons, single quotes, printWidth 100, trailingComma all; .editorconfig 2-space LF.",
+    "linting": "ESLint 9 flat config at root (vue essential, vue-ts recommended, prettier skip-formatting). npm run lint.",
+    "typescript": "ESM everywhere; tsconfig.base.json + per-package; API runs TS natively.",
+    "testing": "Vitest. API tests apps/api/test/*.test.ts named by feature using buildTestApp (empty DB, no demo seed). Web tests colocated *.test.ts.",
+    "architecture": [
+      "packages/shared holds Zod schemas/types as the API/web contract; src/sorting.ts is Zod-free.",
+      "API routes are thin (schema in, status out); business logic in src/services as plain functions (db, input). src/plugins: db, error handler, uploads. src/db: schema.ts, client.ts, seed.ts, demo-content.ts.",
+      "Drizzle migrations in apps/api/drizzle are generated with db:generate and committed, never hand-edited.",
+      "Web: src/api typed fetch functions one file per resource; src/stores Pinia; src/views one per route; src/components by feature (album, crate, forms, profile, admin); src/composables useXxx; src/utils.",
+      "Errors shape { statusCode, error, message, issues? }."
+    ],
+    "git": "Conventional Commits with scope, e.g. feat(api): ...",
+    "ci": ".github/workflows/ci.yml runs format:check, lint, typecheck, test, Docker build."
+  },
+  "documentation": {
+    "readme": "README.md is current: routes table, scripts, browser checks, accounts, admin, env vars, API endpoint table, layout tree. New endpoints/pages should be added there.",
+    "spec": "docs/SPEC.md: Stack, Repo structure, Data model, API, UI/UX, Milestones, Git workflow, Self-hosting.",
+    "deploy": "docs/DEPLOY.md has per-feature upgrade notes.",
+    "adrs": "docs/adr/0001-0007, format Context/Decision/Consequences; next is 0008."
+  },
+  "relevant": {
+    "closest_analog": "The Follows feature (user->user) is the template: table, routes, service, web api module, button component, tests. Favorites mirrors it as user->crate.",
+    "db": [
+      "apps/api/src/db/schema.ts: users, crates (ownerId nullable FK, set null on delete; demoSeedKey; recommendedRank), albums, tracks, follows (id, followerId, followeeId, createdAt; uniqueIndex pair, index followeeId, check no_self, cascade FKs), newsItems; relations blocks; each table needs a data-classification comment. New favorites table (userId, crateId, createdAt, unique pair, cascade both) goes here.",
+      "apps/api/drizzle/: latest 0005_follows_news_demo.sql + meta/0005_snapshot.json + meta/_journal.json; generate 0006 with npm run db:generate -w apps/api.",
+      "apps/api/test/migration.test.ts and schema.test.ts may need updating.",
+      "seed.ts, demo-content.ts, services/demo-seed.ts, db/backup.ts, db/restore.ts: check whether they enumerate tables."
+    ],
+    "api": [
+      "apps/api/src/routes/follows.ts: PUT/DELETE /users/:username/follow (204, idempotent), GET /me/following, /me/feed; preValidation signedInOnly so signed-out gets 401 before 400. Pattern for PUT/DELETE /crates/:id/favorite and GET /me/favorites.",
+      "apps/api/src/services/follows.ts: followUser/unfollowUser/listFollowing/getFeed (CrateCard[]).",
+      "apps/api/src/routes/crates.ts and services/crates.ts: getCrate, assertCrateExists, deleteCrate. /crates/recommended declared before /crates/:id.",
+      "apps/api/src/routes/profiles.ts and services/profiles.ts: GET /users/:username -> toPublicProfile(db, user, viewerId); profileCrates() selects crates where ownerId = user (created crates); followCounts/isFollowedBy viewer helpers.",
+      "apps/api/src/app.ts registers route plugins.",
+      "apps/api/src/services/admin.ts: admin counts, possibly affected by cascade."
+    ],
+    "auth": [
+      "apps/api/src/plugins/auth.ts sets req.user (PublicUser|null).",
+      "apps/api/src/services/permissions.ts: requireUser, canEditOwner, assertCanEditCrate, requireAdmin. Own-crate rule compares crates.ownerId to req.user.id; legacy crates have ownerId NULL.",
+      "apps/api/src/errors.ts: notFound, badRequest helpers."
+    ],
+    "shared": "packages/shared/src/index.ts: idParams, usernameParams, crate (ownerId, ownerUsername, ownerDisplayName), crateCard (public, no ownerId), recommendedCrateCard (isDemo), profileCrate (id, name, color, label, albumCount), publicProfile (crates, followerCount, followingCount, viewerFollows, isDemo), publicUser. Rule: public responses never expose numeric user ids, email, role or demo keys.",
+    "web": [
+      "apps/web/src/api/client.ts request<T>(); api/follows.ts is the template for api/favorites.ts; api/crates.ts, api/profiles.ts.",
+      "apps/web/src/views/ProfileView.vue (/u/:username): 'Crates' section (h2 Crates, links to route 'crate'), FollowButton with optimistic count. Favorites section goes here, separate from Crates.",
+      "apps/web/src/views/MyProfileView.vue (/profile) own profile.",
+      "apps/web/src/views/CrateView.vue (/shelf and /crates/:id): place for a favorite toggle shown only when the crate is not yours (owner check in apps/web/src/utils/permissions.ts, OwnerLink.vue).",
+      "apps/web/src/components/profile/FollowButton.vue: toggle pattern (emits 'changed') for FavoriteButton.",
+      "apps/web/src/router.ts; stores/session.ts (current user); stores/library.ts."
+    ],
+    "tests_near": [
+      "API: follows.test.ts (model), profiles.test.ts, shared-profile.test.ts, crates.test.ts, ownership.test.ts, schema.test.ts, migration.test.ts, helpers.ts.",
+      "Web: views/ProfileView.test.ts, MyProfileView.test.ts, CrateView.test.ts, crateActions.test.ts, components/profile/FollowButton.test.ts, utils/permissions.test.ts."
+    ],
+    "notes": [
+      "apps/api/dist/ is stale compiled JS; ignore.",
+      "No existing favorites/likes concept."
+    ]
+  }
+}

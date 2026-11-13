@@ -1,0 +1,54 @@
+{
+  "id": "T3",
+  "goal": "Favorites section on the profile page (used by both /u/:username and /profile), separate from Crates, with component tests and documentation updates.",
+  "description": "API (built by T1, already merged): `PublicProfile` from '@frisson/shared' now has `favorites: ProfileFavorite[]`, newest favorited first. `ProfileFavorite = { id: number; name: string; color: string; label: string | null; albumCount: number; ownerUsername: string | null; ownerDisplayName: string | null }` (owner fields are null for ownerless legacy crates). `crates` still lists owned crates only. The favorites list is public, so every viewer sees it. MyProfileView (/profile) renders ProfileView with the session user's username, so a change to ProfileView covers both routes.\n\n1. apps/web/src/views/ProfileView.vue: after the existing `<section class=\"crates\">`, add a separate `<section class=\"favorites\">` with `<h2>Favorites</h2>`.\n   - Each favorite is an `<li class=\"crate\">` card built like the Crates cards: color swatch, then a RouterLink to `{ name: 'crate', params: { id } }` (class crate-link, aria-label from crateLinkName) showing label/name. Add a plain-text owner line, e.g. `<span class=\"owner\">by {{ fav.ownerDisplayName }}</span>`, only when ownerDisplayName is non-null. Then the album count.\n   - The owner must be text, not a link. The stretched-link ::after covers the card, so a nested link would be unreachable, and nested interactive content is not allowed.\n   - Empty state: `<p class=\"status-note\">No favorites yet.</p>`.\n   - Stretched-link containment is a known risk from earlier runs. Every card li needs position: relative (the existing .crate rule does this) so each ::after covers only its own card. Neither section may overlap the other, and nothing in the Favorites section may cover the Crates links. Long names and owner names wrap (overflow-wrap: anywhere) so neither 390px nor 1280px widths cause horizontal page overflow.\n   - Render user text with {{ }} only, never v-html. Leave the Crates section, follow button and header as they are.\n2. apps/web/src/views/ProfileView.test.ts (AC7). T1 already added `favorites: []` to the fixtures. Add tests:\n   - A 'Favorites' heading exists and comes after the 'Crates' heading in document order, in its own section.\n   - Each favorite links to /crates/:id and shows its owner's display name.\n   - A favorited crate appears only under Favorites and not under Crates.\n   - With no favorites, 'No favorites yet.' is shown.\n   - A favorite with null owner fields renders without an owner line.\n3. Docs:\n   - README.md: API endpoint table gets PUT/DELETE /api/crates/:id/favorite (signed in, 204, idempotent; 400 own crate) and the viewerFavorited field on GET /api/crates/:id. The routes/features text mentions the Favorite button on /crates/:id and the Favorites section on profiles.\n   - docs/SPEC.md: Data model gets crate_favorites (user_id, crate_id, created_at; unique pair; cascade on both FKs). Add the API and UI notes too.\n   - docs/DEPLOY.md: upgrade note that migration 0006 adds the crate_favorites table and is additive.\n   - New docs/adr/0008-public-crate-favorites.md in Context/Decision/Consequences format, matching the existing ADRs. It records that favorites are public on profiles (unlike follow lists), are only set by request.user, cannot target your own crate, and cascade on user or crate delete.\n\nRun `npm test -w apps/web`, `npm run typecheck`, `npm run lint` and `npx prettier --check` on changed files from the repo root. Do not start a dev server or touch data/crate.db or .shipyard/. Commits: feat(web): ..., docs: ...",
+  "ownsFiles": [
+    "apps/web/src/views/ProfileView.vue",
+    "apps/web/src/views/ProfileView.test.ts",
+    "README.md",
+    "docs/SPEC.md",
+    "docs/DEPLOY.md",
+    "docs/adr/0008-public-crate-favorites.md"
+  ],
+  "dependsOn": [
+    "T1"
+  ],
+  "criteriaIds": [
+    "AC7",
+    "AC9",
+    "AC10",
+    "AC11"
+  ],
+  "model": "sonnet",
+  "criteria": [
+    {
+      "id": "AC7",
+      "statement": "A ProfileView component test renders a 'Favorites' heading in its own section after the 'Crates' section. Each favorite links to /crates/:id and shows its owner's display name. With no favorites the section shows 'No favorites yet.'",
+      "check": "unit"
+    },
+    {
+      "id": "AC9",
+      "statement": "In a real browser on a temp DB copy, user A opens user B's crate at /crates/:id and clicks Favorite, which becomes pressed. On /profile the crate is listed under Favorites, not under Crates. Clicking that card opens the crate page. Clicking Favorite again unpresses it, and after a reload of /profile the crate is gone from Favorites.",
+      "check": "browser"
+    },
+    {
+      "id": "AC10",
+      "statement": "In a real browser on a temp DB copy, user A's own crate page shows no Favorite button. At 390px and 1280px widths, /u/<A> with at least two favorites shows the Crates and Favorites sections without horizontal page overflow, and a click at the centre of each favorite card opens that crate.",
+      "check": "browser"
+    },
+    {
+      "id": "AC11",
+      "statement": "npm run typecheck, npm run lint and npm test all exit 0 from the repo root, and the existing tests still pass.",
+      "check": "command"
+    }
+  ],
+  "testCommand": "npm test (from repo root). Single file: npm test -w apps/web -- src/views/X.test.ts. Full set: npm test && npm run typecheck && npm run lint.",
+  "codebaseMap": ".shipyard/runs/2026-11-13T21-41-52/codebase-map.json",
+  "from": [
+    {
+      "task": "T1",
+      "commit": "5603cf2",
+      "built": "shared: profileFavorite, ProfileFavorite, crateDetail, CrateDetail (crate + viewerFavorited), publicProfile.favorites (newest first). DB: crateFavorites (crate_favorites: id, user_id, crate_id, created_at). services/favorites.ts: favoriteCrate(db, viewer, crateId), unfavoriteCrate(db, viewer, crateId), isFavoritedBy(db, crateId, viewerId|null), listFavorites(db, userId). services/crates.ts: getCrateDetail(db, id, viewer). Routes: PUT|DELETE /api/crates/:id/favorite -> 204 (401/404/400). GET /api/crates/:id returns CrateDetail."
+    }
+  ]
+}

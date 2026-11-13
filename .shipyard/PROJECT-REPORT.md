@@ -84,3 +84,15 @@
 - Lesson: a dev server on the working copy runs insert-at-start steps on the real DB as soon as they are written. Testers can be fast and shallow, so spot-check evidence against the tests
 - Follow-up at the owner's request, outside the circuit: public news and recommended crates carry isDemo, Home tags demo items only, the recommended note and About copy no longer call everything demo. Check: .shipyard/checks/demo-tags.check.mjs
 - Merged and pushed to main at the owner's request
+
+## 2026-11-13T21-41-52: crate favorites on profiles
+- Verdict: shipped (11/11 criteria, real-browser checks on a temp DB), 1 cycle, 0 fix rounds, 3 tasks
+- Wall clock: 66m 2s, inflated by a pause after T1 while the owner ran /harbor mid-run; slowest stage: build (54m 14s, mostly that pause)
+- Tokens: 447,318 across 11 agents (size standard, harbormaster's own tokens not included).
+- Deaths: none. Blockers: none. dev-T3 returned "Placeholder" with no handoff; its commits were real and the harbormaster spot-checked its AC7 tests
+- Survey cache rejected (69 files changed, manifest and tsconfig), refreshed
+- Owner to confirm: favorites are public on profiles (ADR 0008), unlike follow lists
+- Check: .shipyard/checks/favorites.check.mjs (port 4917). browser.mjs still rewrites tracked ac12-long PNGs; restored again
+- Known limits: uneven favorite card heights at 390px; stale favorite row stays if a crate is reassigned to its favoriter; Chromium only
+- Lesson: /harbor needs shipyard-report.json, so run it only after the verdict
+- Not merged or pushed

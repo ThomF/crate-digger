@@ -1,0 +1,84 @@
+{
+  "id": "T1",
+  "goal": "Backend for crate favorites: shared contract, crate_favorites table and migration 0006, service, routes, viewerFavorited on GET /crates/:id, favorites on the public profile, and API and migration tests.",
+  "description": "Template: the Follows feature (apps/api/src/routes/follows.ts, apps/api/src/services/follows.ts, the follows table in apps/api/src/db/schema.ts, apps/api/test/follows.test.ts). Favorites mirror it as user->crate.\n\n1. SHARED CONTRACT (packages/shared/src/index.ts)\n- Add, near profileCrate:\n```ts\n// Data classification: PUBLIC. A crate someone favorited, as their profile lists it. Owner username and display name only (null for ownerless legacy crates). No owner id.\nexport const profileFavorite = z.object({\n  id: z.number().int(),\n  name: z.string(),\n  color: z.string(),\n  label: z.string().nullable(),\n  albumCount: z.number().int(),\n  ownerUsername: z.string().nullable(),\n  ownerDisplayName: z.string().nullable(),\n})\n```\n- Add `favorites: z.array(profileFavorite)` to publicProfile, right after `crates`. Doc comment: newest favorited first.\n- Add `export const crateDetail = crate.extend({ viewerFavorited: z.boolean() })` with the comment 'Does the signed-in viewer favorite this crate? Always false when signed out.'\n- Export the types `ProfileFavorite` and `CrateDetail` (z.infer) beside ProfileCrate and Crate.\n\n2. DB (apps/api/src/db/schema.ts)\n- Add after follows:\n```ts\n// Data classification: INTERNAL (personal data: which crates a user favorited). Profiles show a user's favorites as public crate cards; numeric ids never leave the API.\n// 'cascade' = deleting the user or the crate deletes the favorite rows.\nexport const crateFavorites = sqliteTable('crate_favorites', {\n  id: integer('id').primaryKey({ autoIncrement: true }),\n  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),\n  crateId: integer('crate_id').notNull().references(() => crates.id, { onDelete: 'cascade' }),\n  createdAt: timestamps.createdAt,\n}, (t) => [\n  uniqueIndex('crate_favorites_user_crate_unique').on(t.userId, t.crateId),\n  index('crate_favorites_crate_idx').on(t.crateId),\n])\n```\n  Add relations entries if the file has relations blocks for follows.\n- Generate the migration with `npm run db:generate -w apps/api -- --name crate_favorites`. This writes apps/api/drizzle/0006_crate_favorites.sql, meta/0006_snapshot.json and the _journal.json entry. Never hand-write or hand-edit them. Do not touch 0000-0005. The SQL must only CREATE TABLE and CREATE INDEX, with no table rebuilds.\n- Check apps/api/test/dev-admin.test.ts, apps/api/scripts/check-dev-admin.ts, apps/api/test/demo-seed.test.ts, apps/api/test/schema.test.ts, src/db/backup.ts, src/db/restore.ts and src/services/admin.ts for hard-coded table lists. Add crate_favorites wherever the follows table is enumerated.\n\n3. SERVICE: new file apps/api/src/services/favorites.ts\n- `favoriteCrate(db: Db, viewer: PublicUser | null, crateId: number): void`: requireUser(viewer) (401). Select crate {id, ownerId}; if it is missing, throw notFound(`Crate ${crateId}`) (404). If crate.ownerId === signedIn.id, throw badRequest('You cannot favorite your own crate') (400). Then insert with .onConflictDoNothing(). Ownerless (null owner) crates and other users' crates are allowed, including for admins. 404 is checked before 400.\n- `unfavoriteCrate(db, viewer, crateId): void`: requireUser, 404 if the crate is missing, otherwise delete the row for (viewer, crate). A missing row is a no-op.\n- `isFavoritedBy(db, crateId: number, viewerId: number | null): boolean`: false when viewerId is null.\n- `listFavorites(db, userId: number): ProfileFavorite[]`: from crateFavorites innerJoin crates, leftJoin users on users.id = crates.ownerId, leftJoin albums on albums.crateId = crates.id. Select exactly id, name, color, label, albumCount: count(albums.id), ownerUsername: users.username, ownerDisplayName: users.displayName. where crateFavorites.userId = userId, groupBy crates.id, orderBy desc(crateFavorites.createdAt), desc(crateFavorites.id). Never select email, role, user ids or demoSeedKey.\n- Write a data-classification header comment like the one in services/follows.ts.\n\n4. ROUTES: new file apps/api/src/routes/favorites.ts, registered in apps/api/src/app.ts the way followRoutes is (same prefix).\n- PUT /crates/:id/favorite and DELETE /crates/:id/favorite, each `{ schema: { params: idParams }, preValidation: signedInOnly }`, returning reply.code(204).send(). Define signedInOnly locally as in follows.ts (`async (req) => { requireUser(req.user) }`). Because it runs in preValidation, a signed-out caller gets 401 even with a non-numeric id. Check that /crates/:id/favorite does not collide with /crates/order or /crates/recommended in crates.ts.\n- GET /crates/:id in apps/api/src/routes/crates.ts: response schema becomes crateDetail, and the handler calls a new `getCrateDetail(db: Db, id: number, viewer: PublicUser | null): CrateDetail` in apps/api/src/services/crates.ts. It returns `{ ...getCrate(db, id), viewerFavorited: isFavoritedBy(db, id, viewer?.id ?? null) }`. Keep getCrate unchanged, because create, update and delete use it. GET /crates (the list) stays as it is.\n\n5. PROFILE (apps/api/src/services/profiles.ts)\n- toPublicProfile adds `favorites: listFavorites(db, user.id)` after `crates`. profileCrates stays owner-only. Favorites are PUBLIC: any viewer, signed in or not, sees them. updateOwnProfile and setVerified return toPublicProfile, so they gain the field too. Fix any existing toEqual assertions on those responses.\n\n6. WEB FIXTURES. Adding a required `favorites` breaks typecheck in the web test fixtures that build a PublicProfile. Add `favorites: []` to the fixtures in apps/web/src/views/ProfileView.test.ts, apps/web/src/views/MyProfileView.test.ts, apps/web/src/views/EditProfileView.test.ts and apps/web/src/stores/session.test.ts. Make no other web changes. In apps/web/src/views/ProfileView.vue, do not add UI yet. T3 does that.\n\n7. TESTS\n- apps/api/test/migration.test.ts (AC1): add a 'migration 0006' describe that follows the existing 0005 test pattern. (a) A fresh DB through createDb has crate_favorites. (b) Build a DB at 0005 holding users and crates, then open it so 0006 applies; every pre-existing user and crate row is still there. In both cases check: PRAGMA index_list shows a unique index on (user_id, crate_id), and PRAGMA foreign_key_list(crate_favorites) shows on_delete 'CASCADE' for both the users and crates FKs. Add an 'only adds to the schema' test for 0006 that mirrors the 0005 one.\n- New apps/api/test/favorites.test.ts, using buildTestApp and helpers.ts as follows.test.ts does:\n  - AC2: PUT gives 204, and repeating it gives 204 with exactly one row. DELETE gives 204 and removes the row, and repeating it gives 204.\n  - AC3: PUT on your own crate gives 400 and writes no row. Signed-out PUT gives 401, also for /crates/abc/favorite. Unknown id gives 404. Signed-out DELETE gives 401.\n  - AC4: GET /api/crates/:id viewerFavorited is true for the favoriter, false for another signed-in user and false signed out.\n  - Admins can favorite another user's crate. Ownerless crates can be favorited.\n  - AC5: GET /api/users/:username has favorites newest first (control createdAt, or rely on the id tiebreak), and each entry's keys are exactly [id, name, label, color, albumCount, ownerUsername, ownerDisplayName]. The crates array has only owned crates, and a favorited crate is not in it. The serialized body contains no 'email', 'role', 'demoSeedKey' or numeric user id fields.\n  - AC6: deleting a favorited empty crate through DELETE /api/crates/:id removes the favorite rows, and the favoriter's profile favorites no longer list it. Deleting the favoriting user (db.delete(users) directly; there is no route for it) removes their rows. Crate delete still returns 204, so the cascade does not block it.\n- Fix any existing API tests (profiles, shared-profile, crates, schema) that break on the new fields.\n\nRun `npm test`, `npm run typecheck` and `npm run lint` from the repo root, and `npx prettier --check` on the files you change. Do not start a dev server or touch data/crate.db. Commits: Conventional Commits, e.g. feat(api): ..., feat(shared): ...",
+  "ownsFiles": [
+    "packages/shared/src/index.ts",
+    "apps/api/src/db/schema.ts",
+    "apps/api/drizzle/0006_crate_favorites.sql",
+    "apps/api/drizzle/meta/0006_snapshot.json",
+    "apps/api/drizzle/meta/_journal.json",
+    "apps/api/src/services/favorites.ts",
+    "apps/api/src/routes/favorites.ts",
+    "apps/api/src/app.ts",
+    "apps/api/src/services/crates.ts",
+    "apps/api/src/routes/crates.ts",
+    "apps/api/src/services/profiles.ts",
+    "apps/api/src/services/admin.ts",
+    "apps/api/src/db/backup.ts",
+    "apps/api/src/db/restore.ts",
+    "apps/api/scripts/check-dev-admin.ts",
+    "apps/api/test/favorites.test.ts",
+    "apps/api/test/migration.test.ts",
+    "apps/api/test/schema.test.ts",
+    "apps/api/test/profiles.test.ts",
+    "apps/api/test/shared-profile.test.ts",
+    "apps/api/test/crates.test.ts",
+    "apps/api/test/dev-admin.test.ts",
+    "apps/api/test/demo-seed.test.ts",
+    "apps/web/src/views/ProfileView.test.ts",
+    "apps/web/src/views/MyProfileView.test.ts",
+    "apps/web/src/views/EditProfileView.test.ts",
+    "apps/web/src/stores/session.test.ts"
+  ],
+  "dependsOn": [],
+  "criteriaIds": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC4",
+    "AC5",
+    "AC6",
+    "AC11"
+  ],
+  "model": "opus",
+  "criteria": [
+    {
+      "id": "AC1",
+      "statement": "A migration test applies all migrations to an empty DB and to a DB at migration 0005 that holds existing users and crates. In both cases a favorites table exists with a unique (user_id, crate_id) index and ON DELETE CASCADE on both foreign keys, and every pre-existing user and crate row is still there.",
+      "check": "unit"
+    },
+    {
+      "id": "AC2",
+      "statement": "PUT /api/crates/:id/favorite by a signed-in user on a crate they do not own returns 204. Repeating it returns 204 and leaves exactly one row. DELETE /api/crates/:id/favorite returns 204 and removes the row, and repeating the DELETE returns 204.",
+      "check": "api"
+    },
+    {
+      "id": "AC3",
+      "statement": "PUT /api/crates/:id/favorite returns 400 on the caller's own crate and writes no row. It returns 401 when signed out, including with a non-numeric id. It returns 404 for a crate id that does not exist.",
+      "check": "api"
+    },
+    {
+      "id": "AC4",
+      "statement": "GET /api/crates/:id includes a boolean viewerFavorited. It is true for the user who favorited the crate, false for another signed-in user, and false when signed out.",
+      "check": "api"
+    },
+    {
+      "id": "AC5",
+      "statement": "GET /api/users/:username returns a favorites array of that user's favorited crates, newest first, each with only id, name, label, color, albumCount, ownerUsername and ownerDisplayName. The existing crates array still contains only crates that user owns, and a favorited crate does not appear in it. The response, favorites included, contains no email, role, numeric user id or demo key.",
+      "check": "api"
+    },
+    {
+      "id": "AC6",
+      "statement": "Deleting a favorited (empty) crate, or deleting the user who favorited it, removes the matching favorite rows. The other user's profile favorites array no longer lists that crate.",
+      "check": "api"
+    },
+    {
+      "id": "AC11",
+      "statement": "npm run typecheck, npm run lint and npm test all exit 0 from the repo root, and the existing tests still pass.",
+      "check": "command"
+    }
+  ],
+  "testCommand": "npm test (from repo root). Single file: npm test -w apps/web -- src/views/X.test.ts. Full set: npm test && npm run typecheck && npm run lint.",
+  "codebaseMap": ".shipyard/runs/2026-11-13T21-41-52/codebase-map.json"
+}

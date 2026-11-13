@@ -1,0 +1,42 @@
+{
+  "goal": "Let a signed-in user favorite any crate they do not own, from that crate's page (/crates/:id), and show their favorited crates on their profile in a Favorites section, separate from the Crates they created.",
+  "constraints": [
+    "Store favorites in a new table (for example crate_favorites: user_id, crate_id, created_at) added by a new migration, apps/api/drizzle/0006_*.sql. Add a unique index on (user_id, crate_id). Both foreign keys use ON DELETE CASCADE. Do not change existing migrations.",
+    "Favorites only ever act for request.user. There is no route that sets favorites for another user.",
+    "Follow the public-data rule. Favorites in API responses carry only public crate-card fields (id, name, label, color, albumCount, ownerUsername, ownerDisplayName). They carry no email, role, numeric user id or demo key.",
+    "Copy the follow routes' pattern: PUT/DELETE return 204 and are idempotent, and the signed-in check runs in preValidation so a signed-out caller gets 401 before 400.",
+    "Profile page user text is rendered with {{ }} only, never v-html.",
+    "Browser checks run on a temp copy of the DB, never on data/crate.db. Do not run a dev server on the working copy during the build, because insert-at-start steps hit the real DB.",
+    "Existing behaviour stays as it is: the Crates section lists only owned crates, crate page actions stay hidden on other users' crates, and the admin panel and demo tags are unchanged."
+  ],
+  "assumptions": [
+    "'Isn't yours' means crate.ownerId !== viewer.id. Ownerless legacy crates and demo-user crates can be favorited. An admin can favorite other users' crates but not their own.",
+    "The Favorites section is public, like the Crates section: anyone viewing /u/:username or /profile sees that user's favorites. This differs from follows, where the lists stay private. If favorites should be private, only the profile owner should see the section.",
+    "The Favorite control appears only on the single-crate page /crates/:id. It does not appear on /shelf, Home cards or the Following feed.",
+    "A signed-out viewer sees no Favorite control on a crate. There is no 'Log in to favorite' link.",
+    "The control is a toggle button with accessible name 'Favorite' and aria-pressed showing its state. It updates only after the server agrees, like FollowButton.",
+    "Favorites are listed newest-favorited first. Each card shows the crate's owner. The empty state reads 'No favorites yet.'",
+    "There are no favorite counts on crates and no notification to the crate owner.",
+    "If the viewer later becomes the crate's owner (for example through an admin reassignment), the old favorite row can stay. Nothing cleans it up."
+  ],
+  "risks": [
+    "The public-vs-private choice for favorites is the most likely wrong assumption, and it is cheap to flip if raised now.",
+    "Adding favorites to the publicProfile schema could break existing profile tests or the edit-profile response, which also returns publicProfile.",
+    "A crate can only be deleted once it is empty (albums FK restrict). The cascade on crate delete still has to be tested so favorites do not orphan or block deletes.",
+    "The ProfileView crate cards use a stretched-link ::after. A second list built the same way must not swallow clicks meant for the other section. Earlier runs had click-target bugs.",
+    "browser.mjs rewrites tracked ac12-long PNGs on every run. Restore them before committing."
+  ],
+  "acceptanceCriteria": [
+    { "id": "AC1", "statement": "A migration test applies all migrations to an empty DB and to a DB at migration 0005 that holds existing users and crates. In both cases a favorites table exists with a unique (user_id, crate_id) index and ON DELETE CASCADE on both foreign keys, and every pre-existing user and crate row is still there.", "check": "unit" },
+    { "id": "AC2", "statement": "PUT /api/crates/:id/favorite by a signed-in user on a crate they do not own returns 204. Repeating it returns 204 and leaves exactly one row. DELETE /api/crates/:id/favorite returns 204 and removes the row, and repeating the DELETE returns 204.", "check": "api" },
+    { "id": "AC3", "statement": "PUT /api/crates/:id/favorite returns 400 on the caller's own crate and writes no row. It returns 401 when signed out, including with a non-numeric id. It returns 404 for a crate id that does not exist.", "check": "api" },
+    { "id": "AC4", "statement": "GET /api/crates/:id includes a boolean viewerFavorited. It is true for the user who favorited the crate, false for another signed-in user, and false when signed out.", "check": "api" },
+    { "id": "AC5", "statement": "GET /api/users/:username returns a favorites array of that user's favorited crates, newest first, each with only id, name, label, color, albumCount, ownerUsername and ownerDisplayName. The existing crates array still contains only crates that user owns, and a favorited crate does not appear in it. The response, favorites included, contains no email, role, numeric user id or demo key.", "check": "api" },
+    { "id": "AC6", "statement": "Deleting a favorited (empty) crate, or deleting the user who favorited it, removes the matching favorite rows. The other user's profile favorites array no longer lists that crate.", "check": "api" },
+    { "id": "AC7", "statement": "A ProfileView component test renders a 'Favorites' heading in its own section after the 'Crates' section. Each favorite links to /crates/:id and shows its owner's display name. With no favorites the section shows 'No favorites yet.'", "check": "unit" },
+    { "id": "AC8", "statement": "A CrateView component test renders a button named 'Favorite' with aria-pressed matching viewerFavorited when the viewer is signed in and does not own the crate, including when the viewer is an admin. The button is absent on the viewer's own crate and when signed out. Clicking it calls PUT, or DELETE when pressed, and flips aria-pressed only after the request succeeds.", "check": "unit" },
+    { "id": "AC9", "statement": "In a real browser on a temp DB copy, user A opens user B's crate at /crates/:id and clicks Favorite, which becomes pressed. On /profile the crate is listed under Favorites, not under Crates. Clicking that card opens the crate page. Clicking Favorite again unpresses it, and after a reload of /profile the crate is gone from Favorites.", "check": "browser" },
+    { "id": "AC10", "statement": "In a real browser on a temp DB copy, user A's own crate page shows no Favorite button. At 390px and 1280px widths, /u/<A> with at least two favorites shows the Crates and Favorites sections without horizontal page overflow, and a click at the centre of each favorite card opens that crate.", "check": "browser" },
+    { "id": "AC11", "statement": "npm run typecheck, npm run lint and npm test all exit 0 from the repo root, and the existing tests still pass.", "check": "command" }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "id": "T2",
+  "goal": "Favorite toggle on the single-crate page /crates/:id, shown only to a signed-in viewer who does not own the crate, with component tests.",
+  "description": "API (built by T1, already merged):\n- PUT /api/crates/:id/favorite and DELETE /api/crates/:id/favorite both return 204 and are idempotent. They return 401 when signed out, 400 when PUT targets your own crate, and 404 for an unknown crate.\n- GET /api/crates/:id returns `CrateDetail` from '@frisson/shared' = Crate & { viewerFavorited: boolean }. Crate has id, name, color, label, sortBy, sortOrder, albumCount, ownerId: number | null, ownerUsername, ownerDisplayName.\n\nBuild:\n1. apps/web/src/api/favorites.ts, modelled on apps/web/src/api/follows.ts: `favoriteCrate(id: number) => request<void>(`/crates/${id}/favorite`, { method: 'PUT' })` and `unfavoriteCrate(id: number)` with DELETE. Add a data-classification comment.\n2. apps/web/src/api/crates.ts: add `getCrate(id: number) => request<CrateDetail>(`/crates/${id}`)`.\n3. apps/web/src/components/crate/FavoriteButton.vue, modelled on apps/web/src/components/profile/FollowButton.vue (not optimistic: busy and error state; emits only after the server agrees).\n   - Props `{ crateId: number; favorited: boolean }`. Emits `changed: [favorited: boolean]`.\n   - A `<button type=\"button\">` whose accessible name is exactly 'Favorite' in both states, with `:aria-pressed=\"favorited\"`. A decorative star glyph may sit in an aria-hidden span. Style the pressed state visibly, using the existing tokens (--ink, --paper, --marker-red).\n   - Clicking calls favoriteCrate when not pressed and unfavoriteCrate when pressed. On success it emits changed(!favorited), guarding against the crateId changing mid-request as FollowButton does. On failure it shows a role=alert message via errorMessage and aria-pressed stays as it was.\n4. apps/web/src/views/CrateView.vue:\n   - `showFavorite = props.crateId !== undefined && library.status === 'ready' && !!session.user && !!crate.value && crate.value.ownerId !== session.user.id`. Ownerless crates (ownerId null) show it, and admins see it on others' crates. It never shows on /shelf (no crateId), on your own crate, or when signed out. There is no 'log in to favorite' link.\n   - Hold `viewerFavorited = ref<boolean | null>(null)`. Watch [props.crateId, session.user?.id, showFavorite]. When showFavorite is true, call getCrate(crateId) and set viewerFavorited from the response. Otherwise reset it to null. Ignore stale responses whose crateId or user no longer matches. On a fetch error, leave it null so the button stays hidden.\n   - Render `<FavoriteButton v-if=\"showFavorite && viewerFavorited !== null\" :crate-id=\"crate.id\" :favorited=\"viewerFavorited\" @changed=\"viewerFavorited = $event\" />` next to the OwnerLink under the crate name. It must not overflow at 390px wide. Leave the existing toolbar, crate actions, edit gating and spin logic as they are.\n5. Tests:\n   - New apps/web/src/components/crate/FavoriteButton.test.ts.\n   - In apps/web/src/views/CrateView.test.ts (AC8): a signed-in non-owner sees the button 'Favorite' with aria-pressed matching viewerFavorited (true and false cases). The same holds for an admin viewing another user's crate. The button is absent on the viewer's own crate, when signed out, and on /shelf. Clicking calls PUT /api/crates/:id/favorite when unpressed and DELETE when pressed, and aria-pressed flips only after the mocked request resolves. A failed request leaves it unchanged.\n   - The tests mock global fetch and count '/api/crates' calls. The new GET /api/crates/:id call may break existing fetch mocks in CrateView.test.ts, crateActions.test.ts and editControls.test.ts. Update those mocks so they route by URL rather than by call order, and keep every existing assertion's meaning.\n\nConventions: Vue 3 script setup + TS, Prettier with no semicolons, single quotes, width 100. Render user text with {{ }} only. Run `npm test -w apps/web`, `npm run typecheck` and `npm run lint` from the repo root. Do not start a dev server or touch data/crate.db or .shipyard/. Commit as feat(web): ...",
+  "ownsFiles": [
+    "apps/web/src/api/favorites.ts",
+    "apps/web/src/api/crates.ts",
+    "apps/web/src/components/crate/FavoriteButton.vue",
+    "apps/web/src/components/crate/FavoriteButton.test.ts",
+    "apps/web/src/views/CrateView.vue",
+    "apps/web/src/views/CrateView.test.ts",
+    "apps/web/src/views/crateActions.test.ts",
+    "apps/web/src/views/editControls.test.ts"
+  ],
+  "dependsOn": [
+    "T1"
+  ],
+  "criteriaIds": [
+    "AC8",
+    "AC9",
+    "AC10",
+    "AC11"
+  ],
+  "model": "opus",
+  "criteria": [
+    {
+      "id": "AC8",
+      "statement": "A CrateView component test renders a button named 'Favorite' with aria-pressed matching viewerFavorited when the viewer is signed in and does not own the crate, including when the viewer is an admin. The button is absent on the viewer's own crate and when signed out. Clicking it calls PUT, or DELETE when pressed, and flips aria-pressed only after the request succeeds.",
+      "check": "unit"
+    },
+    {
+      "id": "AC9",
+      "statement": "In a real browser on a temp DB copy, user A opens user B's crate at /crates/:id and clicks Favorite, which becomes pressed. On /profile the crate is listed under Favorites, not under Crates. Clicking that card opens the crate page. Clicking Favorite again unpresses it, and after a reload of /profile the crate is gone from Favorites.",
+      "check": "browser"
+    },
+    {
+      "id": "AC10",
+      "statement": "In a real browser on a temp DB copy, user A's own crate page shows no Favorite button. At 390px and 1280px widths, /u/<A> with at least two favorites shows the Crates and Favorites sections without horizontal page overflow, and a click at the centre of each favorite card opens that crate.",
+      "check": "browser"
+    },
+    {
+      "id": "AC11",
+      "statement": "npm run typecheck, npm run lint and npm test all exit 0 from the repo root, and the existing tests still pass.",
+      "check": "command"
+    }
+  ],
+  "testCommand": "npm test (from repo root). Single file: npm test -w apps/web -- src/views/X.test.ts. Full set: npm test && npm run typecheck && npm run lint.",
+  "codebaseMap": ".shipyard/runs/2026-11-13T21-41-52/codebase-map.json",
+  "from": [
+    {
+      "task": "T1",
+      "commit": "5603cf2",
+      "built": "shared: profileFavorite, ProfileFavorite, crateDetail, CrateDetail (crate + viewerFavorited), publicProfile.favorites (newest first). DB: crateFavorites (crate_favorites: id, user_id, crate_id, created_at). services/favorites.ts: favoriteCrate(db, viewer, crateId), unfavoriteCrate(db, viewer, crateId), isFavoritedBy(db, crateId, viewerId|null), listFavorites(db, userId). services/crates.ts: getCrateDetail(db, id, viewer). Routes: PUT|DELETE /api/crates/:id/favorite -> 204 (401/404/400). GET /api/crates/:id returns CrateDetail."
+    }
+  ]
+}

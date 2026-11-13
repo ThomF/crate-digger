@@ -1,0 +1,6 @@
+{ "criteria": {
+  "AC9": { "verdict": "pass", "evidence": "favorites.check.mjs on temp DB (port 4917): user alf opened bea's /crates/:id. The Favorite button flipped aria-pressed at all 9 click points and was left pressed. On /profile the crate was under Favorites and not under Crates. All 9 click points on the favorite card opened /crates/:id. Clicking Favorite again unpressed it, and after reloading /profile the crate was gone and 'No favorites yet.' showed. Output: PASS AC9." },
+  "AC10": { "verdict": "pass", "evidence": "alf's own crate page showed no Favorite button after 1.5s, while another user's crate showed one. With 2 favorites on /u/alf at 390px and 1280px: Crates and Favorites were both visible, scrollWidth <= clientWidth, a centre click on each favorite card opened its crate, and the full 3x3 click grid had no dead spots on the favorite cards or the own-crate card. Output: PASS AC10." }
+}, "observations": [
+  { "what": "At 390px the favorite cards lay out unevenly: on 'Bea Jazz Box' the 'by bea Display' owner text pushes '0 records' onto a second line, but on 'Bea Soul Box' it does not, so the cards differ in height. This is cosmetic.", "severity": "low" }
+] }

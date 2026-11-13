@@ -1,0 +1,92 @@
+{
+  "tasks": {
+    "T1": {
+      "status": "done",
+      "commit": "5603cf2",
+      "built": "shared: profileFavorite, ProfileFavorite, crateDetail, CrateDetail (crate + viewerFavorited), publicProfile.favorites (newest first). DB: crateFavorites (crate_favorites: id, user_id, crate_id, created_at). services/favorites.ts: favoriteCrate(db, viewer, crateId), unfavoriteCrate(db, viewer, crateId), isFavoritedBy(db, crateId, viewerId|null), listFavorites(db, userId). services/crates.ts: getCrateDetail(db, id, viewer). Routes: PUT|DELETE /api/crates/:id/favorite -> 204 (401/404/400). GET /api/crates/:id returns CrateDetail.",
+      "run": "n/a",
+      "unsure": "none\n```",
+      "agent": "dev-T1"
+    },
+    "T3": {
+      "agent": "dev-T3",
+      "raw": "Placeholder"
+    },
+    "T2": {
+      "status": "done",
+      "commit": "aa6c09c",
+      "built": "api/favorites.ts favoriteCrate(id), unfavoriteCrate(id) -> PUT/DELETE /api/crates/:id/favorite; api/crates.ts getCrate(id): CrateDetail; FavoriteButton.vue props {crateId:number; favorited:boolean}, emits changed(boolean), selector button.favorite[aria-pressed] with aria-hidden span.star, wrapper .favorite-button, row div.favorite-row under OwnerLink in CrateView; error is span.favorite-error[role=alert]",
+      "run": "not run in a browser; start the API and web app on spare ports against a copy of data/crate.db and sign in as two different users",
+      "unsure": "390px layout not checked in a browser. CrateView logs console.warn when the favorite-state fetch fails (the button stays hidden).\n```",
+      "agent": "dev-T2"
+    }
+  },
+  "tests": {
+    "AC1": [
+      {
+        "task": "T1",
+        "file": "apps/api/test/migration.test.ts",
+        "name": "migration 0006 > a fresh database has crate_favorites with its unique index and cascading keys; migration 0006 keeps every existing user and crate and adds an empty crate_favorites; only adds to the schema"
+      }
+    ],
+    "AC2": [
+      {
+        "task": "T1",
+        "file": "apps/api/test/favorites.test.ts",
+        "name": "PUT and DELETE /api/crates/:id/favorite (AC2) > PUT returns 204 and writes one row...; DELETE returns 204 and removes the row..."
+      }
+    ],
+    "AC3": [
+      {
+        "task": "T1",
+        "file": "apps/api/test/favorites.test.ts",
+        "name": "favorite errors (AC3) > PUT on your own crate returns 400...; PUT and DELETE signed out return 401, not 400, with a non-numeric id; PUT and DELETE return 404 for an unknown crate id"
+      }
+    ],
+    "AC4": [
+      {
+        "task": "T1",
+        "file": "apps/api/test/favorites.test.ts",
+        "name": "GET /api/crates/:id viewerFavorited (AC4) > is true for the favoriter, false for another user and false signed out"
+      }
+    ],
+    "AC5": [
+      {
+        "task": "T1",
+        "file": "apps/api/test/favorites.test.ts",
+        "name": "favorites on a public profile (AC5) > lists favorites newest first...; crates lists only owned crates...; carries no email, role, demo key or numeric user id anywhere"
+      }
+    ],
+    "AC6": [
+      {
+        "task": "T1",
+        "file": "apps/api/test/favorites.test.ts",
+        "name": "cascades (AC6) > deleting a favorited empty crate returns 204...; deleting the favoriting user removes their rows..."
+      }
+    ],
+    "AC11": [
+      {
+        "task": "T1",
+        "file": "root",
+        "name": "npm test && npm run typecheck && npm run lint"
+      },
+      {
+        "task": "T2",
+        "file": "repo root",
+        "name": "npm test && npm run typecheck && npm run lint"
+      }
+    ],
+    "AC8": [
+      {
+        "task": "T2",
+        "file": "apps/web/src/views/CrateView.test.ts",
+        "name": "crate browser > AC8: the Favorite toggle on /crates/:id (all cases)"
+      },
+      {
+        "task": "T2",
+        "file": "apps/web/src/components/crate/FavoriteButton.test.ts",
+        "name": "FavoriteButton (all cases)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "runId": "2026-11-13T21-41-52",
+  "target": "/Users/thomasfuhriman/code/crate-digger",
+  "request": "new feature for profiles Favorites: allows to favorite any crate that isnt yours, these show separate of your created ones.",
+  "branch": "shipyard/profile-crate-favorites-2026-11-13T21-41-52",
+  "size": "standard",
+  "budgetTokens": null,
+  "stage": "done",
+  "cycle": 1,
+  "maxCycles": 3,
+  "fixRound": 0,
+  "maxFixRounds": 3,
+  "criteria": {
+    "AC1": "pass",
+    "AC2": "pass",
+    "AC3": "pass",
+    "AC4": "pass",
+    "AC5": "pass",
+    "AC6": "pass",
+    "AC7": "pass",
+    "AC8": "pass",
+    "AC9": "pass",
+    "AC10": "pass",
+    "AC11": "pass"
+  },
+  "tasks": {
+    "T1": "done",
+    "T2": "done",
+    "T3": "done"
+  },
+  "deaths": [],
+  "verdict": "shipped",
+  "baseCommit": "2b94aaff3fdebbf8b37b88006c7986833d348d54",
+  "startedAt": "2026-11-13T21:42:05Z",
+  "endedAt": "2026-11-13T22:48:07Z",
+  "stageTimes": {
+    "intake": {
+      "start": "2026-11-13T21:42:05Z",
+      "end": "2026-11-13T21:44:02Z"
+    },
+    "survey": {
+      "start": "2026-11-13T21:42:05Z",
+      "end": "2026-11-13T21:43:34Z"
+    },
+    "plan": {
+      "start": "2026-11-13T21:44:02Z",
+      "end": "2026-11-13T21:48:03Z"
+    },
+    "build": {
+      "start": "2026-11-13T21:48:03Z",
+      "end": "2026-11-13T22:42:17Z"
+    },
+    "test": {
+      "start": "2026-11-13T22:42:17Z",
+      "end": "2026-11-13T22:47:14Z"
+    },
+    "report": {
+      "start": "2026-11-13T22:47:14Z",
+      "end": "2026-11-13T22:48:07Z"
+    }
+  },
+  "active": [],
+  "fastPaths": [],
+  "usage": [
+    {
+      "agent": "survey-cd",
+      "role": "surveyor",
+      "model": "sonnet",
+      "tokens": 29217,
+      "toolUses": 19,
+      "durationMs": 33662
+    },
+    {
+      "agent": "survey-st",
+      "role": "surveyor",
+      "model": "sonnet",
+      "tokens": 41324,
+      "toolUses": 16,
+      "durationMs": 30137
+    },
+    {
+      "agent": "survey-rel",
+      "role": "surveyor",
+      "model": "sonnet",
+      "tokens": 38261,
+      "toolUses": 21,
+      "durationMs": 50189
+    },
+    {
+      "agent": "intake",
+      "role": "intake",
+      "model": "opus",
+      "tokens": 27507,
+      "toolUses": 15,
+      "durationMs": 58401
+    },
+    {
+      "agent": "manager-plan",
+      "role": "manager",
+      "model": "opus",
+      "tokens": 57442,
+      "toolUses": 26,
+      "durationMs": 168443
+    },
+    {
+      "agent": "dev-T1",
+      "role": "dev",
+      "model": "opus",
+      "tokens": 65429,
+      "toolUses": 33,
+      "durationMs": 258039
+    },
+    {
+      "agent": "dev-T3",
+      "role": "dev",
+      "model": "sonnet",
+      "tokens": 34062,
+      "toolUses": 8,
+      "durationMs": 49090
+    },
+    {
+      "agent": "dev-T2",
+      "role": "dev",
+      "model": "opus",
+      "tokens": 47038,
+      "toolUses": 14,
+      "durationMs": 142067
+    },
+    {
+      "agent": "tester",
+      "role": "tester",
+      "model": "sonnet",
+      "tokens": 18702,
+      "toolUses": 9,
+      "durationMs": 22514
+    },
+    {
+      "agent": "browser-tester",
+      "role": "browser-tester",
+      "model": "opus",
+      "tokens": 71770,
+      "toolUses": 10,
+      "durationMs": 84393
+    },
+    {
+      "agent": "reporter",
+      "role": "reporter",
+      "model": "sonnet",
+      "tokens": 16566,
+      "toolUses": 7,
+      "durationMs": 20110
+    }
+  ]
+}

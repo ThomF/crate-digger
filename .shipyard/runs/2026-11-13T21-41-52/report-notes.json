@@ -1,0 +1,19 @@
+{
+  "plan_changes": [],
+  "notes": [
+    "Intake assumed favorites are public on profiles (like Crates); owner to confirm, cheap to flip.",
+    "dev-T1: none\n```",
+    "dev-T3 returned no handoff (message: Placeholder); its tests for AC7 are not named, and it did not report running the suite.",
+    "dev-T2: 390px layout not checked in a browser. CrateView logs console.warn when the favorite-state fetch fails (the button stays hidden).\n```"
+  ],
+  "observations": [
+    {
+      "what": "T3 handoff is a placeholder with no tests or build notes",
+      "severity": "low"
+    },
+    {
+      "what": "At 390px the favorite cards lay out unevenly: on 'Bea Jazz Box' the 'by bea Display' owner text pushes '0 records' onto a second line, but on 'Bea Soul Box' it does not, so the cards differ in height. This is cosmetic.",
+      "severity": "low"
+    }
+  ]
+}
