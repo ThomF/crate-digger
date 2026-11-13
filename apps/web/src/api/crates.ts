@@ -1,5 +1,6 @@
 import type {
   Crate,
+  CrateDetail,
   CreateCrateRequest,
   RecommendedCrateCard,
   UpdateCrateInput,
@@ -8,6 +9,11 @@ import { request } from './client.ts'
 
 export function listCrates() {
   return request<Crate[]>('/crates')
+}
+
+/** One crate, plus whether the signed-in viewer has favorited it (false when signed out). */
+export function getCrate(id: number) {
+  return request<CrateDetail>(`/crates/${id}`)
 }
 
 /** The curated picks shown on Home. Data classification: PUBLIC (no owner id or email). */

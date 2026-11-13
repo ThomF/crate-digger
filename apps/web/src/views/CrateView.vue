@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import type { AlbumSummary } from '@frisson/shared'
 import { spinAlbum } from '../api/albums.ts'
+import { getCrate } from '../api/crates.ts'
 import { useLibraryStore } from '../stores/library.ts'
 import { useSessionStore } from '../stores/session.ts'
 import { canEditCrate, showsCrateActions } from '../utils/permissions.ts'
 import CrateBox from '../components/crate/CrateBox.vue'
 import OwnerLink from '../components/crate/OwnerLink.vue'
+import FavoriteButton from '../components/crate/FavoriteButton.vue'
 import EmptyShelf from '../components/crate/EmptyShelf.vue'
 import LibraryToolbar from '../components/LibraryToolbar.vue'
 import RatingStars from '../components/album/RatingStars.vue'
 
-// Data classification: PUBLIC. Crates and albums are shown to anyone.
+// Data classification: PUBLIC. Crates and albums are shown to anyone. The viewer's own favorite
+// state (INTERNAL) is fetched for, and shown to, the signed-in viewer only.
 
 // Set on /crates/:id. Without it (/shelf) the view shows whichever crate is selected.
 const props = defineProps<{ crateId?: number }>()
@@ -90,6 +93,39 @@ const canAddFromEmptyCrate = computed(() =>
     : showsCrateActions(session.user, crate.value),
 )
 
+// Favorite: only on /crates/:id, for a signed-in viewer who does not own the crate. Ownerless
+// crates count as not owned, and admins get it on other people's crates like anyone else.
+const showFavorite = computed(
+  () =>
+    props.crateId !== undefined &&
+    library.status === 'ready' &&
+    !!session.user &&
+    !!crate.value &&
+    crate.value.ownerId !== session.user.id,
+)
+
+// The viewer's favorite state, from GET /api/crates/:id. Null until known, which hides the
+// button, and it stays null if that fetch fails rather than guessing.
+const viewerFavorited = ref<boolean | null>(null)
+watch(
+  [() => props.crateId, () => session.user?.id, showFavorite],
+  async ([crateId, userId, show]) => {
+    viewerFavorited.value = null
+    if (!show || crateId === undefined) return
+    try {
+      const detail = await getCrate(crateId)
+      // A late answer for a crate or user we have since left must not land here.
+      if (props.crateId === crateId && session.user?.id === userId && showFavorite.value) {
+        viewerFavorited.value = detail.viewerFavorited
+      }
+    } catch (err) {
+      // Leave it null: no button beats one showing the wrong state.
+      console.warn('Could not load the favorite state for this crate', err)
+    }
+  },
+  { immediate: true },
+)
+
 async function open(album: AlbumSummary) {
   // Count the spin *before* opening the album, so the album page loads the new total
   // instead of showing one less. Only spins of your own records count (admins: any).
@@ -144,6 +180,14 @@ async function open(album: AlbumSummary) {
     <!-- Whose crate this is, linking to /u/<ownerUsername>. Nothing for ownerless crates. -->
     <OwnerLink :username="crate.ownerUsername" :display-name="crate.ownerDisplayName" />
 
+    <div v-if="showFavorite && viewerFavorited !== null" class="favorite-row">
+      <FavoriteButton
+        :crate-id="crate.id"
+        :favorited="viewerFavorited"
+        @changed="viewerFavorited = $event"
+      />
+    </div>
+
     <CrateBox v-model:index="index" :crate="crate" :albums="albums" @open="open" />
 
     <!-- What you're looking at, as real text (and the accessible way to open it). -->
@@ -196,6 +240,13 @@ async function open(album: AlbumSummary) {
   font-size: 1.75rem;
   /* Long crate names wrap rather than widening the page. */
   overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.favorite-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
   max-width: 100%;
 }
 

@@ -3,8 +3,9 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
-import type { AlbumSummary, Crate } from '@frisson/shared'
+import type { AlbumSummary, Crate, CrateDetail, PublicUser } from '@frisson/shared'
 import { useLibraryStore } from '../stores/library.ts'
+import { useSessionStore } from '../stores/session.ts'
 import CrateView from './CrateView.vue'
 
 const crate = (id: number, name: string): Crate => ({
@@ -38,20 +39,39 @@ const albums = [album(10, 1, 'Riffs'), album(20, 2, 'Breaks'), album(30, 3, 'Ech
 
 const Blank = defineComponent({ render: () => null })
 
+/** Answers any request the default routes don't, e.g. the favorite endpoints. */
+type ExtraRoute = (url: string, method: string) => Promise<Response> | undefined
+
 async function visit(
   path: string,
-  options: { crateList?: Crate[]; albumList?: AlbumSummary[] } = {},
+  options: {
+    crateList?: Crate[]
+    albumList?: AlbumSummary[]
+    viewer?: PublicUser | null
+    extra?: ExtraRoute
+  } = {},
 ) {
+  // Routes by method and URL, never by call order.
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string) => {
-      if (url === '/api/crates') return Response.json(options.crateList ?? crates)
-      if (url === '/api/albums') return Response.json(options.albumList ?? albums)
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET'
+      const answer = options.extra?.(url, method)
+      if (answer) return answer
+      if (method === 'GET' && url === '/api/crates') {
+        return Response.json(options.crateList ?? crates)
+      }
+      if (method === 'GET' && url === '/api/albums') {
+        return Response.json(options.albumList ?? albums)
+      }
       return new Response('{}', { status: 500 })
     }),
   )
   const pinia = createPinia()
   setActivePinia(pinia)
+  const session = useSessionStore()
+  session.user = options.viewer ?? null
+  session.loaded = true
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -326,6 +346,185 @@ describe('crate browser', () => {
     it('says so when the crate has no albums', async () => {
       const { wrapper } = await visit('/crates/2', { albumList: [] })
       expect(wrapper.text()).toContain('Nothing in here yet.')
+    })
+  })
+
+  describe('AC8: the Favorite toggle on /crates/:id', () => {
+    const alice: PublicUser = {
+      id: 1,
+      email: 'alice@example.com',
+      username: 'alice',
+      displayName: 'Alice',
+      role: 'user',
+      avatarUrl: null,
+      verified: false,
+    }
+    const admin: PublicUser = { ...alice, id: 9, username: 'boss', role: 'admin' }
+    const owned = (c: Crate, ownerId: number | null, ownerUsername: string | null): Crate => ({
+      ...c,
+      ownerId,
+      ownerUsername,
+    })
+    // Crate 1 is Alice's, crate 2 is Bob's, crate 3 has no owner.
+    const ownedCrates = [
+      owned(crate(1, 'Guitars'), 1, 'alice'),
+      owned(crate(2, 'Beats & Bass'), 2, 'bob'),
+      crate(3, 'Dub'),
+    ]
+
+    /** A fake favorites API. PUT/DELETE wait for the test to answer when `hold` is set. */
+    function favoritesApi(favorited: Record<number, boolean>, hold = false) {
+      const pending: { url: string; method: string; respond: (res: Response) => void }[] = []
+      const extra: ExtraRoute = (url, method) => {
+        const detail = /^\/api\/crates\/(\d+)$/.exec(url)
+        if (method === 'GET' && detail) {
+          const found = ownedCrates.find((c) => c.id === Number(detail[1]))
+          if (!found) return Promise.resolve(new Response('{}', { status: 404 }))
+          const body: CrateDetail = { ...found, viewerFavorited: favorited[found.id] ?? false }
+          return Promise.resolve(Response.json(body))
+        }
+        if (
+          /^\/api\/crates\/\d+\/favorite$/.test(url) &&
+          (method === 'PUT' || method === 'DELETE')
+        ) {
+          if (!hold) return Promise.resolve(new Response(null, { status: 204 }))
+          return new Promise<Response>((respond) => pending.push({ url, method, respond }))
+        }
+        return undefined
+      }
+      return { extra, pending }
+    }
+
+    const favoriteButton = (w: Wrapper) =>
+      w.findAll('button').find((b) => b.find('.star').exists() && b.text().endsWith('Favorite'))
+    const pressed = (w: Wrapper) => favoriteButton(w)?.attributes('aria-pressed')
+    const favoriteCalls = () =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([url]) => String(url).endsWith('/favorite'))
+        .map(([url, init]) => [url, (init as RequestInit | undefined)?.method])
+
+    it.each([true, false])(
+      "a signed-in non-owner sees 'Favorite' with aria-pressed=%s from the API",
+      async (state) => {
+        const { extra } = favoritesApi({ 2: state })
+        const { wrapper } = await visit('/crates/2', {
+          crateList: ownedCrates,
+          viewer: alice,
+          extra,
+        })
+        const button = favoriteButton(wrapper)!
+        expect(button.attributes('type')).toBe('button')
+        expect(button.get('.star').attributes('aria-hidden')).toBe('true')
+        expect(button.text().replace(button.get('.star').text(), '').trim()).toBe('Favorite')
+        expect(pressed(wrapper)).toBe(String(state))
+      },
+    )
+
+    it.each([true, false])(
+      "an admin on another user's crate sees it too, aria-pressed=%s",
+      async (state) => {
+        const { extra } = favoritesApi({ 2: state })
+        const { wrapper } = await visit('/crates/2', {
+          crateList: ownedCrates,
+          viewer: admin,
+          extra,
+        })
+        expect(pressed(wrapper)).toBe(String(state))
+      },
+    )
+
+    it('shows on an ownerless crate for a signed-in viewer', async () => {
+      const { extra } = favoritesApi({})
+      const { wrapper } = await visit('/crates/3', { crateList: ownedCrates, viewer: alice, extra })
+      expect(pressed(wrapper)).toBe('false')
+    })
+
+    it("is absent on the viewer's own crate, without asking the API", async () => {
+      const { extra } = favoritesApi({})
+      const { wrapper } = await visit('/crates/1', { crateList: ownedCrates, viewer: alice, extra })
+      expect(heading(wrapper)).toBe('Guitars')
+      expect(favoriteButton(wrapper)).toBeUndefined()
+      expect(vi.mocked(fetch).mock.calls.some(([url]) => url === '/api/crates/1')).toBe(false)
+    })
+
+    it('is absent when signed out', async () => {
+      const { extra } = favoritesApi({ 2: true })
+      const { wrapper } = await visit('/crates/2', { crateList: ownedCrates, viewer: null, extra })
+      expect(heading(wrapper)).toBe('Beats & Bass')
+      expect(favoriteButton(wrapper)).toBeUndefined()
+      expect(wrapper.text()).not.toContain('Favorite')
+    })
+
+    it('is absent on /shelf', async () => {
+      const { extra } = favoritesApi({ 2: true })
+      const { wrapper } = await visit('/shelf', { crateList: ownedCrates, viewer: alice, extra })
+      await tab(wrapper, 'Beats & Bass').trigger('click')
+      await flushPromises()
+      expect(favoriteButton(wrapper)).toBeUndefined()
+    })
+
+    it('stays hidden when the favorite state cannot be loaded', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { wrapper } = await visit('/crates/2', { crateList: ownedCrates, viewer: alice })
+      expect(heading(wrapper)).toBe('Beats & Bass')
+      expect(favoriteButton(wrapper)).toBeUndefined()
+      warn.mockRestore()
+    })
+
+    it('clicking unpressed sends PUT and presses only after the request succeeds', async () => {
+      const { extra, pending } = favoritesApi({ 2: false }, true)
+      const { wrapper } = await visit('/crates/2', { crateList: ownedCrates, viewer: alice, extra })
+      await favoriteButton(wrapper)!.trigger('click')
+      expect(favoriteCalls()).toEqual([['/api/crates/2/favorite', 'PUT']])
+      expect(pressed(wrapper)).toBe('false')
+
+      pending[0]!.respond(new Response(null, { status: 204 }))
+      await flushPromises()
+      expect(pressed(wrapper)).toBe('true')
+    })
+
+    it('clicking pressed sends DELETE and unpresses only after the request succeeds', async () => {
+      const { extra, pending } = favoritesApi({ 2: true }, true)
+      const { wrapper } = await visit('/crates/2', { crateList: ownedCrates, viewer: alice, extra })
+      await favoriteButton(wrapper)!.trigger('click')
+      expect(favoriteCalls()).toEqual([['/api/crates/2/favorite', 'DELETE']])
+      expect(pressed(wrapper)).toBe('true')
+
+      pending[0]!.respond(new Response(null, { status: 204 }))
+      await flushPromises()
+      expect(pressed(wrapper)).toBe('false')
+    })
+
+    it('a failed request leaves aria-pressed unchanged and shows an alert', async () => {
+      const { extra, pending } = favoritesApi({ 2: false }, true)
+      const { wrapper } = await visit('/crates/2', { crateList: ownedCrates, viewer: alice, extra })
+      await favoriteButton(wrapper)!.trigger('click')
+      pending[0]!.respond(
+        Response.json(
+          { statusCode: 500, error: 'Internal Server Error', message: 'Database is down' },
+          { status: 500 },
+        ),
+      )
+      await flushPromises()
+      expect(pressed(wrapper)).toBe('false')
+      expect(wrapper.get('[role="alert"]').text()).toBe('Database is down')
+    })
+
+    it("follows the URL: own crate hides it, another user's crate shows its own state", async () => {
+      const { extra } = favoritesApi({ 2: true, 3: false })
+      const { wrapper, router } = await visit('/crates/2', {
+        crateList: ownedCrates,
+        viewer: alice,
+        extra,
+      })
+      expect(pressed(wrapper)).toBe('true')
+      await router.push('/crates/1')
+      await flushPromises()
+      expect(favoriteButton(wrapper)).toBeUndefined()
+      await router.push('/crates/3')
+      await flushPromises()
+      expect(pressed(wrapper)).toBe('false')
     })
   })
 })

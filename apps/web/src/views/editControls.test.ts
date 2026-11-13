@@ -80,6 +80,11 @@ function stubApi() {
     const method = init?.method ?? 'GET'
     if (method === 'GET' && url === '/api/crates') return Response.json(crates)
     if (method === 'GET' && url === '/api/albums') return Response.json(albums)
+    const oneCrate = /^\/api\/crates\/(\d+)$/.exec(url)
+    const crateFound = oneCrate && crates.find((c) => c.id === Number(oneCrate[1]))
+    if (method === 'GET' && crateFound) {
+      return Response.json({ ...crateFound, viewerFavorited: false })
+    }
     const one = /^\/api\/albums\/(\d+)$/.exec(url)
     const found = one && albums.find((a) => a.id === Number(one[1]))
     if (method === 'GET' && found) return Response.json(detail(found))

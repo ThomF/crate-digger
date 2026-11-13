@@ -91,6 +91,9 @@ function stubApi() {
     const method = init?.method ?? 'GET'
     if (method === 'GET' && url === '/api/crates') return library(crates)
     if (method === 'GET' && url === '/api/albums') return library(albums)
+    const one = /^\/api\/crates\/(\d+)$/.exec(url)
+    const found = one && crates.find((c) => c.id === Number(one[1]))
+    if (method === 'GET' && found) return ok({ ...found, viewerFavorited: false })
     if (method === 'POST' && /^\/api\/albums\/\d+\/spins$/.test(url)) {
       return ok({ spinCount: 1 })
     }
