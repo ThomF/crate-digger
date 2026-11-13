@@ -95,6 +95,11 @@ docker compose up -d --build
 
 Database migrations run automatically when the new app container starts.
 
+### Upgrading to crate favorites
+
+Nothing to do by hand. Migration 0006 adds the `crate_favorites` table when the app starts. It is
+additive: no existing table or row changes, so rolling back the app code leaves it unused.
+
 ### Upgrading to following and the Home page
 
 Nothing to do by hand. Migration 0005 adds the follows and news tables when the app starts, and no

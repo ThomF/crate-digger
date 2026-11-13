@@ -69,6 +69,7 @@ Album    id, crateId, title, artist, year, genre, format (LP/EP/7"),
 Track    id, albumId, side ('A'|'B'|'C'|'D'), position, title, durationSec?
 User     (accounts and profiles: ADR 0004, ADR 0005), demoSeedKey?
 Follow   id, followerId, followeeId, createdAt
+Favorite id, userId, crateId, createdAt   (table crate_favorites)
 NewsItem id, seedKey, title, summary, source, publishedAt, createdAt
 ```
 
@@ -77,6 +78,10 @@ Albums without cover art get a generated plain sleeve with a typed label.
 A `Follow` is unique per follower and followee, can't point at yourself, and goes when either user
 does. `demoSeedKey` marks fictional demo rows (`NULL` on everything real). A `recommendedRank` puts a
 crate in Recommended on Home, lowest first. See [ADR 0006](adr/0006-following-home-and-demo-content.md).
+
+A `Favorite` (`crate_favorites`: `user_id`, `crate_id`, `created_at`) is unique per user and crate,
+and goes when either the user or the crate does (cascade on both foreign keys). See
+[ADR 0008](adr/0008-public-crate-favorites.md).
 
 ## 4. API (REST, JSON)
 
@@ -98,10 +103,15 @@ GET    /api/me/feed                   crates by people you follow, newest first,
 GET    /api/me/suggested-collectors   demo collectors you don't follow yet; needs sign-in
 GET    /api/news                      news items, newest first; public
 GET    /api/crates/recommended        ranked crates, lowest rank first; public
+PUT    /api/crates/:id/favorite       favorite a crate (204, idempotent); DELETE unfavorites (204); needs sign-in
 ```
 
 `GET /api/users/:username` also returns `followerCount`, `followingCount`, `viewerFollows` and
 `isDemo`. Who follows whom is never public: the only list is your own.
+
+`GET /api/crates/:id` also returns `viewerFavorited`. Favoriting your own crate is a 400, an unknown
+crate a 404, signed out a 401. `GET /api/users/:username` returns `favorites` (newest first), which
+is public.
 
 ## 5. UI / UX
 
@@ -109,6 +119,9 @@ GET    /api/crates/recommended        ranked crates, lowest rank first; public
   (`/profile`, signed in, your own profile) and About (`/about`).
 - **Home:** music news and recommended crates, loading and failing separately, each with an empty
   message when it has nothing to show. Its note says no AI model is involved.
+- **Favorites:** `/crates/:id` shows a Favorite toggle button to signed-in visitors who don't own
+  the crate. Profiles (`/u/:username` and `/profile`) list favorites in a Favorites section after
+  Crates, each card linking to the crate and naming its owner in plain text.
 - **Following:** who you follow, crates from those people, and suggested collectors.
 - **About:** what Frisson is and which content is made up. Fictional content carries a `Demo` tag.
 - **Where the crate view lives:** at `/shelf`, and at `/crates/:id` for one crate. The crate

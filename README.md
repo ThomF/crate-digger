@@ -35,10 +35,10 @@ A dev start adds fictional demo content to your database (see [Database](#databa
 | `/profile`                               | Signed in: your own profile                               |
 | `/about`                                 | What Frisson is and which content is made up              |
 | `/shelf`                                 | The crate browser: choose a crate and flip through it     |
-| `/crates/:id`                            | Shows one crate, with no crate picker (public link)       |
+| `/crates/:id`                            | One crate, no picker (public); signed in: Favorite button |
 | `/list`                                  | Search and rearrange the collection                       |
 | `/crates`                                | Signed in: add, rename and sort crates                    |
-| `/u/:username`                           | Anyone's public profile, with a follow button             |
+| `/u/:username`                           | Public profile: follow button, Crates and Favorites       |
 | `/profile/edit`                          | Signed in: edit your profile                              |
 | `/albums/:id`, `/albums/new`, `.../edit` | One album; adding and editing need a signed-in user       |
 | `/login`, `/signup`                      | Log in or make an account                                 |
@@ -203,6 +203,8 @@ database, since `buildTestApp` never runs this step.
 | `GET /api/me/suggested-collectors`    | Demo collectors you don't follow yet                    |
 | `GET /api/news`                       | News items, newest first (public)                       |
 | `GET /api/crates/recommended`         | Ranked crates, lowest rank first (public)               |
+| `PUT /api/crates/:id/favorite`        | Favorite a crate (204); twice is fine; own crate is 400 |
+| `DELETE /api/crates/:id/favorite`     | Unfavorite (204); not favorited is fine                 |
 
 Creating needs a signed-in user; changing a crate or its albums needs its owner or an admin
 (401 signed out, 403 not allowed). Profile routes return the public profile; the profile body is
@@ -212,6 +214,11 @@ strict, so sending `verified`, `role`, `email` or `username` is a 400. Errors al
 Profiles also carry `followerCount`, `followingCount`, `viewerFollows` (always false signed out) and
 `isDemo`. Follow and `/api/me/*` routes need a signed-in user (401 otherwise). Following yourself is
 a 400 and an unknown username a 404. Who follows whom stays private: the only list is your own.
+
+`GET /api/crates/:id` returns the crate plus `viewerFavorited` (always false signed out). The
+favorite routes need a signed-in user (401), an unknown crate is a 404, and favoriting your own
+crate is a 400. Unlike follows, favorites are public: `GET /api/users/:username` lists them in
+`favorites`, newest first, and the profile page shows them in a Favorites section below Crates.
 
 ## Layout
 
