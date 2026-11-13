@@ -43,6 +43,13 @@
       "when": 1794167967020,
       "tag": "0005_follows_news_demo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794606520624,
+      "tag": "0006_crate_favorites",
+      "breakpoints": true
     }
   ]
 }

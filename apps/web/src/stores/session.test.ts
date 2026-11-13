@@ -106,6 +106,7 @@ describe('session store', () => {
       verified: false,
       links: [],
       crates: [],
+      favorites: [],
       followerCount: 0,
       followingCount: 0,
       viewerFollows: false,

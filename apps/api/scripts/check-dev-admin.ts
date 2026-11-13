@@ -15,7 +15,15 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import Database from 'better-sqlite3'
 import { createDb } from '../src/db/client.ts'
-import { albums, crates, follows, newsItems, tracks, users } from '../src/db/schema.ts'
+import {
+  albums,
+  crateFavorites,
+  crates,
+  follows,
+  newsItems,
+  tracks,
+  users,
+} from '../src/db/schema.ts'
 import { DEV_ADMIN_EMAIL } from '../src/services/dev-admin.ts'
 import { hashPassword } from '../src/services/passwords.ts'
 
@@ -154,6 +162,7 @@ async function buildFixture(dbPath: string) {
       .values({ albumId: album.id, side: 'A', position: 0, title: 'Fixture track' })
       .run()
     db.insert(follows).values({ followerId: member.id, followeeId: owner.id }).run()
+    db.insert(crateFavorites).values({ userId: member.id, crateId: crate.id }).run()
     db.insert(newsItems)
       .values({
         seedKey: 'check:fixture',

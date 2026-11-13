@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import {
   crate,
+  crateDetail,
   recommendedCrateCard,
   crateOrderInput,
   createCrateInput,
@@ -10,7 +11,7 @@ import {
 import {
   createCrate,
   deleteCrate,
-  getCrate,
+  getCrateDetail,
   listCrates,
   listRecommendedCrates,
   reorderCrates,
@@ -30,8 +31,11 @@ export const crateRoutes: FastifyPluginAsyncZod = async (app) => {
     async () => listRecommendedCrates(app.db),
   )
 
-  app.get('/crates/:id', { schema: { params: idParams, response: { 200: crate } } }, async (req) =>
-    getCrate(app.db, req.params.id),
+  // viewerFavorited depends on who is asking; signed out it is always false.
+  app.get(
+    '/crates/:id',
+    { schema: { params: idParams, response: { 200: crateDetail } } },
+    async (req) => getCrateDetail(app.db, req.params.id, req.user),
   )
 
   app.post(

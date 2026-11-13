@@ -9,6 +9,7 @@ import { createDb, type Db } from '../src/db/client.ts'
 import { DEMO_CRATES, DEMO_NEWS, DEMO_USERS } from '../src/db/demo-content.ts'
 import {
   albums,
+  crateFavorites,
   crates,
   follows,
   newsItems,
@@ -219,6 +220,7 @@ describe('seedDemoContent', () => {
     }
     expect(await app.db.$count(userLinks)).toBe(0)
     expect(await app.db.$count(follows)).toBe(0)
+    expect(await app.db.$count(crateFavorites)).toBe(0)
     expect(await app.db.$count(sessions)).toBe(0)
   })
 
@@ -429,6 +431,7 @@ describe('seedDemoContent', () => {
     expect(Math.min(...demoOrders)).toBe(41)
     expect(new Set(demoOrders).size).toBe(demoOrders.length)
     expect(await app.db.$count(follows)).toBe(0)
+    expect(await app.db.$count(crateFavorites)).toBe(0)
   })
 
   it.each([
@@ -459,6 +462,7 @@ describe('seedDemoContent', () => {
       theirCrate,
     ])
     expect(await app.db.$count(follows)).toBe(0)
+    expect(await app.db.$count(crateFavorites)).toBe(0)
     // Nothing of the skipped user's was added under any other owner.
     for (const crate of victimCrates) {
       expect(

@@ -13,6 +13,7 @@ import { authRoutes } from './routes/auth.ts'
 import { avatarRoutes } from './routes/avatars.ts'
 import { coverRoutes } from './routes/covers.ts'
 import { crateRoutes } from './routes/crates.ts'
+import { favoriteRoutes } from './routes/favorites.ts'
 import { followRoutes } from './routes/follows.ts'
 import { healthRoutes } from './routes/health.ts'
 import { newsRoutes } from './routes/news.ts'
@@ -74,6 +75,7 @@ export async function buildApp(opts: AppOptions = {}) {
   await app.register(profileRoutes, { prefix: '/api' })
   await app.register(avatarRoutes, { prefix: '/api' })
   await app.register(followRoutes, { prefix: '/api' })
+  await app.register(favoriteRoutes, { prefix: '/api' })
   await app.register(newsRoutes, { prefix: '/api' })
   await app.register(adminRoutes, { prefix: '/api' })
 

@@ -129,6 +129,12 @@ export const crate = z.object({
   ownerDisplayName: z.string().nullable(),
 })
 
+/** One crate as GET /crates/:id returns it. */
+export const crateDetail = crate.extend({
+  /** Does the signed-in viewer favorite this crate? Always false when signed out. */
+  viewerFavorited: z.boolean(),
+})
+
 const crateFields = z.object({
   name: requiredText(60),
   label: optionalText(40), // the text on the crate's tape label; defaults to the name
@@ -278,6 +284,18 @@ export const profileCrate = z.object({
   albumCount: z.number().int(),
 })
 
+// Data classification: PUBLIC. A crate someone favorited, as their profile lists it. Owner
+// username and display name only (null for ownerless legacy crates). No owner id.
+export const profileFavorite = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  color: z.string(),
+  label: z.string().nullable(),
+  albumCount: z.number().int(),
+  ownerUsername: z.string().nullable(),
+  ownerDisplayName: z.string().nullable(),
+})
+
 // Data classification: PUBLIC. Anyone may read this, signed in or not, so it must never
 // carry the user's id, email, role or anything else from the private publicUser shape.
 export const publicProfile = z.object({
@@ -289,6 +307,8 @@ export const publicProfile = z.object({
   verified: z.boolean(),
   links: z.array(profileLink),
   crates: z.array(profileCrate),
+  /** Crates this user favorited, newest favorited first. */
+  favorites: z.array(profileFavorite),
   /** How many users follow this user. */
   followerCount: z.number().int(),
   /** How many users this user follows. */
@@ -453,6 +473,7 @@ export type UpdateAlbumInput = z.infer<typeof updateAlbumInput>
 export type AlbumSummary = z.infer<typeof albumSummary>
 export type AlbumDetail = z.infer<typeof albumDetail>
 export type Crate = z.infer<typeof crate>
+export type CrateDetail = z.infer<typeof crateDetail>
 export type CreateCrateInput = z.infer<typeof createCrateInput>
 export type CreateCrateRequest = z.input<typeof createCrateInput>
 export type UpdateCrateInput = z.infer<typeof updateCrateInput>
@@ -467,6 +488,7 @@ export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number]
 export type ProfileLink = z.infer<typeof profileLink>
 export type ProfileLinkInput = z.infer<typeof profileLinkInput>
 export type ProfileCrate = z.infer<typeof profileCrate>
+export type ProfileFavorite = z.infer<typeof profileFavorite>
 export type PublicProfile = z.infer<typeof publicProfile>
 /** What the API sees after validation (defaults filled in, empty location is null). */
 export type UpdateProfileInput = z.infer<typeof updateProfileInput>

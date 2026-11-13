@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
-import { albums, follows, newsItems, tracks, users } from '../src/db/schema.ts'
+import { albums, crateFavorites, follows, newsItems, tracks, users } from '../src/db/schema.ts'
 import { bootstrapFromEnv } from '../src/services/bootstrap.ts'
 import { DEV_ADMIN_EMAIL, ensureDevAdmin, shouldSeedDevAdmin } from '../src/services/dev-admin.ts'
 import * as passwords from '../src/services/passwords.ts'
@@ -59,7 +59,7 @@ const devAdminRows = (app: TestApp) =>
 const login = (app: TestApp, email: string, password: string) =>
   app.inject({ method: 'POST', url: '/api/auth/login', payload: { email, password } })
 
-/** Users, crates, albums, tracks, follows and news, plus the sessions signup creates. */
+/** Users, crates, albums, tracks, follows, crate favorites and news, plus the sessions signup creates. */
 async function populate(app: TestApp) {
   const ada = await signUp(app, { username: 'ada', email: 'ada@example.test' })
   const bob = await signUp(app, { username: 'bob', email: 'bob@example.test' })
@@ -73,6 +73,7 @@ async function populate(app: TestApp) {
   app.db.insert(albums).values({ crateId: legacy.id, title: 'Old', artist: 'Someone' }).run()
   app.db.insert(tracks).values({ albumId: album.id, side: 'A', position: 0, title: 'Track' }).run()
   app.db.insert(follows).values({ followerId: bob.user.id, followeeId: ada.user.id }).run()
+  app.db.insert(crateFavorites).values({ userId: bob.user.id, crateId: crate.id }).run()
   app.db
     .insert(newsItems)
     .values({
@@ -108,7 +109,15 @@ describe('ensureDevAdmin on a populated database (AC1)', () => {
     const app = await newApp()
     await populate(app)
     const before = snapshot(app)
-    for (const table of ['users', 'sessions', 'crates', 'albums', 'tracks', 'follows']) {
+    for (const table of [
+      'users',
+      'sessions',
+      'crates',
+      'albums',
+      'tracks',
+      'follows',
+      'crate_favorites',
+    ]) {
       expect(before[table], table).not.toHaveLength(0)
     }
     expect(before.news_items).not.toHaveLength(0)

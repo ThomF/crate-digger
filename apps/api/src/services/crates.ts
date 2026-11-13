@@ -1,6 +1,7 @@
 import { and, asc, count, eq, inArray, isNotNull, isNull, max, ne, or } from 'drizzle-orm'
 import type {
   Crate,
+  CrateDetail,
   CreateCrateInput,
   PublicUser,
   RecommendedCrateCard,
@@ -9,6 +10,7 @@ import type {
 import type { Db } from '../db/client.ts'
 import { albums, crates, users } from '../db/schema.ts'
 import { HttpError, badRequest, notFound } from '../errors.ts'
+import { isFavoritedBy } from './favorites.ts'
 import { assertCanEditCrate, requireUser } from './permissions.ts'
 
 // Writes take the signed-in user (request.user, or null) and check it here via
@@ -85,6 +87,11 @@ export function getCrate(db: Db, id: number): Crate {
     .get()
   if (!crate) throw notFound(`Crate ${id}`)
   return crate
+}
+
+/** getCrate plus whether the viewer (null = signed out) has favorited it. */
+export function getCrateDetail(db: Db, id: number, viewer: PublicUser | null): CrateDetail {
+  return { ...getCrate(db, id), viewerFavorited: isFavoritedBy(db, id, viewer?.id ?? null) }
 }
 
 /** For request bodies that reference a crate: a missing crate is the client's mistake (400). */

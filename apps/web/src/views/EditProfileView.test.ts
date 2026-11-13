@@ -34,6 +34,7 @@ const profile = (overrides: Partial<PublicProfile> = {}): PublicProfile => ({
     { platform: 'discogs', url: 'https://www.discogs.com/user/alice' },
   ],
   crates: [],
+  favorites: [],
   followerCount: 0,
   followingCount: 0,
   viewerFollows: false,

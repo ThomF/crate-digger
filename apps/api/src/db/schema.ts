@@ -156,6 +156,27 @@ export const follows = sqliteTable(
   ],
 )
 
+// Data classification: INTERNAL (personal data: which crates a user favorited). Profiles show a
+// user's favorites as public crate cards; numeric ids never leave the API.
+// 'cascade' = deleting the user or the crate deletes the favorite rows.
+export const crateFavorites = sqliteTable(
+  'crate_favorites',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    crateId: integer('crate_id')
+      .notNull()
+      .references(() => crates.id, { onDelete: 'cascade' }),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    uniqueIndex('crate_favorites_user_crate_unique').on(t.userId, t.crateId),
+    index('crate_favorites_crate_idx').on(t.crateId),
+  ],
+)
+
 // Data classification: PUBLIC. Demo or admin-written news shown on Home. seed_key is the stable
 // key the demo seeding step matches on, so a row is never inserted twice. Admin-written rows use
 // an admin: prefix, which is how the two are told apart.
@@ -177,6 +198,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   links: many(userLinks),
   following: many(follows, { relationName: 'follower' }),
   followers: many(follows, { relationName: 'followee' }),
+  crateFavorites: many(crateFavorites),
+}))
+
+export const crateFavoritesRelations = relations(crateFavorites, ({ one }) => ({
+  user: one(users, { fields: [crateFavorites.userId], references: [users.id] }),
+  crate: one(crates, { fields: [crateFavorites.crateId], references: [crates.id] }),
 }))
 
 export const followsRelations = relations(follows, ({ one }) => ({
@@ -203,6 +230,7 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 export const cratesRelations = relations(crates, ({ one, many }) => ({
   owner: one(users, { fields: [crates.ownerId], references: [users.id] }),
   albums: many(albums),
+  favorites: many(crateFavorites),
 }))
 
 export const albumsRelations = relations(albums, ({ one, many }) => ({
@@ -227,5 +255,6 @@ export type NewAlbum = typeof albums.$inferInsert
 export type Track = typeof tracks.$inferSelect
 export type NewTrack = typeof tracks.$inferInsert
 export type Follow = typeof follows.$inferSelect
+export type CrateFavorite = typeof crateFavorites.$inferSelect
 export type NewsItem = typeof newsItems.$inferSelect
 export type NewNewsItem = typeof newsItems.$inferInsert

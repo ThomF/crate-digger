@@ -4,6 +4,7 @@ import { MAX_PROFILE_LINKS } from '@frisson/shared'
 import type { Db } from '../db/client.ts'
 import { albums, crates, follows, userLinks, users, type User } from '../db/schema.ts'
 import { badRequest, notFound } from '../errors.ts'
+import { listFavorites } from './favorites.ts'
 import { requireAdmin, requireUser } from './permissions.ts'
 import { findUserByUsername, getUserById } from './users.ts'
 
@@ -78,6 +79,7 @@ export function toPublicProfile(db: Db, user: User, viewerId: number | null = nu
     verified: user.verified,
     links: profileLinks(db, user.id),
     crates: profileCrates(db, user.id),
+    favorites: listFavorites(db, user.id),
     ...followCounts(db, user.id),
     viewerFollows: isFollowedBy(db, user.id, viewerId),
     isDemo: user.demoSeedKey !== null,

@@ -30,6 +30,7 @@ const profile: PublicProfile = {
   verified: false,
   links: [],
   crates: [{ id: 1, name: 'Shoegaze', color: '#2f6fa3', label: null, albumCount: 2 }],
+  favorites: [],
   followerCount: 3,
   followingCount: 4,
   viewerFollows: false,

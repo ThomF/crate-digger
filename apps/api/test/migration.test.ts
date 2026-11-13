@@ -12,6 +12,7 @@ const DRIZZLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../drizzle
 const OLD_TAGS = ['0000_init', '0001_crate_sort_by', '0002_album_spin_count']
 const PRE_PROFILE_TAGS = [...OLD_TAGS, '0003_accounts']
 const PRE_FOLLOWS_TAGS = [...PRE_PROFILE_TAGS, '0004_user_profiles']
+const PRE_FAVORITES_TAGS = [...PRE_FOLLOWS_TAGS, '0005_follows_news_demo']
 
 // Columns 0005 adds to rows that already exist. createDb always migrates to the latest version,
 // so the older migration tests see these as well.
@@ -291,6 +292,127 @@ describe('migrations', () => {
       expect(statements.length).toBeGreaterThan(0)
       for (const statement of statements) {
         expect(statement).toMatch(/^(CREATE TABLE|ALTER TABLE \S+ ADD |CREATE (UNIQUE )?INDEX)/)
+        expect(statement).not.toContain('__new_')
+      }
+    })
+  })
+
+  describe('migration 0006', () => {
+    type IndexInfo = { name: string; unique: number }
+    type FkInfo = { table: string; from: string; on_delete: string }
+
+    /** crate_favorites has its unique (user_id, crate_id) index and cascades from both parents. */
+    function expectFavoritesStructure(db: Database.Database) {
+      const indexes = db.pragma('index_list(crate_favorites)') as IndexInfo[]
+      const uniqueColumns = indexes
+        .filter((index) => index.unique === 1)
+        .map((index) =>
+          (db.pragma(`index_info(${index.name})`) as { name: string }[]).map((c) => c.name),
+        )
+      expect(uniqueColumns).toContainEqual(['user_id', 'crate_id'])
+
+      const fks = db.pragma('foreign_key_list(crate_favorites)') as FkInfo[]
+      expect(fks.find((fk) => fk.from === 'user_id')).toMatchObject({
+        table: 'users',
+        on_delete: 'CASCADE',
+      })
+      expect(fks.find((fk) => fk.from === 'crate_id')).toMatchObject({
+        table: 'crates',
+        on_delete: 'CASCADE',
+      })
+    }
+
+    it('a fresh database has crate_favorites with its unique index and cascading keys', () => {
+      const dbPath = join(tmp, 'crate.db')
+      const { close } = createDb(dbPath)
+      close()
+
+      const after = new Database(dbPath, { readonly: true })
+      try {
+        const tables = after
+          .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+          .all()
+          .map((t) => (t as { name: string }).name)
+        expect(tables).toContain('crate_favorites')
+        expectFavoritesStructure(after)
+      } finally {
+        after.close()
+      }
+    })
+
+    it('migration 0006 keeps every existing user and crate and adds an empty crate_favorites', () => {
+      const dbPath = join(tmp, 'crate.db')
+      const oldMigrations = join(tmp, 'migrations')
+      writeMigrations(oldMigrations, PRE_FAVORITES_TAGS)
+
+      // 1. A database at 0005, with users, crates (one ownerless), an album and a follow in it.
+      const old = new Database(dbPath)
+      old.pragma('foreign_keys = ON')
+      migrate(drizzle(old), { migrationsFolder: oldMigrations })
+      expect(
+        old.prepare("SELECT name FROM sqlite_master WHERE name = 'crate_favorites'").all(),
+      ).toEqual([])
+      const insertUser = old.prepare(
+        `INSERT INTO users (email, username, display_name, password_hash, role, bio, verified, demo_seed_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      insertUser.run('ada@example.com', 'ada', 'Ada', 'scrypt$placeholder', 'user', 'Hi', 1, null)
+      insertUser.run(
+        'bob@example.com',
+        'bob',
+        'Bob',
+        'scrypt$placeholder',
+        'admin',
+        '',
+        0,
+        'demo:bob',
+      )
+      const insertCrate = old.prepare(
+        'INSERT INTO crates (name, color, label, sort_by, sort_order, owner_id, recommended_rank) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      )
+      insertCrate.run('Jazz', '#112233', 'JAZZ', 'artist', 0, 1, null)
+      insertCrate.run('Bob crate', '#445566', null, 'manual', 1, 2, 3)
+      insertCrate.run('Ownerless', '#c8a374', null, 'manual', 2, null, null)
+      old
+        .prepare(`INSERT INTO albums (crate_id, title, artist, position) VALUES (?, ?, ?, ?)`)
+        .run(1, 'Kind of Blue', 'Miles Davis', 0)
+      old.prepare('INSERT INTO follows (follower_id, followee_id) VALUES (?, ?)').run(2, 1)
+      const snapshot = {
+        users: old.prepare('SELECT * FROM users ORDER BY id').all(),
+        crates: old.prepare('SELECT * FROM crates ORDER BY id').all(),
+        albums: old.prepare('SELECT * FROM albums ORDER BY id').all(),
+        follows: old.prepare('SELECT * FROM follows ORDER BY id').all(),
+      }
+      old.close()
+
+      // 2. Open it the way the app does, which applies 0006.
+      const { close } = createDb(dbPath)
+      close()
+
+      // 3. Every row is intact, and the new table exists, empty, with the right structure.
+      const after = new Database(dbPath, { readonly: true })
+      try {
+        expect(after.prepare('SELECT * FROM users ORDER BY id').all()).toEqual(snapshot.users)
+        expect(after.prepare('SELECT * FROM crates ORDER BY id').all()).toEqual(snapshot.crates)
+        expect(after.prepare('SELECT * FROM albums ORDER BY id').all()).toEqual(snapshot.albums)
+        expect(after.prepare('SELECT * FROM follows ORDER BY id').all()).toEqual(snapshot.follows)
+        expect(after.prepare('SELECT COUNT(*) AS n FROM crate_favorites').get()).toEqual({ n: 0 })
+        expectFavoritesStructure(after)
+        expect(after.pragma('foreign_key_check')).toEqual([])
+      } finally {
+        after.close()
+      }
+    })
+
+    it('only adds to the schema: no rebuilds, drops, updates or deletes', () => {
+      const statements = readFileSync(join(DRIZZLE_DIR, '0006_crate_favorites.sql'), 'utf8')
+        .split('--> statement-breakpoint')
+        .map((statement) => statement.trim())
+        .filter(Boolean)
+
+      expect(statements.length).toBeGreaterThan(0)
+      for (const statement of statements) {
+        expect(statement).toMatch(/^(CREATE TABLE|CREATE (UNIQUE )?INDEX)/)
         expect(statement).not.toContain('__new_')
       }
     })

@@ -174,6 +174,18 @@ describe('shared profile schemas', () => {
         verified: false,
         links: [{ platform: 'x', url: 'https://x.com/ada' }],
         crates: [{ id: 1, name: 'Jazz', color: '#112233', label: null, albumCount: 3 }],
+        favorites: [
+          {
+            id: 2,
+            name: 'Soul',
+            color: '#445566',
+            label: null,
+            albumCount: 0,
+            ownerId: 9,
+            ownerUsername: 'bob',
+            ownerDisplayName: 'Bob',
+          },
+        ],
         followerCount: 2,
         followingCount: 1,
         viewerFollows: false,
@@ -181,11 +193,23 @@ describe('shared profile schemas', () => {
         demoSeedKey: 'demo-ada',
       })
 
+      // A favorite carries its owner's username and display name, never the owner's id.
+      expect(Object.keys(parsed.favorites[0]!).sort()).toEqual([
+        'albumCount',
+        'color',
+        'id',
+        'label',
+        'name',
+        'ownerDisplayName',
+        'ownerUsername',
+      ])
+
       expect(Object.keys(parsed).sort()).toEqual([
         'avatarUrl',
         'bio',
         'crates',
         'displayName',
+        'favorites',
         'followerCount',
         'followingCount',
         'isDemo',
@@ -197,7 +221,7 @@ describe('shared profile schemas', () => {
       ])
     })
 
-    it.each(['followerCount', 'followingCount', 'viewerFollows', 'isDemo'])(
+    it.each(['favorites', 'followerCount', 'followingCount', 'viewerFollows', 'isDemo'])(
       'requires %s',
       (key) => {
         const complete: Record<string, unknown> = {
@@ -209,6 +233,7 @@ describe('shared profile schemas', () => {
           verified: false,
           links: [],
           crates: [],
+          favorites: [],
           followerCount: 0,
           followingCount: 0,
           viewerFollows: false,

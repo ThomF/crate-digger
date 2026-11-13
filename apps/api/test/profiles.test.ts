@@ -19,6 +19,7 @@ const PUBLIC_KEYS = [
   'bio',
   'crates',
   'displayName',
+  'favorites',
   'followerCount',
   'followingCount',
   'isDemo',
