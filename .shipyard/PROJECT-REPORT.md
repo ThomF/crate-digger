@@ -95,4 +95,4 @@
 - Check: .shipyard/checks/favorites.check.mjs (port 4917). browser.mjs still rewrites tracked ac12-long PNGs; restored again
 - Known limits: uneven favorite card heights at 390px; stale favorite row stays if a crate is reassigned to its favoriter; Chromium only
 - Lesson: /harbor needs shipyard-report.json, so run it only after the verdict
-- Not merged or pushed
+- Merged and pushed to main at the owner's request
